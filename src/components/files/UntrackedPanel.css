@@ -1,0 +1,85 @@
+.untracked-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-top: 1px solid var(--border-color);
+}
+
+.untracked-panel .section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.untracked-panel .section-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.untracked-panel .section-title {
+  font-weight: 500;
+}
+
+.untracked-panel .section-count {
+  margin-left: auto;
+  padding: 1px 6px;
+  background: var(--bg-hover);
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.untracked-panel .section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: 24px;
+  margin-top: var(--spacing-xs);
+}
+
+.untracked-panel .section-action-btn {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.untracked-panel .section-action-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.untracked-panel .section-action-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.untracked-panel .section-action-btn.secondary:hover {
+  background: var(--bg-hover);
+}
+
+.untracked-panel .section-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.untracked-panel .empty-section {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

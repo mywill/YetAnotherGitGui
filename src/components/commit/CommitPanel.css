@@ -1,0 +1,34 @@
+.commit-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+.commit-header {
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.commit-message-input {
+  flex: 1;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.commit-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.commit-button {
+  flex-shrink: 0;
+}
+
+.commit-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}

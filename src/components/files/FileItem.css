@@ -1,0 +1,118 @@
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-md);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: background 0.1s;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.file-item:hover {
+  background: var(--bg-hover);
+}
+
+.file-item.staged {
+  background: rgba(76, 175, 80, 0.08);
+}
+
+.file-item.staged:hover {
+  background: rgba(76, 175, 80, 0.15);
+}
+
+.file-item.selected {
+  background: var(--bg-selected, rgba(59, 130, 246, 0.2));
+  outline: 1px solid var(--color-primary, #3b82f6);
+  outline-offset: -1px;
+}
+
+.file-item.selected:hover {
+  background: var(--bg-selected-hover, rgba(59, 130, 246, 0.3));
+}
+
+.file-item.staged.selected {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.file-item.staged.selected:hover {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.stage-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-addition);
+  flex-shrink: 0;
+}
+
+.status-icon {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  min-height: 18px;
+  max-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 11px;
+  flex-shrink: 0;
+  flex-grow: 0;
+  border-radius: 3px;
+}
+
+.status-icon.status-modified {
+  color: var(--status-modified);
+  background: rgba(226, 192, 141, 0.15);
+}
+
+.status-icon.status-added {
+  color: var(--status-added);
+  background: rgba(137, 209, 133, 0.15);
+}
+
+.status-icon.status-deleted {
+  color: var(--status-deleted);
+  background: rgba(199, 78, 57, 0.15);
+}
+
+.status-icon.status-renamed {
+  color: var(--status-modified);
+  background: rgba(226, 192, 141, 0.15);
+}
+
+.status-icon.status-untracked {
+  color: var(--status-untracked);
+  background: rgba(115, 201, 145, 0.15);
+}
+
+.status-icon.status-conflicted {
+  color: var(--status-conflicted);
+  background: rgba(229, 20, 0, 0.2);
+}
+
+.file-name {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.file-path {
+  flex: 1;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: var(--spacing-xs);
+}
+
+.untracked-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(115, 201, 145, 0.2);
+  color: var(--status-untracked);
+  flex-shrink: 0;
+}

@@ -1,0 +1,32 @@
+.cli-install {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.cli-install-button {
+  width: 100%;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cli-install-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.cli-install-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cli-install-message {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}

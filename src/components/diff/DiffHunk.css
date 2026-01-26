@@ -1,0 +1,130 @@
+.diff-hunk {
+  position: relative;
+}
+
+.diff-hunk:last-child {
+  /* No special styling */
+}
+
+/* Hide any header type lines that slip through */
+.diff-line.line-header {
+  display: none;
+}
+
+.hunk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--spacing-sm);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.hunk-info {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.hunk-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.hunk-action {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.hunk-action:hover {
+  background: var(--bg-hover);
+}
+
+.hunk-action.secondary {
+  background: transparent;
+}
+
+.hunk-lines {
+  background: var(--bg-primary);
+}
+
+.diff-line {
+  display: flex;
+  white-space: pre;
+  min-height: 18px;
+}
+
+.diff-line.line-addition {
+  background: var(--color-addition-bg);
+}
+
+.diff-line.line-deletion {
+  background: var(--color-deletion-bg);
+}
+
+.diff-line.line-context {
+  background: transparent;
+}
+
+.line-number {
+  width: 40px;
+  flex-shrink: 0;
+  padding: 0 var(--spacing-xs);
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+  border-right: 1px solid var(--border-color);
+}
+
+.line-number.old {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.line-number.new {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.line-prefix {
+  width: 20px;
+  flex-shrink: 0;
+  text-align: center;
+  user-select: none;
+}
+
+.line-addition .line-prefix {
+  color: var(--color-addition);
+}
+
+.line-deletion .line-prefix {
+  color: var(--color-deletion);
+}
+
+.line-content {
+  flex: 1;
+  padding-right: var(--spacing-sm);
+}
+
+.diff-line.selectable {
+  cursor: pointer;
+}
+
+.diff-line.selectable:hover {
+  filter: brightness(1.1);
+}
+
+.diff-line.selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.diff-line.selected.line-addition {
+  background: color-mix(in srgb, var(--color-addition-bg), var(--color-primary) 30%);
+}
+
+.diff-line.selected.line-deletion {
+  background: color-mix(in srgb, var(--color-deletion-bg), var(--color-primary) 30%);
+}

@@ -1,0 +1,92 @@
+.commit-file-diff {
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.commit-file-diff.binary,
+.commit-file-diff.empty {
+  padding: var(--spacing-md);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.diff-hunk {
+  margin-bottom: 1px;
+}
+
+.hunk-header {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: color-mix(in srgb, var(--bg-selected) 30%, transparent);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.hunk-lines {
+  display: table;
+  width: 100%;
+  min-width: max-content;
+}
+
+.diff-line {
+  display: table-row;
+  min-height: 18px;
+}
+
+.diff-line .line-number {
+  display: table-cell;
+  width: 40px;
+  min-width: 40px;
+  padding: 0 var(--spacing-xs);
+  text-align: right;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  user-select: none;
+  border-right: 1px solid var(--border-color);
+}
+
+.diff-line .line-number.old {
+  border-right: none;
+}
+
+.diff-line .line-prefix {
+  display: table-cell;
+  width: 16px;
+  min-width: 16px;
+  padding-left: var(--spacing-xs);
+  user-select: none;
+}
+
+.diff-line .line-content {
+  display: table-cell;
+  white-space: pre;
+  padding-right: var(--spacing-sm);
+}
+
+.diff-line.line-context {
+  background: var(--bg-primary);
+}
+
+.diff-line.line-addition {
+  background: var(--color-addition-bg);
+}
+
+.diff-line.line-addition .line-prefix {
+  color: var(--color-addition);
+}
+
+.diff-line.line-addition .line-number {
+  background: color-mix(in srgb, var(--color-addition) 10%, var(--bg-secondary));
+}
+
+.diff-line.line-deletion {
+  background: var(--color-deletion-bg);
+}
+
+.diff-line.line-deletion .line-prefix {
+  color: var(--color-deletion);
+}
+
+.diff-line.line-deletion .line-number {
+  background: color-mix(in srgb, var(--color-deletion) 10%, var(--bg-secondary));
+}

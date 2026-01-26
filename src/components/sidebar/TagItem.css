@@ -1,0 +1,36 @@
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  padding-left: calc(var(--spacing-md) + 16px);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.tag-item:hover {
+  background: var(--bg-hover);
+}
+
+.tag-item .tag-icon {
+  flex-shrink: 0;
+  color: var(--badge-tag);
+}
+
+.tag-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotated-badge {
+  padding: 1px 4px;
+  background: var(--badge-tag);
+  color: white;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+}
