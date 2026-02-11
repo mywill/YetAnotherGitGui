@@ -42,12 +42,12 @@ mod tests {
         let state = AppState::new();
         // Should be able to lock multiple times (after releasing)
         {
-            let _lock1 = state.repository.lock();
+            let lock1 = state.repository.lock();
+            assert!(lock1.is_none());
         }
         {
-            let _lock2 = state.repository.lock();
+            let lock2 = state.repository.lock();
+            assert!(lock2.is_none());
         }
-        // If we get here, mutex works correctly
-        assert!(true);
     }
 }
