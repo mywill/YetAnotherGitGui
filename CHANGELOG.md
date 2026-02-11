@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.0...v1.0.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* more pipline updats ([3791ecc](https://github.com/mywill/YetAnotherGitGui/commit/3791ecc8032a586329a0ffbd33b25d7e33a7c69e))
+
 # 1.0.0 (2026-02-11)
 
 

@@ -1,6 +1,6 @@
 [package]
 name = "yagg"
-version = "1.0.0"
+version = "1.0.1"
 description = "Yet Another Git Gui - A Git GUI application"
 authors = ["kd"]
 edition = "2021"
