@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.1...v1.0.2) (2026-02-11)
+
+
+### Bug Fixes
+
+* upate to use tauri action to fix issues with releases. ([5c1dd64](https://github.com/mywill/YetAnotherGitGui/commit/5c1dd647a11123def96c6b98150942eda6b1c4f8))
+
 ## [1.0.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.0...v1.0.1) (2026-02-11)
 
 
