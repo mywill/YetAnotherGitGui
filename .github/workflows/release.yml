@@ -35,7 +35,7 @@ jobs:
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: node scripts/semantic-release.mjs
 
   build-linux:
     name: Build Linux
