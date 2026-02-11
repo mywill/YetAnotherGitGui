@@ -1,6 +1,6 @@
 {
   "name": "yagg",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A Git GUI application built with Tauri",
   "author": "kd",
   "license": "MIT",
