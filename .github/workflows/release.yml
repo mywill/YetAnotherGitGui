@@ -71,8 +71,15 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Add Rust target for macOS ARM
+        if: matrix.platform == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin
+
+      - name: Install Tauri CLI via Cargo
+        run: cargo install tauri-cli --version 2.5.0 --locked
+
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build with Tauri Action
         uses: tauri-apps/tauri-action@v0
@@ -80,4 +87,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v${{ needs.release.outputs.version }}
+          tauriScript: cargo tauri
           args: ${{ matrix.args }}
