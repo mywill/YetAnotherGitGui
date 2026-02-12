@@ -39,14 +39,14 @@
     "format:rust": "cd src-tauri && cargo fmt"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-cli": "^2.0.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
-    "date-fns": "^3.6.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-window": "^1.8.10",
-    "zustand": "^4.5.5"
+    "date-fns": "^4.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-window": "^2.2.6",
+    "zustand": "^5.0.11"
   },
   "release": {
     "branches": [
@@ -90,9 +90,9 @@
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.0.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@types/react-window": "^1.8.8",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-window": "^2.0.0",
     "@vitejs/plugin-react": "^4.3.3",
     "@vitest/coverage-v8": "^2.0.0",
     "@vitest/ui": "^2.0.0",
