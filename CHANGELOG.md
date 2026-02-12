@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.2...v1.0.3) (2026-02-12)
+
+
+### Bug Fixes
+
+* more ci updates ([2d45a98](https://github.com/mywill/YetAnotherGitGui/commit/2d45a98ecb6534ab52287fbc995c0557078138e2))
+
 ## [1.0.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.1...v1.0.2) (2026-02-11)
 
 
