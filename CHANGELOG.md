@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.4...v1.1.0) (2026-02-12)
+
+
+### Features
+
+* this is a chore but i need a release.. this is swapping to pnpm to fix some issues with platform specific dependnencies ([709c073](https://github.com/mywill/YetAnotherGitGui/commit/709c0732a860a6132f440b30abe7896965ec3e89))
+
 ## [1.0.4](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.3...v1.0.4) (2026-02-12)
 
 
