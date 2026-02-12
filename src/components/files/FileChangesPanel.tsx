@@ -106,15 +106,16 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
   // Handle file selection with modifiers
   const handleSelectWithModifiers = useCallback(
-    (sectionPaths: string[]) => (path: string, isCtrl: boolean, isShift: boolean) => {
-      toggleFileSelection(path, isCtrl, isShift, sectionPaths);
-      // Also load the diff for the clicked file
-      const file = [...staged, ...unstaged, ...untracked].find((f) => f.path === path);
-      if (file) {
-        const isFileStaged = staged.some((f) => f.path === path);
-        loadFileDiff(path, isFileStaged);
-      }
-    },
+    (sectionPaths: string[], isStaged: boolean) =>
+      (path: string, isCtrl: boolean, isShift: boolean) => {
+        toggleFileSelection(path, isStaged, isCtrl, isShift, sectionPaths);
+        // Also load the diff for the clicked file
+        const file = [...staged, ...unstaged, ...untracked].find((f) => f.path === path);
+        if (file) {
+          const isFileStaged = staged.some((f) => f.path === path);
+          loadFileDiff(path, isFileStaged);
+        }
+      },
     [staged, unstaged, untracked, toggleFileSelection, loadFileDiff]
   );
 
@@ -224,7 +225,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                   isSelected={selectedFilePaths.has(file.path)}
                   onToggleStage={() => unstageFile(file.path)}
                   onSelect={() => loadFileDiff(file.path, true)}
-                  onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths)}
+                  onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
                   onDoubleClick={() => unstageFile(file.path)}
                   onRevert={() => unstageFile(file.path)}
                 />
@@ -274,7 +275,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                   isSelected={selectedFilePaths.has(file.path)}
                   onToggleStage={() => stageFile(file.path)}
                   onSelect={() => loadFileDiff(file.path, false)}
-                  onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths)}
+                  onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
                   onDoubleClick={() => stageFile(file.path)}
                   onRevert={() => revertFile(file.path)}
                   onDelete={() => deleteFile(file.path)}
@@ -330,7 +331,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                   isSelected={selectedFilePaths.has(file.path)}
                   onToggleStage={() => stageFile(file.path)}
                   onSelect={() => loadFileDiff(file.path, false)}
-                  onSelectWithModifiers={handleSelectWithModifiers(allUntrackedPaths)}
+                  onSelectWithModifiers={handleSelectWithModifiers(allUntrackedPaths, false)}
                   onDoubleClick={() => stageFile(file.path)}
                   onDelete={() => deleteFile(file.path)}
                 />
