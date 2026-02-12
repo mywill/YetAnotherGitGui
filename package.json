@@ -2,6 +2,7 @@
   "name": "yagg",
   "version": "1.0.4",
   "description": "A Git GUI application built with Tauri",
+  "packageManager": "pnpm@9.15.4",
   "author": "kd",
   "license": "MIT",
   "repository": {
