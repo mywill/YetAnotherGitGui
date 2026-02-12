@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.3...v1.0.4) (2026-02-12)
+
+
+### Bug Fixes
+
+* fix issue with complatation in strict mode ([611b86f](https://github.com/mywill/YetAnotherGitGui/commit/611b86fb6c829bfcad80b02dd7473da0b56003e5))
+
 ## [1.0.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.2...v1.0.3) (2026-02-12)
 
 
