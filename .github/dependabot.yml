@@ -7,6 +7,9 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
     groups:
       development:
         dependency-type: "development"
@@ -24,6 +27,8 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
     groups:
       rust-dependencies:
         patterns:
@@ -35,3 +40,5 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
