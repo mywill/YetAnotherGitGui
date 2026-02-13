@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.0...v1.1.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* Update the CI and read me for the pnpm swap ([ad82182](https://github.com/mywill/YetAnotherGitGui/commit/ad821829f8cd66df735ba51ec7d653d073a3f251))
+
 # [1.1.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.0.4...v1.1.0) (2026-02-12)
 
 
