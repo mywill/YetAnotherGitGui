@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/your-username/YetAnotherGitGui.git`
-3. Install dependencies: `npm install`
+3. Install dependencies: `pnpm install`
 4. Create a branch: `git checkout -b feature/your-feature`
 
 ## Development Setup
@@ -18,16 +18,16 @@ Prerequisites:
 
 ```bash
 # Start development server
-npm run tauri dev
+pnpm tauri dev
 
 # Run tests
-npm test
-npm run test:e2e
+pnpm test
+pnpm test:e2e
 cd src-tauri && cargo test
 
 # Lint code
-npm run lint
-npm run lint:rust
+pnpm lint
+pnpm lint:rust
 ```
 
 ## Code Style
@@ -36,7 +36,7 @@ npm run lint:rust
 - Use TypeScript strict mode
 - Prefer functional components with hooks
 - Use Zustand for state management
-- Run `npm run format` before committing
+- Run `pnpm format` before committing
 
 ### Rust
 - Follow standard Rust conventions
@@ -96,8 +96,8 @@ For breaking changes, you can either:
 
 ## Pull Request Process
 
-1. Ensure all tests pass: `npm test && npm run test:e2e && cd src-tauri && cargo test`
-2. Ensure linters pass: `npm run lint && npm run format:check && npm run lint:rust`
+1. Ensure all tests pass: `pnpm test && pnpm test:e2e && cd src-tauri && cargo test`
+2. Ensure linters pass: `pnpm lint && pnpm format:check && pnpm lint:rust`
 3. Update documentation if needed
 4. Create a pull request with a clear description
 5. Link any related issues

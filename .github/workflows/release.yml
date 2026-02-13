@@ -82,8 +82,10 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: rustup target add aarch64-apple-darwin
 
-      - name: Install Tauri CLI via Cargo
-        run: cargo install tauri-cli --version 2.5.0 --locked
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -94,5 +96,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v${{ needs.release.outputs.version }}
-          tauriScript: cargo tauri
           args: ${{ matrix.args }}

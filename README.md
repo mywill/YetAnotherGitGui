@@ -73,13 +73,13 @@ git clone https://github.com/mywill/YetAnotherGitGui.git
 cd YetAnotherGitGui
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run in development mode
-npm run tauri dev
+pnpm tauri dev
 
 # Build for production
-npm run tauri build
+pnpm tauri build
 ```
 
 ## Development
@@ -88,24 +88,24 @@ npm run tauri build
 
 | Command | Description |
 |---------|-------------|
-| `npm run tauri dev` | Start development server with hot reload |
-| `npm run tauri build` | Build production release |
-| `npm test` | Run unit tests |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run lint` | Lint code |
-| `npm run format` | Format code |
+| `pnpm tauri dev` | Start development server with hot reload |
+| `pnpm tauri build` | Build production release |
+| `pnpm test` | Run unit tests |
+| `pnpm test:e2e` | Run E2E tests |
+| `pnpm lint` | Lint code |
+| `pnpm format` | Format code |
 
 ### Testing
 
 ```bash
 # Frontend unit tests
-npm test
+pnpm test
 
 # Frontend unit tests with coverage
-npm run test:coverage
+pnpm test:coverage
 
 # E2E tests (requires Playwright browsers)
-npm run test:e2e
+pnpm test:e2e
 
 # Rust tests
 cd src-tauri && cargo test

@@ -16,16 +16,16 @@ Yet Another Git Gui uses a comprehensive testing stack:
 
 ```bash
 # Run all frontend tests
-npm test
+pnpm test
 
 # Run tests in watch mode (re-runs on file changes)
-npm run test -- --watch
+pnpm test --watch
 
 # Run tests with UI (visual test runner)
-npm run test:ui
+pnpm test:ui
 
 # Run tests with coverage report
-npm run test:coverage
+pnpm test:coverage
 ```
 
 ### Rust Unit Tests
@@ -50,16 +50,16 @@ E2E tests use Playwright with mocked Tauri APIs. The tests run against the Vite 
 
 **First-time setup** - Install Playwright browsers (required once):
 ```bash
-npm run test:e2e:install
+pnpm test:e2e:install
 ```
 
 **Running E2E tests**:
 ```bash
 # Run all E2E tests (starts Vite dev server automatically)
-npm run test:e2e
+pnpm test:e2e
 
 # Run with interactive UI
-npm run test:e2e:ui
+pnpm test:e2e:ui
 
 # Run with headed browser (visible)
 npx playwright test --headed
@@ -356,8 +356,8 @@ For continuous integration:
 
 1. **Frontend tests** can run without any special setup:
    ```bash
-   npm ci
-   npm test
+   pnpm install --frozen-lockfile
+   pnpm test
    ```
 
 2. **Rust tests** require Rust toolchain:
@@ -367,7 +367,7 @@ For continuous integration:
    ```
 
 3. **E2E tests** require:
-   - Playwright browsers installed: `npm run test:e2e:install`
+   - Playwright browsers installed: `pnpm test:e2e:install`
    - The Vite dev server (started automatically by Playwright)
 
 Example GitHub Actions workflow:
@@ -378,11 +378,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: npm test
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
   rust-test:
     runs-on: ubuntu-latest
@@ -395,12 +397,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: npm run test:e2e:install
-      - run: npm run test:e2e
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:e2e:install
+      - run: pnpm test:e2e
 ```
 
 ## Coverage
@@ -409,7 +413,7 @@ Generate coverage reports:
 
 ```bash
 # Frontend coverage
-npm run test:coverage
+pnpm test:coverage
 
 # View HTML report
 open coverage/index.html
