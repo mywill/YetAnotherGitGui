@@ -14,7 +14,10 @@
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
   },
   "app": {
     "windows": [

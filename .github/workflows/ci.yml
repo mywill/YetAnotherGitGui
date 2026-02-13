@@ -254,6 +254,20 @@ jobs:
       - name: Build Tauri app
         run: pnpm tauri build
 
+      - name: Ad-hoc sign macOS app
+        run: |
+          APP_PATH=$(find src-tauri/target/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
+          echo "Signing: $APP_PATH"
+          codesign --force --deep --sign - "$APP_PATH"
+
+          # Recreate DMG with the signed app
+          DMG_PATH=$(find src-tauri/target/release/bundle/dmg -name "*.dmg" | head -1)
+          APP_NAME=$(basename "$APP_PATH" .app)
+
+          rm -f "$DMG_PATH"
+          hdiutil create -volname "$APP_NAME" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_PATH"
+          echo "Created signed DMG: $DMG_PATH"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
