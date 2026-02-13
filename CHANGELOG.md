@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.2...v1.1.3) (2026-02-13)
+
+
+### Bug Fixes
+
+* updated ci for macs ([464fe34](https://github.com/mywill/YetAnotherGitGui/commit/464fe340bc207ece38a492282fa75b1f7defc986))
+
 ## [1.1.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.1...v1.1.2) (2026-02-13)
 
 
