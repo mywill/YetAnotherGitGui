@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.1...v1.1.2) (2026-02-13)
+
+
+### Bug Fixes
+
+* tauri versions ([6bd1a4a](https://github.com/mywill/YetAnotherGitGui/commit/6bd1a4a007b14dc16a17b101d6d52f2dac3ac63f))
+
 ## [1.1.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.0...v1.1.1) (2026-02-13)
 
 
