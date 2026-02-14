@@ -1,4 +1,5 @@
 mod commands;
+pub mod crash_handler;
 mod error;
 mod git;
 mod state;
