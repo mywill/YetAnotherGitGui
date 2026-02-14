@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.3...v1.2.0) (2026-02-14)
+
+
+### Features
+
+* Added a copy submenu to copy file paths ([27012fd](https://github.com/mywill/YetAnotherGitGui/commit/27012fdf89fec8f7f37facd17d04eef1c141a16a))
+
 ## [1.1.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.2...v1.1.3) (2026-02-13)
 
 
