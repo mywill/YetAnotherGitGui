@@ -13,7 +13,7 @@ This is not a full featured git tool and is intended for use along with the CLI 
 - Two-view layout: History View and Status View
 - File staging with hunk and line-level control
 - Branch and tag management
-- Cross-platform (Windows, macOS, Linux)
+- Cross-platform (macOS, Linux)
 
 ## Installation
 
@@ -31,8 +31,8 @@ sudo rpm -i yet-another-git-gui-*.rpm
 
 **AppImage (any distro):**
 ```bash
-chmod +x Yet Another Git Gui-*.AppImage
-./Yet Another Git Gui-*.AppImage
+chmod +x "Yet Another Git Gui-*.AppImage"
+./"Yet Another Git Gui-*.AppImage"
 ```
 
 After installing via .deb or .rpm, the `yagg` command is available system-wide:
@@ -52,15 +52,6 @@ After installing the CLI tool:
 ```bash
 yagg                  # Open current directory
 yagg /path/to/repo    # Open specific repository
-```
-
-### Windows
-
-Run the `.msi` installer or `.exe` (NSIS installer) and follow the prompts.
-
-To use from command line, add the install directory to your PATH or run directly:
-```powershell
-& "C:\Program Files\Yet Another Git Gui\Yet Another Git Gui.exe" C:\path\to\repo
 ```
 
 ### From Source
@@ -141,9 +132,6 @@ You only need to do this once — subsequent launches will work normally.
 ```bash
 xattr -cr /Applications/Yet\ Another\ Git\ Gui.app
 ```
-
-### Windows: App won't start
-Make sure WebView2 runtime is installed. Download from [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
 
 ### Build fails with missing dependencies
 Check that you have all [Tauri prerequisites](https://tauri.app/start/prerequisites/) installed for your platform.
