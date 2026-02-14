@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.2.0...v1.2.1) (2026-02-14)
+
+
+### Bug Fixes
+
+* Update for MacOS crash on launch ([b39a939](https://github.com/mywill/YetAnotherGitGui/commit/b39a93971ee7a99bb10eba206b21c7a7ddea33e7))
+
 # [1.2.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.1.3...v1.2.0) (2026-02-14)
 
 
