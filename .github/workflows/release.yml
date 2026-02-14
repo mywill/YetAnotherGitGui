@@ -122,7 +122,19 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri app
+      - name: Check for signing secrets
+        id: check-signing
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ]; then
+            echo "has_signing=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_signing=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Tauri app (with code signing)
+        if: steps.check-signing.outputs.has_signing == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -132,10 +144,12 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm tauri build --target aarch64-apple-darwin
 
+      - name: Build Tauri app (without code signing)
+        if: steps.check-signing.outputs.has_signing != 'true'
+        run: pnpm tauri build --target aarch64-apple-darwin
+
       - name: Ad-hoc sign macOS app
-        if: ${{ !env.APPLE_CERTIFICATE }}
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+        if: steps.check-signing.outputs.has_signing != 'true'
         run: |
           APP_PATH=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
           echo "Signing: $APP_PATH"
