@@ -127,8 +127,20 @@ See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 ### Linux: "No display server" error
 Ensure you're running in a graphical environment. If running via SSH, use X11 forwarding or VNC.
 
-### macOS: "App is damaged" message
-Run `xattr -cr /Applications/Yet\ Another\ Git\ Gui.app` in Terminal.
+### macOS: "Cannot be opened because Apple cannot verify it"
+Since the app is not signed with an Apple Developer certificate, macOS Gatekeeper will block it on first launch. To open the app, use one of these methods:
+
+**Option A — Right-click to open (easiest):**
+1. Right-click (or Control-click) the app in Finder
+2. Select **Open** from the context menu
+3. Click **Open** in the dialog that appears
+
+You only need to do this once — subsequent launches will work normally.
+
+**Option B — Remove the quarantine flag:**
+```bash
+xattr -cr /Applications/Yet\ Another\ Git\ Gui.app
+```
 
 ### Windows: App won't start
 Make sure WebView2 runtime is installed. Download from [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
