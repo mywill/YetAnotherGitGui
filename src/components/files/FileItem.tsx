@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import type { FileStatus, FileStatusType } from "../../types";
-import { ContextMenu } from "../common/ContextMenu";
+import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
+import { copyToClipboard } from "../../services/clipboard";
+import { useRepositoryStore } from "../../stores/repositoryStore";
 import "./FileItem.css";
 
 interface FileItemProps {
@@ -38,6 +40,7 @@ export function FileItem({
   onDelete,
   onRevert,
 }: FileItemProps) {
+  const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const handleClick = useCallback(
@@ -76,7 +79,33 @@ export function FileItem({
   const fileName = file.path.split("/").pop() || file.path;
   const dirPath = file.path.includes("/") ? file.path.substring(0, file.path.lastIndexOf("/")) : "";
 
-  const menuItems = [];
+  const repoPath = repositoryInfo?.path ?? "";
+
+  const menuItems: ContextMenuItem[] = [
+    {
+      label: "Copy",
+      children: [
+        {
+          label: "Relative path",
+          onClick: () => {
+            copyToClipboard(file.path);
+          },
+        },
+        {
+          label: "Absolute path",
+          onClick: () => {
+            copyToClipboard(repoPath ? `${repoPath}/${file.path}` : file.path);
+          },
+        },
+        {
+          label: "File name",
+          onClick: () => {
+            copyToClipboard(fileName);
+          },
+        },
+      ],
+    },
+  ];
   if (onRevert) {
     menuItems.push({
       label: "Revert changes",
@@ -119,7 +148,7 @@ export function FileItem({
         {isUntracked && <span className="untracked-badge">new</span>}
       </div>
 
-      {contextMenu && menuItems.length > 0 && (
+      {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}

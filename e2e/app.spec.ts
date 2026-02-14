@@ -866,6 +866,54 @@ test.describe("File Context Menus", () => {
     await expect(contextMenu).toBeVisible();
     await expect(contextMenu.getByText("Delete file")).toBeVisible();
   });
+
+  test("file context menu shows Copy submenu with path options", async ({
+    page,
+  }) => {
+    const fileItem = page.locator(".file-item").first();
+    await expect(fileItem).toBeVisible({ timeout: 10000 });
+    await fileItem.click({ button: "right" });
+
+    const contextMenu = page.locator(".context-menu");
+    await expect(contextMenu).toBeVisible();
+
+    // Copy item should be visible
+    const copyItem = contextMenu.locator(".context-menu-item.has-submenu", { hasText: "Copy" });
+    await expect(copyItem).toBeVisible();
+
+    // Hover to open submenu
+    await copyItem.hover();
+
+    // Submenu options should appear
+    const submenu = copyItem.locator(".context-submenu");
+    await expect(submenu).toBeVisible();
+    await expect(submenu.getByText("Relative path")).toBeVisible();
+    await expect(submenu.getByText("Absolute path")).toBeVisible();
+    await expect(submenu.getByText("File name")).toBeVisible();
+  });
+
+  test("clicking Copy submenu item closes the context menu", async ({
+    page,
+  }) => {
+    const fileItem = page.locator(".file-item").first();
+    await expect(fileItem).toBeVisible({ timeout: 10000 });
+    await fileItem.click({ button: "right" });
+
+    const contextMenu = page.locator(".context-menu");
+    await expect(contextMenu).toBeVisible();
+
+    const copyItem = contextMenu.locator(".context-menu-item.has-submenu", { hasText: "Copy" });
+    await copyItem.hover();
+
+    const submenu = copyItem.locator(".context-submenu");
+    await expect(submenu).toBeVisible();
+
+    // Click "File name" in submenu
+    await submenu.getByText("File name").click();
+
+    // Context menu should close
+    await expect(contextMenu).not.toBeVisible();
+  });
 });
 
 test.describe("Commit Details", () => {

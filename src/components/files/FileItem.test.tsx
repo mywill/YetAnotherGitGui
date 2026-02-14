@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FileItem } from "./FileItem";
 import type { FileStatus } from "../../types";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { copyToClipboard } from "../../services/clipboard";
+
+vi.mock("../../services/clipboard", () => ({
+  copyToClipboard: vi.fn(),
+}));
+
+vi.mock("../../stores/repositoryStore", () => ({
+  useRepositoryStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ repositoryInfo: { path: "/mock/repo/path" } })
+  ),
+}));
 
 describe("FileItem", () => {
   const mockOnToggleStage = vi.fn();
@@ -12,6 +24,10 @@ describe("FileItem", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useRepositoryStore).mockImplementation(
+      (selector: (state: Record<string, unknown>) => unknown) =>
+        selector({ repositoryInfo: { path: "/mock/repo/path" } })
+    );
   });
 
   const defaultFile: FileStatus = {
@@ -181,7 +197,7 @@ describe("FileItem", () => {
     expect(mockOnDelete).toHaveBeenCalledTimes(1);
   });
 
-  it("does not show context menu when no revert/delete handlers", () => {
+  it("shows Copy submenu but no revert/delete when no handlers provided", () => {
     render(
       <FileItem
         file={defaultFile}
@@ -194,6 +210,9 @@ describe("FileItem", () => {
     const fileItem = screen.getByText("test.tsx").closest(".file-item");
     fireEvent.contextMenu(fileItem!);
 
+    // Copy submenu should always be present
+    expect(screen.getByText("Copy")).toBeInTheDocument();
+    // But no revert/delete
     expect(screen.queryByText("Revert changes")).not.toBeInTheDocument();
     expect(screen.queryByText("Delete file")).not.toBeInTheDocument();
   });
@@ -217,5 +236,69 @@ describe("FileItem", () => {
 
     const fileItem = screen.getByText("test.tsx").closest(".file-item");
     expect(fileItem).toHaveClass("staged");
+  });
+
+  describe("Copy submenu", () => {
+    it("shows Copy item in context menu", () => {
+      renderFileItem();
+
+      const fileItem = screen.getByText("test.tsx").closest(".file-item");
+      fireEvent.contextMenu(fileItem!);
+
+      expect(screen.getByText("Copy")).toBeInTheDocument();
+    });
+
+    it("shows submenu children on hover", () => {
+      renderFileItem();
+
+      const fileItem = screen.getByText("test.tsx").closest(".file-item");
+      fireEvent.contextMenu(fileItem!);
+
+      const copyItem = screen.getByText("Copy").closest(".context-menu-item");
+      fireEvent.mouseEnter(copyItem!);
+
+      expect(screen.getByText("Relative path")).toBeInTheDocument();
+      expect(screen.getByText("Absolute path")).toBeInTheDocument();
+      expect(screen.getByText("File name")).toBeInTheDocument();
+    });
+
+    it("copies relative path when 'Relative path' is clicked", () => {
+      renderFileItem();
+
+      const fileItem = screen.getByText("test.tsx").closest(".file-item");
+      fireEvent.contextMenu(fileItem!);
+
+      const copyItem = screen.getByText("Copy").closest(".context-menu-item");
+      fireEvent.mouseEnter(copyItem!);
+      fireEvent.click(screen.getByText("Relative path"));
+
+      expect(copyToClipboard).toHaveBeenCalledWith("src/components/test.tsx");
+    });
+
+    it("copies absolute path when 'Absolute path' is clicked", () => {
+      renderFileItem();
+
+      const fileItem = screen.getByText("test.tsx").closest(".file-item");
+      fireEvent.contextMenu(fileItem!);
+
+      const copyItem = screen.getByText("Copy").closest(".context-menu-item");
+      fireEvent.mouseEnter(copyItem!);
+      fireEvent.click(screen.getByText("Absolute path"));
+
+      expect(copyToClipboard).toHaveBeenCalledWith("/mock/repo/path/src/components/test.tsx");
+    });
+
+    it("copies file name when 'File name' is clicked", () => {
+      renderFileItem();
+
+      const fileItem = screen.getByText("test.tsx").closest(".file-item");
+      fireEvent.contextMenu(fileItem!);
+
+      const copyItem = screen.getByText("Copy").closest(".context-menu-item");
+      fireEvent.mouseEnter(copyItem!);
+      fireEvent.click(screen.getByText("File name"));
+
+      expect(copyToClipboard).toHaveBeenCalledWith("test.tsx");
+    });
   });
 });

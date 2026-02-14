@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./ContextMenu.css";
 
-interface ContextMenuItem {
+export interface ContextMenuItem {
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
+  children?: ContextMenuItem[];
 }
 
 interface ContextMenuProps {
@@ -13,6 +14,56 @@ interface ContextMenuProps {
   y: number;
   items: ContextMenuItem[];
   onClose: () => void;
+}
+
+function ContextMenuItemComponent({
+  item,
+  onClose,
+}: {
+  item: ContextMenuItem;
+  onClose: () => void;
+}) {
+  const [submenuOpen, setSubmenuOpen] = useState(false);
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  const hasChildren = item.children && item.children.length > 0;
+
+  return (
+    <div
+      ref={itemRef}
+      className={`context-menu-item ${item.disabled ? "disabled" : ""} ${hasChildren ? "has-submenu" : ""}`}
+      onClick={() => {
+        if (!item.disabled && !hasChildren && item.onClick) {
+          item.onClick();
+          onClose();
+        }
+      }}
+      onMouseEnter={() => hasChildren && setSubmenuOpen(true)}
+      onMouseLeave={() => hasChildren && setSubmenuOpen(false)}
+    >
+      <span>{item.label}</span>
+      {hasChildren && <span className="submenu-arrow">&#9656;</span>}
+      {hasChildren && submenuOpen && (
+        <div className="context-submenu">
+          {item.children!.map((child, idx) => (
+            <div
+              key={idx}
+              className={`context-menu-item ${child.disabled ? "disabled" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!child.disabled && child.onClick) {
+                  child.onClick();
+                  onClose();
+                }
+              }}
+            >
+              {child.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
@@ -59,18 +110,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const menu = (
     <div ref={menuRef} className="context-menu" style={{ left: x, top: y }}>
       {items.map((item, index) => (
-        <div
-          key={index}
-          className={`context-menu-item ${item.disabled ? "disabled" : ""}`}
-          onClick={() => {
-            if (!item.disabled) {
-              item.onClick();
-              onClose();
-            }
-          }}
-        >
-          {item.label}
-        </div>
+        <ContextMenuItemComponent key={index} item={item} onClose={onClose} />
       ))}
     </div>
   );

@@ -87,7 +87,7 @@ describe("ContextMenu", () => {
       items: [{ label: "Disabled Item", onClick: mockItemClick, disabled: true }],
     });
 
-    const item = screen.getByText("Disabled Item");
+    const item = screen.getByText("Disabled Item").closest(".context-menu-item");
     expect(item).toHaveClass("disabled");
   });
 
@@ -143,5 +143,90 @@ describe("ContextMenu", () => {
     expect(removeEventListenerSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
 
     removeEventListenerSpy.mockRestore();
+  });
+
+  describe("Submenu", () => {
+    const submenuItems = [
+      {
+        label: "Parent",
+        children: [
+          { label: "Child 1", onClick: vi.fn() },
+          { label: "Child 2", onClick: vi.fn() },
+        ],
+      },
+      { label: "Regular", onClick: vi.fn() },
+    ];
+
+    it("renders arrow indicator for items with children", () => {
+      renderContextMenu({ items: submenuItems });
+
+      const parentItem = screen.getByText("Parent").closest(".context-menu-item");
+      expect(parentItem).toHaveClass("has-submenu");
+    });
+
+    it("does not show submenu children initially", () => {
+      renderContextMenu({ items: submenuItems });
+
+      expect(screen.queryByText("Child 1")).not.toBeInTheDocument();
+      expect(screen.queryByText("Child 2")).not.toBeInTheDocument();
+    });
+
+    it("shows submenu on hover", () => {
+      renderContextMenu({ items: submenuItems });
+
+      const parentItem = screen.getByText("Parent").closest(".context-menu-item");
+      fireEvent.mouseEnter(parentItem!);
+
+      expect(screen.getByText("Child 1")).toBeInTheDocument();
+      expect(screen.getByText("Child 2")).toBeInTheDocument();
+    });
+
+    it("hides submenu on mouse leave", () => {
+      renderContextMenu({ items: submenuItems });
+
+      const parentItem = screen.getByText("Parent").closest(".context-menu-item");
+      fireEvent.mouseEnter(parentItem!);
+      expect(screen.getByText("Child 1")).toBeInTheDocument();
+
+      fireEvent.mouseLeave(parentItem!);
+      expect(screen.queryByText("Child 1")).not.toBeInTheDocument();
+    });
+
+    it("calls child onClick and onClose when submenu item is clicked", () => {
+      const childHandler = vi.fn();
+      const items = [
+        {
+          label: "Parent",
+          children: [{ label: "Child Action", onClick: childHandler }],
+        },
+      ];
+      renderContextMenu({ items });
+
+      const parentItem = screen.getByText("Parent").closest(".context-menu-item");
+      fireEvent.mouseEnter(parentItem!);
+      fireEvent.click(screen.getByText("Child Action"));
+
+      expect(childHandler).toHaveBeenCalledTimes(1);
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onClose when clicking parent item with children", () => {
+      renderContextMenu({ items: submenuItems });
+
+      const parentItem = screen.getByText("Parent").closest(".context-menu-item");
+      fireEvent.click(parentItem!);
+
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it("renders submenu inside a .context-submenu container", () => {
+      renderContextMenu({ items: submenuItems });
+
+      const parentItem = screen.getByText("Parent").closest(".context-menu-item");
+      fireEvent.mouseEnter(parentItem!);
+
+      const submenu = screen.getByText("Child 1").closest(".context-submenu");
+      expect(submenu).toBeInTheDocument();
+    });
   });
 });
