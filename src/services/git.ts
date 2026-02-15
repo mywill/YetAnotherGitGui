@@ -79,6 +79,14 @@ export async function stageLines(
   return invoke("stage_lines", { path, hunkIndex, lineIndices });
 }
 
+export async function discardHunk(
+  path: string,
+  hunkIndex: number,
+  lineIndices?: number[]
+): Promise<void> {
+  return invoke("discard_hunk", { path, hunkIndex, lineIndices: lineIndices ?? null });
+}
+
 export async function getFileDiff(
   path: string,
   staged: boolean,

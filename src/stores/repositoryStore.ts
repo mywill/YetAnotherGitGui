@@ -64,6 +64,8 @@ interface RepositoryState {
   stageHunk: (path: string, hunkIndex: number) => Promise<void>;
   unstageHunk: (path: string, hunkIndex: number) => Promise<void>;
   stageLines: (path: string, hunkIndex: number, lineIndices: number[]) => Promise<void>;
+  discardHunk: (path: string, hunkIndex: number) => Promise<void>;
+  discardLines: (path: string, hunkIndex: number, lineIndices: number[]) => Promise<void>;
   createCommit: (message: string) => Promise<void>;
   checkoutCommit: (hash: string) => Promise<void>;
   revertFile: (path: string) => Promise<void>;
@@ -297,6 +299,26 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   stageLines: async (path: string, hunkIndex: number, lineIndices: number[]) => {
     try {
       await git.stageLines(path, hunkIndex, lineIndices);
+      await get().loadFileStatuses();
+      await get().loadFileDiff(path, false);
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  discardHunk: async (path: string, hunkIndex: number) => {
+    try {
+      await git.discardHunk(path, hunkIndex);
+      await get().loadFileStatuses();
+      await get().loadFileDiff(path, false);
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  discardLines: async (path: string, hunkIndex: number, lineIndices: number[]) => {
+    try {
+      await git.discardHunk(path, hunkIndex, lineIndices);
       await get().loadFileStatuses();
       await get().loadFileDiff(path, false);
     } catch (err) {

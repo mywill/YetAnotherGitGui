@@ -2,6 +2,7 @@ import type { FileDiff } from "../../types";
 import { DiffHunk } from "./DiffHunk";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import "./DiffViewPanel.css";
 
 interface DiffViewPanelProps {
@@ -14,8 +15,11 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   const stageHunk = useRepositoryStore((s) => s.stageHunk);
   const unstageHunk = useRepositoryStore((s) => s.unstageHunk);
   const stageLines = useRepositoryStore((s) => s.stageLines);
+  const discardHunk = useRepositoryStore((s) => s.discardHunk);
+  const discardLines = useRepositoryStore((s) => s.discardLines);
   const currentDiffPath = useRepositoryStore((s) => s.currentDiffPath);
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
+  const showConfirm = useDialogStore((s) => s.showConfirm);
 
   // Count selected files
   const selectedCount = selectedFilePaths.size;
@@ -77,6 +81,31 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
     await stageLines(currentDiffPath, hunkIndex, lineIndices);
   };
 
+  const handleDiscardHunk = async (hunkIndex: number) => {
+    if (!currentDiffPath) return;
+    const confirmed = await showConfirm({
+      title: "Discard hunk?",
+      message: "This will permanently revert the changes in this hunk. This cannot be undone.",
+      confirmLabel: "Discard",
+    });
+    if (confirmed) {
+      await discardHunk(currentDiffPath, hunkIndex);
+    }
+  };
+
+  const handleDiscardLines = async (hunkIndex: number, lineIndices: number[]) => {
+    if (!currentDiffPath) return;
+    const count = lineIndices.length;
+    const confirmed = await showConfirm({
+      title: `Discard ${count} line${count > 1 ? "s" : ""}?`,
+      message: "This will permanently revert the selected changes. This cannot be undone.",
+      confirmLabel: "Discard",
+    });
+    if (confirmed) {
+      await discardLines(currentDiffPath, hunkIndex, lineIndices);
+    }
+  };
+
   return (
     <div className="diff-view-panel">
       <div className="diff-header">
@@ -92,6 +121,10 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
             onStageLines={(lineIndices) => handleStageLines(index, lineIndices)}
             actionLabel={staged ? "Unstage hunk" : "Stage hunk"}
             canSelectLines={!staged}
+            onDiscardHunk={!staged ? () => handleDiscardHunk(index) : undefined}
+            onDiscardLines={
+              !staged ? (lineIndices) => handleDiscardLines(index, lineIndices) : undefined
+            }
           />
         ))}
       </div>

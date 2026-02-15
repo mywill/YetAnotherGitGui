@@ -240,7 +240,7 @@ pub fn unstage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<
 
     // Reverse apply the hunk
     let hunk = &diff.hunks[hunk_index];
-    let new_content = reverse_apply_hunk(&index_content, hunk)?;
+    let new_content = reverse_apply_hunk(&index_content, hunk, None)?;
 
     // Write back to index
     let oid = repo.blob(new_content.as_bytes())?;
@@ -310,7 +310,11 @@ fn apply_hunk_to_content(content: &str, hunk: &super::diff::DiffHunk) -> Result<
     Ok(result.join("\n") + if content.ends_with('\n') { "\n" } else { "" })
 }
 
-fn reverse_apply_hunk(content: &str, hunk: &super::diff::DiffHunk) -> Result<String, AppError> {
+fn reverse_apply_hunk(
+    content: &str,
+    hunk: &super::diff::DiffHunk,
+    selected_indices: Option<&[usize]>,
+) -> Result<String, AppError> {
     let lines: Vec<&str> = content.lines().collect();
     let mut result = Vec::new();
 
@@ -325,7 +329,11 @@ fn reverse_apply_hunk(content: &str, hunk: &super::diff::DiffHunk) -> Result<Str
     // Reverse apply - deletions become additions, additions become deletions
     // Context and addition lines exist in content (new version)
     // Deletion lines don't exist in content, they need to be restored from hunk
-    for line in &hunk.lines {
+    for (idx, line) in hunk.lines.iter().enumerate() {
+        let is_selected = selected_indices
+            .map(|indices| indices.contains(&idx))
+            .unwrap_or(true);
+
         match line.line_type {
             super::diff::LineType::Context => {
                 // Context: exists in both, use content and advance
@@ -335,14 +343,25 @@ fn reverse_apply_hunk(content: &str, hunk: &super::diff::DiffHunk) -> Result<Str
                 }
             }
             super::diff::LineType::Deletion => {
-                // Deletion was removed in forward apply, restore it from hunk
+                // Deletion was removed in forward apply
+                if is_selected {
+                    // Restore it from hunk data
+                    result.push(line.content.trim_end_matches('\n').to_string());
+                }
                 // This line doesn't exist in content, so don't advance content_pos
-                result.push(line.content.trim_end_matches('\n').to_string());
             }
             super::diff::LineType::Addition => {
-                // Addition was added in forward apply, skip it (remove)
-                // This line exists in content, advance past it
-                content_pos += 1;
+                // Addition was added in forward apply
+                if is_selected {
+                    // Skip it (remove from output)
+                    content_pos += 1;
+                } else {
+                    // Keep it in output
+                    if content_pos < lines.len() {
+                        result.push(lines[content_pos].to_string());
+                        content_pos += 1;
+                    }
+                }
             }
             super::diff::LineType::Header => {}
         }
@@ -354,6 +373,39 @@ fn reverse_apply_hunk(content: &str, hunk: &super::diff::DiffHunk) -> Result<Str
     }
 
     Ok(result.join("\n") + if content.ends_with('\n') { "\n" } else { "" })
+}
+
+pub fn discard_hunk(
+    repo: &Repository,
+    path: &str,
+    hunk_index: usize,
+    line_indices: Option<Vec<usize>>,
+) -> Result<(), AppError> {
+    // Get the unstaged diff
+    let diff = super::diff::get_file_diff(repo, path, false)?;
+
+    if hunk_index >= diff.hunks.len() {
+        return Err(AppError::InvalidPath(format!(
+            "Hunk index {} out of range",
+            hunk_index
+        )));
+    }
+
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| AppError::InvalidPath("No working directory".into()))?;
+    let file_path = workdir.join(path);
+
+    let content = std::fs::read_to_string(&file_path)
+        .map_err(|e| AppError::InvalidPath(format!("Failed to read file: {}", e)))?;
+
+    let hunk = &diff.hunks[hunk_index];
+    let new_content = reverse_apply_hunk(&content, hunk, line_indices.as_deref())?;
+
+    std::fs::write(&file_path, &new_content)
+        .map_err(|e| AppError::InvalidPath(format!("Failed to write file: {}", e)))?;
+
+    Ok(())
 }
 
 pub fn stage_lines(
@@ -1003,7 +1055,7 @@ mod tests {
             ],
         };
 
-        let result = reverse_apply_hunk(content, &hunk).unwrap();
+        let result = reverse_apply_hunk(content, &hunk, None).unwrap();
         assert!(result.contains("line2"));
         assert!(!result.contains("modified2"));
     }
@@ -1366,5 +1418,311 @@ mod tests {
         // Should preserve absence of trailing newline
         assert_eq!(result, "line1\ninserted\nline2");
         assert!(!result.ends_with('\n'));
+    }
+
+    #[test]
+    fn test_reverse_apply_hunk_selected_addition() {
+        use super::super::diff::{DiffHunk, DiffLine, LineType};
+
+        // Working dir content has an added line
+        let content = "line1\nnewline\nline2\n";
+        let hunk = DiffHunk {
+            header: "@@ -1,2 +1,3 @@".to_string(),
+            old_start: 1,
+            old_lines: 2,
+            new_start: 1,
+            new_lines: 3,
+            lines: vec![
+                DiffLine {
+                    content: "line1\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(1),
+                    new_lineno: Some(1),
+                },
+                DiffLine {
+                    content: "newline\n".to_string(),
+                    line_type: LineType::Addition,
+                    old_lineno: None,
+                    new_lineno: Some(2),
+                },
+                DiffLine {
+                    content: "line2\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(2),
+                    new_lineno: Some(3),
+                },
+            ],
+        };
+
+        // Discard just the addition (index 1)
+        let result = reverse_apply_hunk(content, &hunk, Some(&[1])).unwrap();
+        assert_eq!(result, "line1\nline2\n");
+    }
+
+    #[test]
+    fn test_reverse_apply_hunk_selected_deletion() {
+        use super::super::diff::{DiffHunk, DiffLine, LineType};
+
+        // Working dir content is missing a deleted line
+        let content = "line1\nline3\n";
+        let hunk = DiffHunk {
+            header: "@@ -1,3 +1,2 @@".to_string(),
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 2,
+            lines: vec![
+                DiffLine {
+                    content: "line1\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(1),
+                    new_lineno: Some(1),
+                },
+                DiffLine {
+                    content: "line2\n".to_string(),
+                    line_type: LineType::Deletion,
+                    old_lineno: Some(2),
+                    new_lineno: None,
+                },
+                DiffLine {
+                    content: "line3\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(3),
+                    new_lineno: Some(2),
+                },
+            ],
+        };
+
+        // Discard the deletion (restore line2)
+        let result = reverse_apply_hunk(content, &hunk, Some(&[1])).unwrap();
+        assert_eq!(result, "line1\nline2\nline3\n");
+    }
+
+    #[test]
+    fn test_reverse_apply_hunk_partial_selection() {
+        use super::super::diff::{DiffHunk, DiffLine, LineType};
+
+        // Working dir: line1, new1, new2, line2
+        let content = "line1\nnew1\nnew2\nline2\n";
+        let hunk = DiffHunk {
+            header: "@@ -1,2 +1,4 @@".to_string(),
+            old_start: 1,
+            old_lines: 2,
+            new_start: 1,
+            new_lines: 4,
+            lines: vec![
+                DiffLine {
+                    content: "line1\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(1),
+                    new_lineno: Some(1),
+                },
+                DiffLine {
+                    content: "new1\n".to_string(),
+                    line_type: LineType::Addition,
+                    old_lineno: None,
+                    new_lineno: Some(2),
+                },
+                DiffLine {
+                    content: "new2\n".to_string(),
+                    line_type: LineType::Addition,
+                    old_lineno: None,
+                    new_lineno: Some(3),
+                },
+                DiffLine {
+                    content: "line2\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(2),
+                    new_lineno: Some(4),
+                },
+            ],
+        };
+
+        // Discard only new1 (index 1), keep new2 (index 2)
+        let result = reverse_apply_hunk(content, &hunk, Some(&[1])).unwrap();
+        assert_eq!(result, "line1\nnew2\nline2\n");
+    }
+
+    #[test]
+    fn test_reverse_apply_hunk_mixed_selection() {
+        use super::super::diff::{DiffHunk, DiffLine, LineType};
+
+        // Working dir: line1, new2, line3 (old2 was deleted, new2 was added)
+        let content = "line1\nnew2\nline3\n";
+        let hunk = DiffHunk {
+            header: "@@ -1,3 +1,3 @@".to_string(),
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 3,
+            lines: vec![
+                DiffLine {
+                    content: "line1\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(1),
+                    new_lineno: Some(1),
+                },
+                DiffLine {
+                    content: "old2\n".to_string(),
+                    line_type: LineType::Deletion,
+                    old_lineno: Some(2),
+                    new_lineno: None,
+                },
+                DiffLine {
+                    content: "new2\n".to_string(),
+                    line_type: LineType::Addition,
+                    old_lineno: None,
+                    new_lineno: Some(2),
+                },
+                DiffLine {
+                    content: "line3\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(3),
+                    new_lineno: Some(3),
+                },
+            ],
+        };
+
+        // Discard both (revert the whole change)
+        let result = reverse_apply_hunk(content, &hunk, Some(&[1, 2])).unwrap();
+        assert_eq!(result, "line1\nold2\nline3\n");
+    }
+
+    #[test]
+    fn test_reverse_apply_hunk_no_trailing_newline() {
+        use super::super::diff::{DiffHunk, DiffLine, LineType};
+
+        let content = "line1\nadded";
+        let hunk = DiffHunk {
+            header: "@@ -1,1 +1,2 @@".to_string(),
+            old_start: 1,
+            old_lines: 1,
+            new_start: 1,
+            new_lines: 2,
+            lines: vec![
+                DiffLine {
+                    content: "line1\n".to_string(),
+                    line_type: LineType::Context,
+                    old_lineno: Some(1),
+                    new_lineno: Some(1),
+                },
+                DiffLine {
+                    content: "added".to_string(),
+                    line_type: LineType::Addition,
+                    old_lineno: None,
+                    new_lineno: Some(2),
+                },
+            ],
+        };
+
+        let result = reverse_apply_hunk(content, &hunk, Some(&[1])).unwrap();
+        assert_eq!(result, "line1");
+        assert!(!result.ends_with('\n'));
+    }
+
+    #[test]
+    fn test_discard_hunk_whole_hunk() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        // Create and commit a file
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(&file_path, "line1\nline2\nline3\n").unwrap();
+        stage_file(&repo, "file.txt").unwrap();
+
+        let sig = repo.signature().unwrap();
+        let mut index = repo.index().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "Add file", &tree, &[&parent])
+            .unwrap();
+
+        // Modify the file
+        fs::write(&file_path, "modified1\nline2\nline3\n").unwrap();
+
+        // Discard the whole hunk
+        let result = discard_hunk(&repo, "file.txt", 0, None);
+        assert!(result.is_ok());
+
+        // File should be reverted
+        let content = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(content, "line1\nline2\nline3\n");
+    }
+
+    #[test]
+    fn test_discard_hunk_selected_lines() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        // Create and commit a file
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(&file_path, "line1\nline2\nline3\n").unwrap();
+        stage_file(&repo, "file.txt").unwrap();
+
+        let sig = repo.signature().unwrap();
+        let mut index = repo.index().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "Add file", &tree, &[&parent])
+            .unwrap();
+
+        // Modify the file: change line1 and line2
+        fs::write(&file_path, "modified1\nmodified2\nline3\n").unwrap();
+
+        // Get the diff to find line indices
+        let diff = super::super::diff::get_file_diff(&repo, "file.txt", false).unwrap();
+        assert!(!diff.hunks.is_empty());
+
+        // Find the index of the first deletion line
+        let first_deletion_idx = diff.hunks[0]
+            .lines
+            .iter()
+            .position(|l| l.line_type == super::super::diff::LineType::Deletion)
+            .unwrap();
+        // Find the index of the first addition line
+        let first_addition_idx = diff.hunks[0]
+            .lines
+            .iter()
+            .position(|l| l.line_type == super::super::diff::LineType::Addition)
+            .unwrap();
+
+        // Discard only the first deletion/addition pair
+        let result = discard_hunk(
+            &repo,
+            "file.txt",
+            0,
+            Some(vec![first_deletion_idx, first_addition_idx]),
+        );
+        assert!(result.is_ok());
+
+        // line1 should be restored, modified2 should remain
+        let content = fs::read_to_string(&file_path).unwrap();
+        assert!(content.contains("line1"));
+        assert!(content.contains("modified2"));
+    }
+
+    #[test]
+    fn test_discard_hunk_out_of_range() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(&file_path, "content\n").unwrap();
+        stage_file(&repo, "file.txt").unwrap();
+
+        let sig = repo.signature().unwrap();
+        let mut index = repo.index().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "Add file", &tree, &[&parent])
+            .unwrap();
+
+        fs::write(&file_path, "modified\n").unwrap();
+
+        let result = discard_hunk(&repo, "file.txt", 5, None);
+        assert!(result.is_err());
     }
 }

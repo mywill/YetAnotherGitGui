@@ -31,6 +31,7 @@ pub fn run() {
             commands::stage_hunk,
             commands::unstage_hunk,
             commands::stage_lines,
+            commands::discard_hunk,
             commands::get_file_diff,
             commands::create_commit,
             commands::revert_file,

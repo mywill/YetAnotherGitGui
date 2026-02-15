@@ -1197,6 +1197,70 @@ describe("repositoryStore", () => {
     });
   });
 
+  describe("discardHunk", () => {
+    it("calls git.discardHunk and refreshes statuses and diff", async () => {
+      vi.mocked(git.discardHunk).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+      vi.mocked(git.getFileDiff).mockResolvedValue({
+        path: "test.ts",
+        hunks: [],
+        is_binary: false,
+      });
+
+      const { discardHunk } = useRepositoryStore.getState();
+      await discardHunk("test.ts", 0);
+
+      expect(git.discardHunk).toHaveBeenCalledWith("test.ts", 0);
+      expect(git.getFileStatuses).toHaveBeenCalled();
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+    });
+
+    it("sets error state on failure", async () => {
+      vi.mocked(git.discardHunk).mockRejectedValue(new Error("Discard failed"));
+
+      const { discardHunk } = useRepositoryStore.getState();
+      await discardHunk("test.ts", 0);
+
+      expect(useRepositoryStore.getState().error).toBe("Error: Discard failed");
+    });
+  });
+
+  describe("discardLines", () => {
+    it("calls git.discardHunk with lineIndices and refreshes statuses and diff", async () => {
+      vi.mocked(git.discardHunk).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+      vi.mocked(git.getFileDiff).mockResolvedValue({
+        path: "test.ts",
+        hunks: [],
+        is_binary: false,
+      });
+
+      const { discardLines } = useRepositoryStore.getState();
+      await discardLines("test.ts", 0, [1, 2]);
+
+      expect(git.discardHunk).toHaveBeenCalledWith("test.ts", 0, [1, 2]);
+      expect(git.getFileStatuses).toHaveBeenCalled();
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+    });
+
+    it("sets error state on failure", async () => {
+      vi.mocked(git.discardHunk).mockRejectedValue(new Error("Discard lines failed"));
+
+      const { discardLines } = useRepositoryStore.getState();
+      await discardLines("test.ts", 0, [1]);
+
+      expect(useRepositoryStore.getState().error).toBe("Error: Discard lines failed");
+    });
+  });
+
   describe("checkoutCommit", () => {
     it("calls git.checkoutCommit and refreshes repository", async () => {
       useRepositoryStore.setState({

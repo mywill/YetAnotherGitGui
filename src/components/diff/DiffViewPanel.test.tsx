@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { DiffViewPanel } from "./DiffViewPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import type { FileDiff } from "../../types";
 
 vi.mock("../../stores/repositoryStore", () => ({
@@ -13,10 +14,34 @@ vi.mock("../../stores/selectionStore", () => ({
   useSelectionStore: vi.fn(),
 }));
 
+vi.mock("../../stores/dialogStore", () => ({
+  useDialogStore: vi.fn(),
+}));
+
 vi.mock("./DiffHunk", () => ({
-  DiffHunk: ({ onAction, actionLabel }: { onAction: () => void; actionLabel: string }) => (
+  DiffHunk: ({
+    onAction,
+    actionLabel,
+    onDiscardHunk,
+    onDiscardLines,
+  }: {
+    onAction: () => void;
+    actionLabel: string;
+    onDiscardHunk?: () => void;
+    onDiscardLines?: (lineIndices: number[]) => void;
+  }) => (
     <div data-testid="diff-hunk">
       <button onClick={onAction}>{actionLabel}</button>
+      {onDiscardHunk && (
+        <button data-testid="discard-hunk-btn" onClick={onDiscardHunk}>
+          Discard hunk
+        </button>
+      )}
+      {onDiscardLines && (
+        <button data-testid="discard-lines-btn" onClick={() => onDiscardLines([1, 2])}>
+          Discard lines
+        </button>
+      )}
     </div>
   ),
 }));
@@ -25,6 +50,9 @@ describe("DiffViewPanel", () => {
   const mockStageHunk = vi.fn();
   const mockUnstageHunk = vi.fn();
   const mockStageLines = vi.fn();
+  const mockDiscardHunk = vi.fn();
+  const mockDiscardLines = vi.fn();
+  const mockShowConfirm = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,6 +64,8 @@ describe("DiffViewPanel", () => {
           stageHunk: mockStageHunk,
           unstageHunk: mockUnstageHunk,
           stageLines: mockStageLines,
+          discardHunk: mockDiscardHunk,
+          discardLines: mockDiscardLines,
           currentDiffPath: "test.txt",
         };
         return selector(state);
@@ -48,6 +78,16 @@ describe("DiffViewPanel", () => {
       (selector: any) => {
         const state = {
           selectedFilePaths: new Set(),
+        };
+        return selector(state);
+      }
+    );
+
+    vi.mocked(useDialogStore).mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (selector: any) => {
+        const state = {
+          showConfirm: mockShowConfirm,
         };
         return selector(state);
       }
@@ -238,6 +278,106 @@ describe("DiffViewPanel", () => {
     expect(container.querySelector(".diff-view-panel")).toBeInTheDocument();
     expect(container.querySelector(".diff-header")).toBeInTheDocument();
     expect(container.querySelector(".diff-content")).toBeInTheDocument();
+  });
+
+  describe("discard buttons", () => {
+    const diff: FileDiff = {
+      path: "test.txt",
+      hunks: [
+        {
+          header: "@@ -1,1 +1,1 @@",
+          old_start: 1,
+          old_lines: 1,
+          new_start: 1,
+          new_lines: 1,
+          lines: [],
+        },
+      ],
+      is_binary: false,
+    };
+
+    it("passes discard props for unstaged diffs", () => {
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      expect(screen.getByTestId("discard-hunk-btn")).toBeInTheDocument();
+      expect(screen.getByTestId("discard-lines-btn")).toBeInTheDocument();
+    });
+
+    it("does not pass discard props for staged diffs", () => {
+      render(<DiffViewPanel diff={diff} loading={false} staged={true} />);
+
+      expect(screen.queryByTestId("discard-hunk-btn")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("discard-lines-btn")).not.toBeInTheDocument();
+    });
+
+    it("shows confirmation dialog before discarding hunk", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByTestId("discard-hunk-btn"));
+
+      expect(mockShowConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Discard hunk?",
+          confirmLabel: "Discard",
+        })
+      );
+    });
+
+    it("calls discardHunk after confirmation", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByTestId("discard-hunk-btn"));
+
+      // Wait for async confirmation
+      await vi.waitFor(() => {
+        expect(mockDiscardHunk).toHaveBeenCalledWith("test.txt", 0);
+      });
+    });
+
+    it("does not call discardHunk when confirmation is cancelled", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByTestId("discard-hunk-btn"));
+
+      await vi.waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalled();
+      });
+
+      expect(mockDiscardHunk).not.toHaveBeenCalled();
+    });
+
+    it("shows confirmation dialog before discarding lines", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByTestId("discard-lines-btn"));
+
+      expect(mockShowConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Discard 2 lines?",
+          confirmLabel: "Discard",
+        })
+      );
+    });
+
+    it("calls discardLines after confirmation", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByTestId("discard-lines-btn"));
+
+      await vi.waitFor(() => {
+        expect(mockDiscardLines).toHaveBeenCalledWith("test.txt", 0, [1, 2]);
+      });
+    });
   });
 
   describe("multi-file selection", () => {

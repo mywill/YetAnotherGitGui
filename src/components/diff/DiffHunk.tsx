@@ -8,6 +8,8 @@ interface DiffHunkProps {
   onStageLines?: (lineIndices: number[]) => void;
   actionLabel: string;
   canSelectLines: boolean;
+  onDiscardHunk?: () => void;
+  onDiscardLines?: (lineIndices: number[]) => void;
 }
 
 export function DiffHunk({
@@ -16,6 +18,8 @@ export function DiffHunk({
   onStageLines,
   actionLabel,
   canSelectLines,
+  onDiscardHunk,
+  onDiscardLines,
 }: DiffHunkProps) {
   const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
@@ -101,6 +105,14 @@ export function DiffHunk({
     }
   }, [onStageLines, selectedLines]);
 
+  const handleDiscardSelected = useCallback(() => {
+    if (onDiscardLines && selectedLines.size > 0) {
+      onDiscardLines(Array.from(selectedLines));
+      setSelectedLines(new Set());
+      lastClickedRef.current = null;
+    }
+  }, [onDiscardLines, selectedLines]);
+
   const clearSelection = useCallback(() => {
     setSelectedLines(new Set());
     lastClickedRef.current = null;
@@ -121,18 +133,28 @@ export function DiffHunk({
         <span className="hunk-info">{hunkInfo.trim()}</span>
         <div className="hunk-actions">
           {selectedLines.size > 0 && canSelectLines && (
-            <>
-              <button className="hunk-action" onClick={handleStageSelected}>
-                Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
-              </button>
-              <button className="hunk-action secondary" onClick={clearSelection}>
-                Clear
-              </button>
-            </>
+            <button className="hunk-action" onClick={handleStageSelected}>
+              Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
+            </button>
           )}
           <button className="hunk-action" onClick={onAction}>
             {actionLabel}
           </button>
+          {selectedLines.size > 0 && canSelectLines && onDiscardLines && (
+            <button className="hunk-action" onClick={handleDiscardSelected}>
+              Discard {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
+            </button>
+          )}
+          {onDiscardHunk && (
+            <button className="hunk-action" onClick={onDiscardHunk}>
+              Discard hunk
+            </button>
+          )}
+          {selectedLines.size > 0 && canSelectLines && (
+            <button className="hunk-action secondary" onClick={clearSelection}>
+              Clear
+            </button>
+          )}
         </div>
       </div>
       <div className="hunk-lines">

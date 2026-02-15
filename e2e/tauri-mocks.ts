@@ -114,6 +114,7 @@ export const tauriMocks = `
         case 'stage_hunk':
         case 'unstage_hunk':
         case 'stage_lines':
+        case 'discard_hunk':
           return undefined;
 
         case 'create_commit':

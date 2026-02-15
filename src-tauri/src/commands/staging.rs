@@ -62,6 +62,19 @@ pub fn stage_lines(
 }
 
 #[tauri::command]
+pub fn discard_hunk(
+    path: String,
+    hunk_index: usize,
+    line_indices: Option<Vec<usize>>,
+    state: State<AppState>,
+) -> Result<(), AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    git::discard_hunk(repo, &path, hunk_index, line_indices)
+}
+
+#[tauri::command]
 pub fn revert_file(path: String, state: State<AppState>) -> Result<(), AppError> {
     let repo_lock = state.repository.lock();
     let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;

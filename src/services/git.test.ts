@@ -241,6 +241,32 @@ describe("git service", () => {
     });
   });
 
+  describe("discardHunk", () => {
+    it("invokes discard_hunk command with path and hunkIndex", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.discardHunk("test.ts", 0);
+
+      expect(invoke).toHaveBeenCalledWith("discard_hunk", {
+        path: "test.ts",
+        hunkIndex: 0,
+        lineIndices: null,
+      });
+    });
+
+    it("invokes discard_hunk command with lineIndices", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.discardHunk("test.ts", 1, [2, 3]);
+
+      expect(invoke).toHaveBeenCalledWith("discard_hunk", {
+        path: "test.ts",
+        hunkIndex: 1,
+        lineIndices: [2, 3],
+      });
+    });
+  });
+
   describe("getFileDiff", () => {
     it("invokes get_file_diff command with path and staged", async () => {
       const mockDiff = {

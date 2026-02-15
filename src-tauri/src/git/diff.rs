@@ -30,7 +30,7 @@ pub struct DiffLine {
     pub new_lineno: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum LineType {
     Context,

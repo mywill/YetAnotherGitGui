@@ -319,6 +319,101 @@ describe("DiffHunk", () => {
     });
   });
 
+  describe("discard buttons", () => {
+    it("renders discard hunk button when onDiscardHunk is provided", () => {
+      const mockDiscardHunk = vi.fn();
+      render(<DiffHunk {...defaultProps} onDiscardHunk={mockDiscardHunk} />);
+
+      expect(screen.getByText("Discard hunk")).toBeInTheDocument();
+    });
+
+    it("does not render discard hunk button when onDiscardHunk is not provided", () => {
+      render(<DiffHunk {...defaultProps} />);
+
+      expect(screen.queryByText("Discard hunk")).not.toBeInTheDocument();
+    });
+
+    it("calls onDiscardHunk when discard hunk button is clicked", () => {
+      const mockDiscardHunk = vi.fn();
+      render(<DiffHunk {...defaultProps} onDiscardHunk={mockDiscardHunk} />);
+
+      fireEvent.click(screen.getByText("Discard hunk"));
+
+      expect(mockDiscardHunk).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders discard lines button when lines are selected and onDiscardLines is provided", () => {
+      const mockDiscardLines = vi.fn();
+      const { container } = render(
+        <DiffHunk {...defaultProps} onDiscardLines={mockDiscardLines} />
+      );
+
+      // Select a line
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!);
+
+      expect(screen.getByText("Discard 1 line")).toBeInTheDocument();
+    });
+
+    it("does not render discard lines button when onDiscardLines is not provided", () => {
+      const { container } = render(<DiffHunk {...defaultProps} />);
+
+      // Select a line
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!);
+
+      expect(screen.queryByText("Discard 1 line")).not.toBeInTheDocument();
+    });
+
+    it("calls onDiscardLines with selected indices when discard lines button is clicked", () => {
+      const mockDiscardLines = vi.fn();
+      const { container } = render(
+        <DiffHunk {...defaultProps} onDiscardLines={mockDiscardLines} />
+      );
+
+      // Select the addition line (index 2 in original lines)
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!);
+
+      fireEvent.click(screen.getByText("Discard 1 line"));
+
+      expect(mockDiscardLines).toHaveBeenCalledWith([2]);
+    });
+
+    it("clears selection after discarding lines", () => {
+      const mockDiscardLines = vi.fn();
+      const { container } = render(
+        <DiffHunk {...defaultProps} onDiscardLines={mockDiscardLines} />
+      );
+
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!);
+
+      expect(screen.getByText("Discard 1 line")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Discard 1 line"));
+
+      expect(screen.queryByText("Discard 1 line")).not.toBeInTheDocument();
+      expect(additionLine).not.toHaveClass("selected");
+    });
+
+    it("shows plural form for multiple selected lines", () => {
+      const mockDiscardLines = vi.fn();
+      const { container } = render(
+        <DiffHunk {...defaultProps} onDiscardLines={mockDiscardLines} />
+      );
+
+      // Select deletion then shift-click addition to get 2 lines
+      const deletionLine = container.querySelector(".line-deletion");
+      fireEvent.mouseDown(deletionLine!);
+
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!, { shiftKey: true });
+
+      expect(screen.getByText("Discard 2 lines")).toBeInTheDocument();
+    });
+  });
+
   describe("header lines", () => {
     it("filters out header lines from display", () => {
       const hunkWithHeader: DiffHunkType = {
