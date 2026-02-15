@@ -1,3 +1,17 @@
+# [1.3.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.2.1...v1.3.0) (2026-02-15)
+
+
+### Bug Fixes
+
+* linting issues ([2f9bf54](https://github.com/mywill/YetAnotherGitGui/commit/2f9bf548be7cb710faeeb4d7d9eac9ba547dcd08))
+* Updated the mac os install to CLI option.  We now provide an easy un install in the settings dropdown and an about window that the user can view (this prevents the menue from  being empty ever) The install process also got more informitave. ([dcf4958](https://github.com/mywill/YetAnotherGitGui/commit/dcf4958ba67d7dfb11d23d8f1374198882af0871))
+* Updated to not block the terminal when launched And to log crashes to a log file when needed. ([0ad1588](https://github.com/mywill/YetAnotherGitGui/commit/0ad1588f46283d8a134aae3a52b736426764d9ad))
+
+
+### Features
+
+* Added the abbility to discard hunks and lines from hunks in the status view ([658eef2](https://github.com/mywill/YetAnotherGitGui/commit/658eef2aa2d4fa38325a8b4216d5b539dc46e468))
+
 ## [1.2.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.2.0...v1.2.1) (2026-02-14)
 
 
