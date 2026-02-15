@@ -1269,6 +1269,212 @@ test.describe("Stage All Button - All Files", () => {
   });
 });
 
+test.describe("Settings Menu", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("settings gear button is visible in header", async ({ page }) => {
+    await expect(page.locator(".settings-menu-button")).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  test("clicking gear opens dropdown menu", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+
+    await expect(page.locator(".settings-menu-dropdown")).toBeVisible();
+  });
+
+  test("dropdown has About menu item", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+
+    await expect(
+      page.locator(".settings-menu-item", { hasText: "About" })
+    ).toBeVisible();
+  });
+
+  test("dropdown shows Uninstall CLI Tool when CLI is installed", async ({
+    page,
+  }) => {
+    // Default mock has check_cli_installed returning true
+    await page.locator(".settings-menu-button").click();
+
+    await expect(
+      page.locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" })
+    ).toBeVisible();
+  });
+
+  test("dropdown closes when clicking outside", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await expect(page.locator(".settings-menu-dropdown")).toBeVisible();
+
+    // Click outside the menu
+    await page.locator(".app-header .app-title").click();
+
+    await expect(page.locator(".settings-menu-dropdown")).not.toBeVisible();
+  });
+
+  test("dropdown closes on Escape key", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await expect(page.locator(".settings-menu-dropdown")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+
+    await expect(page.locator(".settings-menu-dropdown")).not.toBeVisible();
+  });
+
+  test("clicking gear button again closes dropdown", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await expect(page.locator(".settings-menu-dropdown")).toBeVisible();
+
+    await page.locator(".settings-menu-button").click();
+    await expect(page.locator(".settings-menu-dropdown")).not.toBeVisible();
+  });
+});
+
+test.describe("Settings Menu - About Dialog", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("clicking About opens the About dialog", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await page.locator(".settings-menu-item", { hasText: "About" }).click();
+
+    await expect(
+      page.getByText("About Yet Another Git Gui")
+    ).toBeVisible();
+  });
+
+  test("About dialog shows app version", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await page.locator(".settings-menu-item", { hasText: "About" }).click();
+
+    await expect(page.getByText("1.2.0")).toBeVisible();
+  });
+
+  test("About dialog shows platform info", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await page.locator(".settings-menu-item", { hasText: "About" }).click();
+
+    await expect(page.getByText("Version")).toBeVisible();
+    await expect(page.getByText("Tauri")).toBeVisible();
+    await expect(page.getByText("Platform")).toBeVisible();
+    await expect(page.getByText("Architecture")).toBeVisible();
+  });
+
+  test("About dialog closes when Close button is clicked", async ({
+    page,
+  }) => {
+    await page.locator(".settings-menu-button").click();
+    await page.locator(".settings-menu-item", { hasText: "About" }).click();
+
+    await expect(
+      page.getByText("About Yet Another Git Gui")
+    ).toBeVisible();
+
+    await page.locator(".dialog-btn.confirm", { hasText: "Close" }).click();
+
+    await expect(
+      page.getByText("About Yet Another Git Gui")
+    ).not.toBeVisible();
+  });
+
+  test("About dialog closes on Escape key", async ({ page }) => {
+    await page.locator(".settings-menu-button").click();
+    await page.locator(".settings-menu-item", { hasText: "About" }).click();
+
+    await expect(
+      page.getByText("About Yet Another Git Gui")
+    ).toBeVisible();
+
+    await page.keyboard.press("Escape");
+
+    await expect(
+      page.getByText("About Yet Another Git Gui")
+    ).not.toBeVisible();
+  });
+});
+
+test.describe("Settings Menu - CLI Uninstall", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("clicking Uninstall CLI Tool shows confirmation dialog", async ({
+    page,
+  }) => {
+    await page.locator(".settings-menu-button").click();
+    await page
+      .locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" })
+      .click();
+
+    // Confirm dialog should appear
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+    await expect(page.getByText("Uninstall CLI Tool")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Uninstall" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+  });
+
+  test("cancelling uninstall closes dialog without action", async ({
+    page,
+  }) => {
+    await page.locator(".settings-menu-button").click();
+    await page
+      .locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" })
+      .click();
+
+    await page.locator(".dialog-btn.cancel").click();
+
+    // Dialog should close
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+  });
+});
+
+test.describe("Settings Menu - CLI Install (not installed)", () => {
+  test.beforeEach(async ({ page }) => {
+    // Override mock to simulate CLI not installed
+    await page.addInitScript(`
+      window.__MOCK_CLI_INSTALLED__ = false;
+    `);
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("shows Install CLI Tool when CLI is not installed", async ({
+    page,
+  }) => {
+    await page.locator(".settings-menu-button").click();
+
+    await expect(
+      page.locator(".settings-menu-item", { hasText: "Install CLI Tool" })
+    ).toBeVisible();
+  });
+
+  test("clicking Install CLI Tool shows confirmation dialog with details", async ({
+    page,
+  }) => {
+    await page.locator(".settings-menu-button").click();
+    await page
+      .locator(".settings-menu-item", { hasText: "Install CLI Tool" })
+      .click();
+
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+    await expect(page.getByText(/symlink at/)).toBeVisible();
+    await expect(page.getByText(/administrator password/)).toBeVisible();
+  });
+});
+
 test.describe("Empty State Centering", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(tauriMocks);

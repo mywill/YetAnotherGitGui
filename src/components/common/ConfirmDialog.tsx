@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import "./ConfirmDialog.css";
 
 interface ConfirmDialogProps {
   title: string;
-  message: string;
+  message: string | ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void;
@@ -60,7 +60,7 @@ export function ConfirmDialog({
           <h2 id="dialog-title">{title}</h2>
         </div>
         <div className="confirm-dialog-body">
-          <p>{message}</p>
+          {typeof message === "string" ? <p>{message}</p> : message}
         </div>
         <div className="confirm-dialog-actions">
           <button className="dialog-btn cancel" onClick={onCancel}>

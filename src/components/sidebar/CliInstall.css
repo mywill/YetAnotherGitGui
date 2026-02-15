@@ -30,3 +30,34 @@
   color: var(--text-secondary);
   word-break: break-word;
 }
+
+.cli-install-info p {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.cli-install-info p:last-child {
+  margin-bottom: 0;
+}
+
+.cli-install-info code {
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.cli-install-info .cli-install-usage-header {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.cli-install-info .cli-install-usage {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+}

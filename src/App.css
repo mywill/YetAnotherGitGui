@@ -98,6 +98,18 @@
   gap: var(--spacing-sm);
 }
 
+.header-right > button,
+.header-right .settings-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+}
+
+.header-right > button {
+  padding: 3px var(--spacing-sm) 0;
+}
+
 .app-main {
   flex: 1;
   overflow: hidden;

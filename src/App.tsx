@@ -4,6 +4,7 @@ import { Sidebar } from "./components/sidebar/Sidebar";
 import { HistoryView } from "./components/views/HistoryView";
 import { StatusView } from "./components/views/StatusView";
 import { ConfirmDialog } from "./components/common/ConfirmDialog";
+import { SettingsMenu } from "./components/common/SettingsMenu";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
@@ -100,6 +101,7 @@ export function App() {
           <button onClick={refreshRepository} disabled={isLoading} title="Refresh (F5 or Ctrl+R)">
             Refresh
           </button>
+          <SettingsMenu />
         </div>
       </header>
 

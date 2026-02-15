@@ -179,10 +179,23 @@ export const tauriMocks = `
           return undefined;
 
         case 'check_cli_installed':
-          return true;
+          return window.__MOCK_CLI_INSTALLED__ !== undefined ? window.__MOCK_CLI_INSTALLED__ : true;
 
         case 'install_cli':
-          return '/usr/local/bin/yagg';
+          window.__MOCK_CLI_INSTALLED__ = true;
+          return 'CLI installed successfully. You can now use yagg from the terminal.';
+
+        case 'uninstall_cli':
+          window.__MOCK_CLI_INSTALLED__ = false;
+          return 'CLI tool uninstalled successfully.';
+
+        case 'get_app_info':
+          return {
+            version: '1.2.0',
+            tauri_version: '2.0.0',
+            platform: 'macos',
+            arch: 'aarch64'
+          };
 
         case 'checkout_commit':
         case 'checkout_branch':

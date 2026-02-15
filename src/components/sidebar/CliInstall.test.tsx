@@ -78,6 +78,83 @@ describe("CliInstall", () => {
     });
   });
 
+  describe("confirmation dialog", () => {
+    beforeEach(() => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+    });
+
+    it("shows confirmation dialog when install button is clicked", async () => {
+      render(<CliInstall />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Install CLI Tool"));
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText("Install")).toBeInTheDocument();
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
+    });
+
+    it("shows informational content about the CLI install", async () => {
+      render(<CliInstall />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Install CLI Tool"));
+
+      expect(screen.getByText(/symlink at/)).toBeInTheDocument();
+      expect(screen.getByText(/administrator password/)).toBeInTheDocument();
+    });
+
+    it("dismisses dialog when Cancel is clicked", async () => {
+      render(<CliInstall />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Install CLI Tool"));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Cancel"));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("does not call installCli when Cancel is clicked", async () => {
+      render(<CliInstall />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Cancel"));
+
+      expect(installCli).not.toHaveBeenCalled();
+    });
+
+    it("calls installCli when Install is confirmed", async () => {
+      vi.mocked(installCli).mockResolvedValue("/usr/local/bin/yagg");
+
+      render(<CliInstall />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
+
+      await waitFor(() => {
+        expect(installCli).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
   describe("installing state", () => {
     beforeEach(() => {
       vi.mocked(checkCliInstalled).mockResolvedValue(false);
@@ -95,7 +172,9 @@ describe("CliInstall", () => {
         expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
       });
 
+      // Open dialog and confirm
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       expect(screen.getByText("Installing...")).toBeInTheDocument();
     });
@@ -112,6 +191,7 @@ describe("CliInstall", () => {
       });
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       expect(screen.getByText("Installing...")).toBeDisabled();
     });
@@ -132,6 +212,7 @@ describe("CliInstall", () => {
       });
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       // After successful install, isInstalled becomes true and component returns null
       await waitFor(() => {
@@ -139,7 +220,7 @@ describe("CliInstall", () => {
       });
     });
 
-    it("calls installCli when button is clicked", async () => {
+    it("calls installCli when confirmed", async () => {
       vi.mocked(installCli).mockResolvedValue("/usr/local/bin/yagg");
 
       render(<CliInstall />);
@@ -149,6 +230,7 @@ describe("CliInstall", () => {
       });
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       await waitFor(() => {
         expect(installCli).toHaveBeenCalledTimes(1);
@@ -171,6 +253,7 @@ describe("CliInstall", () => {
       });
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       await waitFor(() => {
         expect(screen.getByText("Error: Permission denied")).toBeInTheDocument();
@@ -187,6 +270,7 @@ describe("CliInstall", () => {
       });
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       await waitFor(() => {
         const button = screen.getByText("Install CLI Tool");
@@ -226,6 +310,7 @@ describe("CliInstall", () => {
       });
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       await waitFor(() => {
         expect(container.querySelector(".cli-install-message")).toBeInTheDocument();
@@ -248,8 +333,9 @@ describe("CliInstall", () => {
         expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
       });
 
-      // First click - should show error
+      // First click - open dialog, then confirm
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       await waitFor(() => {
         expect(screen.getByText("Error: First error")).toBeInTheDocument();
@@ -258,8 +344,9 @@ describe("CliInstall", () => {
       // Second install succeeds
       vi.mocked(installCli).mockResolvedValueOnce("/usr/local/bin/yagg");
 
-      // Second click - should clear old message
+      // Second click - open dialog again
       fireEvent.click(screen.getByText("Install CLI Tool"));
+      fireEvent.click(screen.getByText("Install"));
 
       // Old error should be cleared
       expect(screen.queryByText("Error: First error")).not.toBeInTheDocument();
