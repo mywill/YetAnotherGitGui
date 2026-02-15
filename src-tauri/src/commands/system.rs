@@ -27,9 +27,7 @@ pub fn uninstall_cli() -> Result<String, AppError> {
         let symlink_path = "/usr/local/bin/yagg";
 
         if !std::path::Path::new(symlink_path).exists() {
-            return Err(AppError::InvalidPath(
-                "CLI tool is not installed.".into(),
-            ));
+            return Err(AppError::InvalidPath("CLI tool is not installed.".into()));
         }
 
         let script = format!(
@@ -48,14 +46,9 @@ pub fn uninstall_cli() -> Result<String, AppError> {
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             if stderr.contains("User canceled") {
-                Err(AppError::InvalidPath(
-                    "Uninstall cancelled by user.".into(),
-                ))
+                Err(AppError::InvalidPath("Uninstall cancelled by user.".into()))
             } else {
-                Err(AppError::InvalidPath(format!(
-                    "Failed to uninstall CLI: {}",
-                    stderr
-                )))
+                Err(AppError::InvalidPath("Uninstall cancelled by user.".into()))
             }
         }
     }
