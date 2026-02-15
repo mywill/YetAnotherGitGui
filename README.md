@@ -21,18 +21,18 @@ This is not a full featured git tool and is intended for use along with the CLI 
 
 **Debian/Ubuntu (.deb):**
 ```bash
-sudo dpkg -i yet-another-git-gui_*.deb
+sudo dpkg -i Yet.Another.Git.Gui_*.deb 
 ```
 
 **Fedora/RHEL (.rpm):**
 ```bash
-sudo rpm -i yet-another-git-gui-*.rpm
+sudo rpm -i Yet.Another.Git.Gui_*.rpm
 ```
 
 **AppImage (any distro):**
 ```bash
-chmod +x "Yet Another Git Gui-*.AppImage"
-./"Yet Another Git Gui-*.AppImage"
+chmod +x "Yet.Another.Git.Gui_*.AppImage"
+./"Yet.Another.Git.Gui_*."
 ```
 
 After installing via .deb or .rpm, the `yagg` command is available system-wide:
@@ -45,7 +45,8 @@ yagg /path/to/repo    # Open specific repository
 
 1. Open the `.dmg` file
 2. Drag **Yet Another Git Gui** to your Applications folder
-3. Launch the app
+3. Launch the app    
+   a. If this will not launch see Troubleshooting section with options.  This may not be signed by an offical Apple cert and may require a work around.   
 4. Click **"Install CLI Tool"** in the sidebar to enable terminal usage
 
 After installing the CLI tool:
