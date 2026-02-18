@@ -5,6 +5,7 @@ import { HistoryView } from "./components/views/HistoryView";
 import { StatusView } from "./components/views/StatusView";
 import { ConfirmDialog } from "./components/common/ConfirmDialog";
 import { SettingsMenu } from "./components/common/SettingsMenu";
+import { FileStatusCounts } from "./components/layout/FileStatusCounts";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
@@ -18,11 +19,22 @@ export function App() {
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
   const isLoading = useRepositoryStore((s) => s.isLoading);
   const error = useRepositoryStore((s) => s.error);
+  const successMessage = useRepositoryStore((s) => s.successMessage);
   const openRepository = useRepositoryStore((s) => s.openRepository);
   const refreshRepository = useRepositoryStore((s) => s.refreshRepository);
   const loadBranchesAndTags = useRepositoryStore((s) => s.loadBranchesAndTags);
 
+  const clearError = useRepositoryStore((s) => s.clearError);
+
   const activeView = useSelectionStore((s) => s.activeView);
+
+  // Auto-dismiss error toast after 5 seconds
+  useEffect(() => {
+    if (error && repositoryInfo) {
+      const timer = setTimeout(clearError, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, repositoryInfo, clearError]);
 
   const dialogIsOpen = useDialogStore((s) => s.isOpen);
   const dialogTitle = useDialogStore((s) => s.title);
@@ -97,6 +109,11 @@ export function App() {
             </>
           )}
         </div>
+        {repositoryInfo && (
+          <div className="header-center">
+            <FileStatusCounts />
+          </div>
+        )}
         <div className="header-right">
           <button onClick={refreshRepository} disabled={isLoading} title="Refresh (F5 or Ctrl+R)">
             Refresh
@@ -111,7 +128,12 @@ export function App() {
         </AppLayout>
       </main>
 
-      {error && repositoryInfo && <div className="app-error-toast">{error}</div>}
+      {error && repositoryInfo && (
+        <div className="app-error-toast" onClick={clearError} title="Click to dismiss">
+          {error}
+        </div>
+      )}
+      {successMessage && <div className="app-success-toast">{successMessage}</div>}
 
       {dialogIsOpen && (
         <ConfirmDialog

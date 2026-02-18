@@ -67,6 +67,7 @@ describe("App", () => {
   const mockOpenRepository = vi.fn();
   const mockRefreshRepository = vi.fn();
   const mockLoadBranchesAndTags = vi.fn();
+  const mockClearError = vi.fn();
   const mockCloseDialog = vi.fn();
   const mockOnConfirm = vi.fn();
 
@@ -89,6 +90,7 @@ describe("App", () => {
       } | null;
       isLoading?: boolean;
       error?: string | null;
+      successMessage?: string | null;
       cliLoading?: boolean;
       repoPath?: string | null;
       activeView?: "history" | "status";
@@ -105,6 +107,7 @@ describe("App", () => {
       },
       isLoading = false,
       error = null,
+      successMessage = null,
       cliLoading = false,
       repoPath = "/test/repo",
       activeView = "status",
@@ -116,9 +119,11 @@ describe("App", () => {
       repositoryInfo,
       isLoading,
       error,
+      successMessage,
       openRepository: mockOpenRepository,
       refreshRepository: mockRefreshRepository,
       loadBranchesAndTags: mockLoadBranchesAndTags,
+      clearError: mockClearError,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -444,6 +449,45 @@ describe("App", () => {
 
       expect(container.querySelector(".app-error-toast")).not.toBeInTheDocument();
     });
+
+    it("dismisses error toast on click", () => {
+      setupDefaultMocks({
+        error: "Failed to stage file",
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: "main",
+          is_detached: false,
+          remotes: [],
+        },
+      });
+
+      const { container } = render(<App />);
+      const toast = container.querySelector(".app-error-toast");
+      expect(toast).toBeInTheDocument();
+
+      fireEvent.click(toast!);
+      expect(mockClearError).toHaveBeenCalled();
+    });
+
+    it("auto-dismisses error toast after 10 seconds", () => {
+      vi.useFakeTimers();
+      setupDefaultMocks({
+        error: "Failed to stage file",
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: "main",
+          is_detached: false,
+          remotes: [],
+        },
+      });
+
+      render(<App />);
+
+      expect(mockClearError).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(10000);
+      expect(mockClearError).toHaveBeenCalled();
+      vi.useRealTimers();
+    });
   });
 
   describe("repository initialization", () => {
@@ -479,6 +523,37 @@ describe("App", () => {
       render(<App />);
 
       expect(mockLoadBranchesAndTags).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("success toast", () => {
+    it("shows success toast when successMessage is set", () => {
+      setupDefaultMocks({ successMessage: "Reverted commit abc123d" });
+
+      const { container } = render(<App />);
+
+      expect(container.querySelector(".app-success-toast")).toBeInTheDocument();
+      expect(screen.getByText("Reverted commit abc123d")).toBeInTheDocument();
+    });
+
+    it("does not show success toast when successMessage is null", () => {
+      setupDefaultMocks({ successMessage: null });
+
+      const { container } = render(<App />);
+
+      expect(container.querySelector(".app-success-toast")).not.toBeInTheDocument();
+    });
+
+    it("can show both error toast and success toast at the same time", () => {
+      setupDefaultMocks({
+        error: "Something failed",
+        successMessage: "Reverted file.ts",
+      });
+
+      const { container } = render(<App />);
+
+      expect(container.querySelector(".app-error-toast")).toBeInTheDocument();
+      expect(container.querySelector(".app-success-toast")).toBeInTheDocument();
     });
   });
 

@@ -12,6 +12,9 @@ pub enum AppError {
     #[error("Invalid path: {0}")]
     InvalidPath(String),
 
+    #[error("Revert conflict: {0}")]
+    RevertConflict(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -68,5 +71,24 @@ mod tests {
         let error: AppError = io_error.into();
         let json = serde_json::to_string(&error).unwrap();
         assert!(json.contains("access denied"));
+    }
+
+    #[test]
+    fn test_revert_conflict_error_display() {
+        let error = AppError::RevertConflict(
+            "File has been modified since this commit. The revert cannot be applied safely."
+                .to_string(),
+        );
+        assert_eq!(
+            error.to_string(),
+            "Revert conflict: File has been modified since this commit. The revert cannot be applied safely."
+        );
+    }
+
+    #[test]
+    fn test_serialize_revert_conflict() {
+        let error = AppError::RevertConflict("conflict details".to_string());
+        let json = serde_json::to_string(&error).unwrap();
+        assert_eq!(json, "\"Revert conflict: conflict details\"");
     }
 }

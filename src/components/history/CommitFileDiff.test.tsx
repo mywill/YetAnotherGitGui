@@ -1,9 +1,36 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitFileDiff } from "./CommitFileDiff";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import type { FileDiff } from "../../types";
 
+// Mock stores
+vi.mock("../../stores/repositoryStore", () => ({
+  useRepositoryStore: vi.fn(),
+}));
+
+vi.mock("../../stores/dialogStore", () => ({
+  useDialogStore: vi.fn(),
+}));
+
 describe("CommitFileDiff", () => {
+  const mockRevertCommitFileLines = vi.fn().mockResolvedValue(undefined);
+  const mockShowConfirm = vi.fn().mockResolvedValue(true);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
+      selector({ revertCommitFileLines: mockRevertCommitFileLines })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useDialogStore).mockImplementation((selector: any) =>
+      selector({ showConfirm: mockShowConfirm })
+    );
+  });
+
   describe("binary file handling", () => {
     it("shows binary file message when is_binary is true", () => {
       const binaryDiff: FileDiff = {
@@ -196,6 +223,161 @@ describe("CommitFileDiff", () => {
       expect(container.querySelector(".line-number.new")).toBeInTheDocument();
       expect(container.querySelector(".line-prefix")).toBeInTheDocument();
       expect(container.querySelector(".line-content")).toBeInTheDocument();
+    });
+  });
+
+  describe("revert actions with confirmation dialogs", () => {
+    const revertableDiff: FileDiff = {
+      path: "test.ts",
+      hunks: [
+        {
+          header: "@@ -1,3 +1,4 @@",
+          old_start: 1,
+          old_lines: 3,
+          new_start: 1,
+          new_lines: 4,
+          lines: [
+            { content: "const x = 1;", line_type: "context", old_lineno: 1, new_lineno: 1 },
+            { content: "const y = 2;", line_type: "deletion", old_lineno: 2, new_lineno: null },
+            { content: "const y = 3;", line_type: "addition", old_lineno: null, new_lineno: 2 },
+            { content: "export { x };", line_type: "context", old_lineno: 3, new_lineno: 3 },
+          ],
+        },
+      ],
+      is_binary: false,
+    };
+
+    it("shows Revert hunk button when commitHash and filePath are provided", () => {
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      expect(screen.getByText("Revert hunk")).toBeInTheDocument();
+    });
+
+    it("does not show Revert hunk button without commitHash", () => {
+      render(<CommitFileDiff diff={revertableDiff} />);
+
+      expect(screen.queryByText("Revert hunk")).not.toBeInTheDocument();
+    });
+
+    it("shows confirmation dialog when Revert hunk is clicked", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      fireEvent.click(screen.getByText("Revert hunk"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith({
+          title: "Revert hunk?",
+          message: "This will undo the changes in this hunk and stage the result.",
+          confirmLabel: "Revert",
+        });
+      });
+    });
+
+    it("calls revertCommitFileLines with all changed line indices on hunk revert confirm", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      fireEvent.click(screen.getByText("Revert hunk"));
+
+      await waitFor(() => {
+        expect(mockRevertCommitFileLines).toHaveBeenCalledWith(
+          "abc123",
+          "test.ts",
+          0,
+          [1, 2] // indices of deletion and addition lines
+        );
+      });
+    });
+
+    it("does not call revertCommitFileLines when hunk revert dialog is cancelled", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      fireEvent.click(screen.getByText("Revert hunk"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalled();
+      });
+      expect(mockRevertCommitFileLines).not.toHaveBeenCalled();
+    });
+
+    it("shows line selection revert button after selecting a line", async () => {
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      // Click a deletion line to select it
+      const deletionLine = screen.getByText("const y = 2;").closest(".diff-line");
+      fireEvent.mouseDown(deletionLine!);
+      fireEvent.mouseUp(deletionLine!);
+
+      expect(screen.getByText("Revert 1 line")).toBeInTheDocument();
+    });
+
+    it("shows confirmation dialog when reverting selected lines", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      // Select a line
+      const deletionLine = screen.getByText("const y = 2;").closest(".diff-line");
+      fireEvent.mouseDown(deletionLine!);
+      fireEvent.mouseUp(deletionLine!);
+
+      // Click the revert selected lines button
+      fireEvent.click(screen.getByText("Revert 1 line"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith({
+          title: "Revert 1 line?",
+          message: "This will undo the selected changes and stage the result.",
+          confirmLabel: "Revert",
+        });
+      });
+    });
+
+    it("shows plural wording when multiple lines selected", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      // Select both changed lines via shift-click
+      const deletionLine = screen.getByText("const y = 2;").closest(".diff-line");
+      fireEvent.mouseDown(deletionLine!);
+
+      const additionLine = screen.getByText("const y = 3;").closest(".diff-line");
+      fireEvent.mouseEnter(additionLine!);
+      fireEvent.mouseUp(additionLine!);
+
+      expect(screen.getByText("Revert 2 lines")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Revert 2 lines"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith({
+          title: "Revert 2 lines?",
+          message: "This will undo the selected changes and stage the result.",
+          confirmLabel: "Revert",
+        });
+      });
+    });
+
+    it("clears selection when Clear button is clicked", () => {
+      render(<CommitFileDiff diff={revertableDiff} commitHash="abc123" filePath="test.ts" />);
+
+      // Select a line
+      const deletionLine = screen.getByText("const y = 2;").closest(".diff-line");
+      fireEvent.mouseDown(deletionLine!);
+      fireEvent.mouseUp(deletionLine!);
+
+      expect(screen.getByText("Clear")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Clear"));
+
+      expect(screen.queryByText("Clear")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Revert \d+ line/)).not.toBeInTheDocument();
     });
   });
 });

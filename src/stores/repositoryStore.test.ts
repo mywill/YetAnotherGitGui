@@ -548,6 +548,17 @@ describe("repositoryStore", () => {
     });
   });
 
+  describe("clearError", () => {
+    it("clears the error state", () => {
+      useRepositoryStore.setState({ error: "Something failed" });
+
+      const { clearError } = useRepositoryStore.getState();
+      clearError();
+
+      expect(useRepositoryStore.getState().error).toBeNull();
+    });
+  });
+
   describe("clearDiff", () => {
     it("clears current diff state", () => {
       useRepositoryStore.setState({
@@ -1760,6 +1771,97 @@ describe("repositoryStore", () => {
       expect(useRepositoryStore.getState().selectedStashDetails).toBeNull();
       expect(useRepositoryStore.getState().expandedStashFiles.size).toBe(0);
       expect(useRepositoryStore.getState().stashFileDiffs.size).toBe(0);
+    });
+  });
+
+  describe("revertCommit", () => {
+    it("calls revertCommit and reloads file statuses", async () => {
+      vi.mocked(git.revertCommit).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [{ path: "file.ts", status: "modified", is_staged: true }],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { revertCommit } = useRepositoryStore.getState();
+      await revertCommit("abc123");
+
+      expect(git.revertCommit).toHaveBeenCalledWith("abc123");
+      expect(git.getFileStatuses).toHaveBeenCalled();
+      expect(useRepositoryStore.getState().fileStatuses?.staged).toHaveLength(1);
+      expect(useRepositoryStore.getState().successMessage).toBe("Reverted commit abc123");
+    });
+
+    it("sets error on failure", async () => {
+      vi.mocked(git.revertCommit).mockRejectedValue(new Error("Revert failed"));
+
+      const { revertCommit } = useRepositoryStore.getState();
+      await revertCommit("abc123");
+
+      expect(useRepositoryStore.getState().error).toBe("Error: Revert failed");
+      expect(useRepositoryStore.getState().successMessage).toBeNull();
+    });
+  });
+
+  describe("revertCommitFile", () => {
+    it("calls revertCommitFile and reloads file statuses", async () => {
+      vi.mocked(git.revertCommitFile).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [{ path: "file.ts", status: "modified", is_staged: true }],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { revertCommitFile } = useRepositoryStore.getState();
+      await revertCommitFile("abc123", "file.ts");
+
+      expect(git.revertCommitFile).toHaveBeenCalledWith("abc123", "file.ts");
+      expect(git.getFileStatuses).toHaveBeenCalled();
+      expect(useRepositoryStore.getState().successMessage).toBe("Reverted file.ts");
+    });
+
+    it("sets error on failure", async () => {
+      vi.mocked(git.revertCommitFile).mockRejectedValue(new Error("Revert failed"));
+
+      const { revertCommitFile } = useRepositoryStore.getState();
+      await revertCommitFile("abc123", "file.ts");
+
+      expect(useRepositoryStore.getState().error).toBe("Error: Revert failed");
+      expect(useRepositoryStore.getState().successMessage).toBeNull();
+    });
+  });
+
+  describe("revertCommitFileLines", () => {
+    it("calls revertCommitFileLines and reloads statuses and diff", async () => {
+      vi.mocked(git.revertCommitFileLines).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+      vi.mocked(git.getCommitFileDiff).mockResolvedValue({
+        path: "file.ts",
+        hunks: [],
+        is_binary: false,
+      });
+
+      const { revertCommitFileLines } = useRepositoryStore.getState();
+      await revertCommitFileLines("abc123", "file.ts", 0, [1, 2]);
+
+      expect(git.revertCommitFileLines).toHaveBeenCalledWith("abc123", "file.ts", 0, [1, 2]);
+      expect(git.getFileStatuses).toHaveBeenCalled();
+      expect(git.getCommitFileDiff).toHaveBeenCalledWith("abc123", "file.ts");
+      expect(useRepositoryStore.getState().successMessage).toBe("Reverted lines in file.ts");
+    });
+
+    it("sets error on failure", async () => {
+      vi.mocked(git.revertCommitFileLines).mockRejectedValue(new Error("Lines revert failed"));
+
+      const { revertCommitFileLines } = useRepositoryStore.getState();
+      await revertCommitFileLines("abc123", "file.ts", 0, [1, 2]);
+
+      expect(useRepositoryStore.getState().error).toBe("Error: Lines revert failed");
+      expect(useRepositoryStore.getState().successMessage).toBeNull();
     });
   });
 });

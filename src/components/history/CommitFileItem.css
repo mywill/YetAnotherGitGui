@@ -78,11 +78,34 @@
   color: var(--text-primary);
 }
 
+.revert-file-btn {
+  font-size: 11px;
+  padding: 1px 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+.file-header:hover .revert-file-btn {
+  opacity: 1;
+}
+
+.revert-file-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .file-diff-container {
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
-  max-height: 400px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .loading-diff {

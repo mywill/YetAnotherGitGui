@@ -1,11 +1,16 @@
+import { useState, useCallback, useRef } from "react";
 import type { FileDiff } from "../../types";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import "./CommitFileDiff.css";
 
 interface CommitFileDiffProps {
   diff: FileDiff;
+  commitHash?: string;
+  filePath?: string;
 }
 
-export function CommitFileDiff({ diff }: CommitFileDiffProps) {
+export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffProps) {
   if (diff.is_binary) {
     return <div className="commit-file-diff binary">Binary file - cannot display diff</div>;
   }
@@ -14,24 +19,193 @@ export function CommitFileDiff({ diff }: CommitFileDiffProps) {
     return <div className="commit-file-diff empty">No changes to display</div>;
   }
 
+  const canRevert = !!commitHash && !!filePath;
+
   return (
     <div className="commit-file-diff">
       {diff.hunks.map((hunk, hunkIndex) => (
-        <div key={hunkIndex} className="diff-hunk">
-          <div className="hunk-lines">
-            {hunk.lines.map((line, lineIndex) => (
-              <div key={lineIndex} className={`diff-line line-${line.line_type}`}>
-                <span className="line-number old">{line.old_lineno ?? ""}</span>
-                <span className="line-number new">{line.new_lineno ?? ""}</span>
-                <span className="line-prefix">
-                  {line.line_type === "addition" ? "+" : line.line_type === "deletion" ? "-" : " "}
-                </span>
-                <span className="line-content">{line.content}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CommitDiffHunk
+          key={hunkIndex}
+          hunk={hunk}
+          hunkIndex={hunkIndex}
+          commitHash={commitHash}
+          filePath={filePath}
+          canRevert={canRevert}
+        />
       ))}
+    </div>
+  );
+}
+
+interface CommitDiffHunkProps {
+  hunk: FileDiff["hunks"][0];
+  hunkIndex: number;
+  commitHash?: string;
+  filePath?: string;
+  canRevert: boolean;
+}
+
+function CommitDiffHunk({ hunk, hunkIndex, commitHash, filePath, canRevert }: CommitDiffHunkProps) {
+  const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
+  const [isSelecting, setIsSelecting] = useState(false);
+  const lastClickedRef = useRef<number | null>(null);
+  const selectionStartRef = useRef<number | null>(null);
+  const revertCommitFileLines = useRepositoryStore((s) => s.revertCommitFileLines);
+  const showConfirm = useDialogStore((s) => s.showConfirm);
+
+  const visibleLines = hunk.lines
+    .map((line, idx) => ({ ...line, originalIndex: idx }))
+    .filter((line) => line.line_type !== "header");
+
+  const handleMouseDown = useCallback(
+    (originalIndex: number, lineType: string, e: React.MouseEvent) => {
+      if (!canRevert) return;
+      if (lineType === "context") return;
+
+      if (e.shiftKey && lastClickedRef.current !== null) {
+        const start = Math.min(lastClickedRef.current, originalIndex);
+        const end = Math.max(lastClickedRef.current, originalIndex);
+        const newSelection = new Set<number>();
+        for (let i = start; i <= end; i++) {
+          const line = hunk.lines[i];
+          if (line && line.line_type !== "context" && line.line_type !== "header") {
+            newSelection.add(i);
+          }
+        }
+        setSelectedLines(newSelection);
+        return;
+      }
+
+      if (selectedLines.size === 1 && selectedLines.has(originalIndex)) {
+        setSelectedLines(new Set());
+        lastClickedRef.current = null;
+        return;
+      }
+
+      setIsSelecting(true);
+      selectionStartRef.current = originalIndex;
+      lastClickedRef.current = originalIndex;
+      setSelectedLines(new Set([originalIndex]));
+    },
+    [canRevert, hunk.lines, selectedLines]
+  );
+
+  const handleMouseEnter = useCallback(
+    (originalIndex: number, lineType: string) => {
+      if (!isSelecting || !canRevert) return;
+      if (lineType === "context") return;
+      if (selectionStartRef.current === null) return;
+
+      const start = Math.min(selectionStartRef.current, originalIndex);
+      const end = Math.max(selectionStartRef.current, originalIndex);
+      const newSelection = new Set<number>();
+      for (let i = start; i <= end; i++) {
+        const line = hunk.lines[i];
+        if (line && line.line_type !== "context" && line.line_type !== "header") {
+          newSelection.add(i);
+        }
+      }
+      setSelectedLines(newSelection);
+    },
+    [isSelecting, canRevert, hunk.lines]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsSelecting(false);
+    selectionStartRef.current = null;
+  }, []);
+
+  const handleRevertSelected = useCallback(async () => {
+    if (!commitHash || !filePath || selectedLines.size === 0) return;
+    const count = selectedLines.size;
+    const confirmed = await showConfirm({
+      title: `Revert ${count} line${count > 1 ? "s" : ""}?`,
+      message: "This will undo the selected changes and stage the result.",
+      confirmLabel: "Revert",
+    });
+    if (!confirmed) return;
+    await revertCommitFileLines(commitHash, filePath, hunkIndex, Array.from(selectedLines));
+    setSelectedLines(new Set());
+    lastClickedRef.current = null;
+  }, [commitHash, filePath, hunkIndex, selectedLines, revertCommitFileLines, showConfirm]);
+
+  const handleRevertHunk = useCallback(async () => {
+    if (!commitHash || !filePath) return;
+    const confirmed = await showConfirm({
+      title: "Revert hunk?",
+      message: "This will undo the changes in this hunk and stage the result.",
+      confirmLabel: "Revert",
+    });
+    if (!confirmed) return;
+    // Select all addition/deletion lines in this hunk
+    const allIndices: number[] = [];
+    hunk.lines.forEach((line, idx) => {
+      if (line.line_type === "addition" || line.line_type === "deletion") {
+        allIndices.push(idx);
+      }
+    });
+    if (allIndices.length > 0) {
+      await revertCommitFileLines(commitHash, filePath, hunkIndex, allIndices);
+    }
+  }, [commitHash, filePath, hunkIndex, hunk.lines, revertCommitFileLines, showConfirm]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedLines(new Set());
+    lastClickedRef.current = null;
+  }, []);
+
+  const hasSelection = selectedLines.size > 0;
+  const hunkInfo = hunk.header.split("@@").slice(0, 2).join("@@") + "@@";
+
+  return (
+    <div
+      className={`diff-hunk ${hasSelection ? "has-selection" : ""}`}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      <div className="hunk-header">
+        <span className="hunk-info">{hunkInfo.trim()}</span>
+        {canRevert && (
+          <div className="hunk-actions">
+            {hasSelection && (
+              <button className="hunk-action" onClick={handleRevertSelected}>
+                Revert {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
+              </button>
+            )}
+            <button className="hunk-action" onClick={handleRevertHunk}>
+              Revert hunk
+            </button>
+            {hasSelection && (
+              <button className="hunk-action secondary" onClick={clearSelection}>
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="hunk-lines">
+        {visibleLines.map((line) => {
+          const isSelectable =
+            canRevert && (line.line_type === "addition" || line.line_type === "deletion");
+          const isSelected = selectedLines.has(line.originalIndex);
+
+          return (
+            <div
+              key={line.originalIndex}
+              className={`diff-line line-${line.line_type} ${isSelectable ? "selectable" : ""} ${isSelected ? "selected" : ""}`}
+              onMouseDown={(e) => handleMouseDown(line.originalIndex, line.line_type, e)}
+              onMouseEnter={() => handleMouseEnter(line.originalIndex, line.line_type)}
+            >
+              <span className="line-number old">{line.old_lineno ?? ""}</span>
+              <span className="line-number new">{line.new_lineno ?? ""}</span>
+              <span className="line-prefix">
+                {line.line_type === "addition" ? "+" : line.line_type === "deletion" ? "-" : " "}
+              </span>
+              <span className="line-content">{line.content}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

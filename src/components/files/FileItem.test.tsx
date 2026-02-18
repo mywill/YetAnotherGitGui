@@ -44,8 +44,10 @@ describe("FileItem", () => {
         onToggleStage={mockOnToggleStage}
         onSelect={mockOnSelect}
         onDoubleClick={mockOnDoubleClick}
-        onDelete={mockOnDelete}
-        onRevert={mockOnRevert}
+        extraMenuItems={[
+          { label: "Revert changes", onClick: mockOnRevert },
+          { label: "Delete file", onClick: mockOnDelete },
+        ]}
         {...props}
       />
     );
@@ -155,7 +157,7 @@ describe("FileItem", () => {
     expect(mockOnDoubleClick).toHaveBeenCalledTimes(1);
   });
 
-  it("opens context menu on right-click", async () => {
+  it("opens context menu on right-click with extra menu items", async () => {
     renderFileItem();
 
     const fileItem = screen.getByText("test.tsx").closest(".file-item");
@@ -167,7 +169,7 @@ describe("FileItem", () => {
     });
   });
 
-  it("calls onRevert when 'Revert changes' is clicked in context menu", async () => {
+  it("calls onClick when extra menu item is clicked", async () => {
     renderFileItem();
 
     const fileItem = screen.getByText("test.tsx").closest(".file-item");
@@ -182,7 +184,7 @@ describe("FileItem", () => {
     expect(mockOnRevert).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onDelete when 'Delete file' is clicked in context menu", async () => {
+  it("calls onClick when Delete file is clicked in context menu", async () => {
     renderFileItem();
 
     const fileItem = screen.getByText("test.tsx").closest(".file-item");
@@ -197,7 +199,7 @@ describe("FileItem", () => {
     expect(mockOnDelete).toHaveBeenCalledTimes(1);
   });
 
-  it("shows Copy submenu but no revert/delete when no handlers provided", () => {
+  it("shows Copy submenu but no extra items when no extraMenuItems provided", () => {
     render(
       <FileItem
         file={defaultFile}
@@ -212,7 +214,7 @@ describe("FileItem", () => {
 
     // Copy submenu should always be present
     expect(screen.getByText("Copy")).toBeInTheDocument();
-    // But no revert/delete
+    // But no extra items
     expect(screen.queryByText("Revert changes")).not.toBeInTheDocument();
     expect(screen.queryByText("Delete file")).not.toBeInTheDocument();
   });
@@ -236,6 +238,34 @@ describe("FileItem", () => {
 
     const fileItem = screen.getByText("test.tsx").closest(".file-item");
     expect(fileItem).toHaveClass("staged");
+  });
+
+  it("renders custom labels from extraMenuItems", async () => {
+    renderFileItem({
+      extraMenuItems: [{ label: "Unstage", onClick: vi.fn() }],
+    });
+
+    const fileItem = screen.getByText("test.tsx").closest(".file-item");
+    fireEvent.contextMenu(fileItem!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Unstage")).toBeInTheDocument();
+      expect(screen.queryByText("Revert changes")).not.toBeInTheDocument();
+    });
+  });
+
+  it("renders Discard changes from extraMenuItems", async () => {
+    renderFileItem({
+      extraMenuItems: [{ label: "Discard changes", onClick: vi.fn() }],
+    });
+
+    const fileItem = screen.getByText("test.tsx").closest(".file-item");
+    fireEvent.contextMenu(fileItem!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Discard changes")).toBeInTheDocument();
+      expect(screen.queryByText("Revert changes")).not.toBeInTheDocument();
+    });
   });
 
   describe("Copy submenu", () => {

@@ -210,6 +210,7 @@ pub fn get_commit_file_diff(
     };
 
     let mut current_hunk: Option<DiffHunk> = None;
+    let mut current_hunk_header: Option<String> = None;
 
     diff.print(git2::DiffFormat::Patch, |delta, hunk, line| {
         if delta.flags().contains(git2::DiffFlags::BINARY) {
@@ -218,18 +219,26 @@ pub fn get_commit_file_diff(
         }
 
         if let Some(hunk_info) = hunk {
-            if let Some(h) = current_hunk.take() {
-                file_diff.hunks.push(h);
-            }
+            let header = String::from_utf8_lossy(hunk_info.header()).to_string();
 
-            current_hunk = Some(DiffHunk {
-                header: String::from_utf8_lossy(hunk_info.header()).to_string(),
-                old_start: hunk_info.old_start(),
-                old_lines: hunk_info.old_lines(),
-                new_start: hunk_info.new_start(),
-                new_lines: hunk_info.new_lines(),
-                lines: Vec::new(),
-            });
+            // Only create a new hunk if we're seeing a different hunk header
+            let is_new_hunk = current_hunk_header.as_ref() != Some(&header);
+
+            if is_new_hunk {
+                if let Some(h) = current_hunk.take() {
+                    file_diff.hunks.push(h);
+                }
+
+                current_hunk = Some(DiffHunk {
+                    header: header.clone(),
+                    old_start: hunk_info.old_start(),
+                    old_lines: hunk_info.old_lines(),
+                    new_start: hunk_info.new_start(),
+                    new_lines: hunk_info.new_lines(),
+                    lines: Vec::new(),
+                });
+                current_hunk_header = Some(header);
+            }
         }
 
         if let Some(ref mut hunk) = current_hunk {

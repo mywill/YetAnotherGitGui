@@ -5,6 +5,9 @@ import type { GraphCommit } from "../../types";
 import { BranchLines } from "./BranchLines";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import "./CommitRow.css";
 
 interface CommitRowProps {
@@ -25,6 +28,9 @@ export function CommitRow({
   onDoubleClick,
 }: CommitRowProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const revertCommit = useRepositoryStore((s) => s.revertCommit);
+  const setActiveView = useSelectionStore((s) => s.setActiveView);
+  const showConfirm = useDialogStore((s) => s.showConfirm);
 
   const handleContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();
@@ -40,6 +46,22 @@ export function CommitRow({
     setContextMenu(null);
     onDoubleClick();
   }, [onDoubleClick]);
+
+  const handleRevert = useCallback(async () => {
+    setContextMenu(null);
+    const shortHash = commit.hash.slice(0, 7);
+    const shortMessage =
+      commit.message.length > 60 ? commit.message.slice(0, 60) + "..." : commit.message;
+    const confirmed = await showConfirm({
+      title: "Revert commit",
+      message: `Revert ${shortHash}: "${shortMessage}"?\n\nThis will create new changes that undo this commit and stage them.`,
+      confirmLabel: "Revert",
+    });
+    if (confirmed) {
+      await revertCommit(commit.hash);
+      setActiveView("status");
+    }
+  }, [commit.hash, commit.message, revertCommit, setActiveView, showConfirm]);
 
   const date = new Date(commit.timestamp * 1000);
   const timeAgo = formatDistanceToNow(date, { addSuffix: true });
@@ -87,6 +109,7 @@ export function CommitRow({
           items={[
             { label: "Copy commit hash", onClick: handleCopyHash },
             { label: "Checkout commit", onClick: handleCheckout },
+            { label: "Revert commit", onClick: handleRevert },
           ]}
         />
       )}

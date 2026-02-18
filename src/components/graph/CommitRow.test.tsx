@@ -1,7 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitRow } from "./CommitRow";
 import type { GraphCommit } from "../../types";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
+
+// Mock stores
+vi.mock("../../stores/repositoryStore", () => ({
+  useRepositoryStore: vi.fn(),
+}));
+
+vi.mock("../../stores/selectionStore", () => ({
+  useSelectionStore: vi.fn(),
+}));
+
+vi.mock("../../stores/dialogStore", () => ({
+  useDialogStore: vi.fn(),
+}));
 
 // Mock BranchLines component
 vi.mock("./BranchLines", () => ({
@@ -42,6 +58,9 @@ vi.mock("../../services/clipboard", () => ({
 describe("CommitRow", () => {
   const mockOnSelect = vi.fn();
   const mockOnDoubleClick = vi.fn();
+  const mockRevertCommit = vi.fn().mockResolvedValue(undefined);
+  const mockSetActiveView = vi.fn();
+  const mockShowConfirm = vi.fn().mockResolvedValue(true);
 
   const createMockCommit = (overrides: Partial<GraphCommit> = {}): GraphCommit => ({
     hash: "abc123def456789",
@@ -69,6 +88,19 @@ describe("CommitRow", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
+      selector({ revertCommit: mockRevertCommit })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useSelectionStore).mockImplementation((selector: any) =>
+      selector({ setActiveView: mockSetActiveView })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useDialogStore).mockImplementation((selector: any) =>
+      selector({ showConfirm: mockShowConfirm })
+    );
   });
 
   describe("rendering", () => {
@@ -326,6 +358,106 @@ describe("CommitRow", () => {
       expect(dateCol).toHaveAttribute("title");
       // The title should contain a locale-formatted date
       expect(dateCol?.getAttribute("title")).toBeTruthy();
+    });
+  });
+
+  describe("revert commit", () => {
+    it("shows Revert commit option in context menu", () => {
+      const { container } = render(<CommitRow {...defaultProps} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+
+      expect(screen.getByText("Revert commit")).toBeInTheDocument();
+    });
+
+    it("shows confirmation dialog with correct wording when Revert commit is clicked", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      const { container } = render(<CommitRow {...defaultProps} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith({
+          title: "Revert commit",
+          message: expect.stringContaining(
+            "This will create new changes that undo this commit and stage them."
+          ),
+          confirmLabel: "Revert",
+        });
+      });
+    });
+
+    it("includes short hash and message in confirmation dialog", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      const { container } = render(<CommitRow {...defaultProps} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('abc123d: "Test commit message"'),
+          })
+        );
+      });
+    });
+
+    it("calls revertCommit and switches to status view on confirm", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      const { container } = render(<CommitRow {...defaultProps} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockRevertCommit).toHaveBeenCalledWith("abc123def456789");
+      });
+      expect(mockSetActiveView).toHaveBeenCalledWith("status");
+    });
+
+    it("does not call revertCommit when dialog is cancelled", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      const { container } = render(<CommitRow {...defaultProps} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalled();
+      });
+      expect(mockRevertCommit).not.toHaveBeenCalled();
+      expect(mockSetActiveView).not.toHaveBeenCalled();
+    });
+
+    it("truncates long commit messages in dialog", async () => {
+      const longMessage = "A".repeat(70);
+      const commit = createMockCommit({ message: longMessage });
+      mockShowConfirm.mockResolvedValue(false);
+
+      const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining("..."),
+          })
+        );
+      });
     });
   });
 });

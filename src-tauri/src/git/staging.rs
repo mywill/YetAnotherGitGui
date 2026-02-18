@@ -1,4 +1,4 @@
-use git2::{Repository, Status, StatusOptions};
+use git2::{Oid, Repository, RevertOptions, Status, StatusOptions};
 use serde::Serialize;
 use std::path::Path;
 
@@ -536,6 +536,135 @@ fn apply_selected_lines_to_content(
     }
 
     Ok(result.join("\n") + if content.ends_with('\n') { "\n" } else { "" })
+}
+
+pub fn revert_commit(repo: &Repository, hash: &str) -> Result<(), AppError> {
+    let oid = Oid::from_str(hash)?;
+    let commit = repo.find_commit(oid)?;
+
+    let mut opts = RevertOptions::new();
+    if commit.parent_count() > 1 {
+        opts.mainline(1);
+    }
+
+    repo.revert(&commit, Some(&mut opts))?;
+    Ok(())
+}
+
+pub fn revert_commit_file(repo: &Repository, hash: &str, path: &str) -> Result<(), AppError> {
+    let oid = Oid::from_str(hash)?;
+    let commit = repo.find_commit(oid)?;
+    let our_commit = repo.head()?.peel_to_commit()?;
+
+    let mainline = if commit.parent_count() > 1 { 1 } else { 0 };
+    let revert_index = repo.revert_commit(&commit, &our_commit, mainline, None)?;
+
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| AppError::InvalidPath("No working directory".into()))?;
+
+    let mut index = repo.index()?;
+    let file_path = workdir.join(path);
+
+    // Check if the file exists in the reverted index
+    if let Some(entry) = revert_index.get_path(Path::new(path), 0) {
+        // File exists in reverted state - write the new content
+        let blob = repo.find_blob(entry.id)?;
+        let content = blob.content();
+        std::fs::write(&file_path, content)
+            .map_err(|e| AppError::InvalidPath(format!("Failed to write file: {}", e)))?;
+        index.add_path(Path::new(path))?;
+    } else {
+        // No stage-0 entry — could be a conflict (stages 1-3) or a genuinely added file.
+        // Check if the file existed in the commit's parent to distinguish the two cases.
+        let parent = commit.parent(0)?;
+        let parent_tree = parent.tree()?;
+        let file_in_parent = parent_tree.get_path(Path::new(path)).is_ok();
+
+        if file_in_parent {
+            return Err(AppError::RevertConflict(format!(
+                "Cannot cleanly revert '{}'. The file has been modified since this commit.",
+                path
+            )));
+        }
+
+        // File was genuinely added by this commit — safe to delete
+        if file_path.exists() {
+            std::fs::remove_file(&file_path)
+                .map_err(|e| AppError::InvalidPath(format!("Failed to delete file: {}", e)))?;
+        }
+        index.remove_path(Path::new(path))?;
+    }
+
+    index.write()?;
+    Ok(())
+}
+
+pub fn revert_commit_file_lines(
+    repo: &Repository,
+    hash: &str,
+    path: &str,
+    hunk_index: usize,
+    line_indices: Vec<usize>,
+) -> Result<(), AppError> {
+    // Get the commit's diff for this file
+    let diff = super::diff::get_commit_file_diff(repo, hash, path)?;
+
+    if hunk_index >= diff.hunks.len() {
+        return Err(AppError::InvalidPath(format!(
+            "Hunk index {} out of range",
+            hunk_index
+        )));
+    }
+
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| AppError::InvalidPath("No working directory".into()))?;
+    let file_path = workdir.join(path);
+
+    let content = std::fs::read_to_string(&file_path)
+        .map_err(|e| AppError::InvalidPath(format!("Failed to read file: {}", e)))?;
+
+    // The commit diff shows old (parent) -> new (commit).
+    // To revert selected lines, we reverse-apply them.
+    let hunk = &diff.hunks[hunk_index];
+
+    // Validate that context/addition lines match current file content
+    let content_lines: Vec<&str> = content.lines().collect();
+    let start = (hunk.new_start as usize).saturating_sub(1);
+    let mut pos = start;
+    for line in &hunk.lines {
+        match line.line_type {
+            super::diff::LineType::Context | super::diff::LineType::Addition => {
+                if pos < content_lines.len() {
+                    let expected = line.content.trim_end_matches('\n');
+                    let actual = content_lines[pos];
+                    if expected != actual {
+                        return Err(AppError::RevertConflict(
+                            "File has been modified since this commit. The revert cannot be applied safely.".into(),
+                        ));
+                    }
+                }
+                pos += 1;
+            }
+            super::diff::LineType::Deletion => {
+                // Deletion lines don't exist in current file
+            }
+            super::diff::LineType::Header => {}
+        }
+    }
+
+    let new_content = reverse_apply_hunk(&content, hunk, Some(&line_indices))?;
+
+    std::fs::write(&file_path, &new_content)
+        .map_err(|e| AppError::InvalidPath(format!("Failed to write file: {}", e)))?;
+
+    // Stage the changes
+    let mut index = repo.index()?;
+    index.add_path(Path::new(path))?;
+    index.write()?;
+
+    Ok(())
 }
 
 fn index_status_to_type(status: Status) -> FileStatusType {
@@ -1724,5 +1853,256 @@ mod tests {
 
         let result = discard_hunk(&repo, "file.txt", 5, None);
         assert!(result.is_err());
+    }
+
+    fn make_commit(
+        repo: &Repository,
+        temp_dir: &TempDir,
+        filename: &str,
+        content: &str,
+        message: &str,
+    ) -> git2::Oid {
+        let file_path = temp_dir.path().join(filename);
+        fs::write(&file_path, content).unwrap();
+
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new(filename)).unwrap();
+        index.write().unwrap();
+
+        let sig = repo.signature().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+
+        let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+        let parents: Vec<&git2::Commit> = parent.iter().collect();
+
+        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
+            .unwrap()
+    }
+
+    fn make_commit_delete(
+        repo: &Repository,
+        temp_dir: &TempDir,
+        filename: &str,
+        message: &str,
+    ) -> git2::Oid {
+        let file_path = temp_dir.path().join(filename);
+        fs::remove_file(&file_path).unwrap();
+
+        let mut index = repo.index().unwrap();
+        index.remove_path(Path::new(filename)).unwrap();
+        index.write().unwrap();
+
+        let sig = repo.signature().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+
+        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[&parent])
+            .unwrap()
+    }
+
+    #[test]
+    fn test_revert_commit_modified_file() {
+        let (temp_dir, repo) = create_test_repo();
+        make_commit(&repo, &temp_dir, "file.txt", "original\n", "initial");
+        let commit_oid =
+            make_commit(&repo, &temp_dir, "file.txt", "modified\n", "modify file");
+
+        let result = revert_commit(&repo, &commit_oid.to_string());
+        assert!(result.is_ok());
+
+        // File should be reverted back to original
+        let content = fs::read_to_string(temp_dir.path().join("file.txt")).unwrap();
+        assert_eq!(content, "original\n");
+    }
+
+    #[test]
+    fn test_revert_commit_added_file() {
+        let (temp_dir, repo) = create_test_repo();
+        make_commit(&repo, &temp_dir, "existing.txt", "exists\n", "initial");
+        let commit_oid =
+            make_commit(&repo, &temp_dir, "new_file.txt", "new content\n", "add file");
+
+        let result = revert_commit(&repo, &commit_oid.to_string());
+        assert!(result.is_ok());
+
+        // new_file.txt should be removed from workdir
+        assert!(!temp_dir.path().join("new_file.txt").exists());
+    }
+
+    #[test]
+    fn test_revert_commit_deleted_file() {
+        let (temp_dir, repo) = create_test_repo();
+        make_commit(&repo, &temp_dir, "file.txt", "content\n", "initial");
+        let commit_oid = make_commit_delete(&repo, &temp_dir, "file.txt", "delete file");
+
+        let result = revert_commit(&repo, &commit_oid.to_string());
+        assert!(result.is_ok());
+
+        // file.txt should be restored
+        assert!(temp_dir.path().join("file.txt").exists());
+        let content = fs::read_to_string(temp_dir.path().join("file.txt")).unwrap();
+        assert_eq!(content, "content\n");
+    }
+
+    #[test]
+    fn test_revert_commit_file_single() {
+        let (temp_dir, repo) = create_test_repo();
+        make_commit(&repo, &temp_dir, "a.txt", "aaa\n", "initial a");
+        make_commit(&repo, &temp_dir, "b.txt", "bbb\n", "initial b");
+
+        // Commit that modifies both files
+        let file_a = temp_dir.path().join("a.txt");
+        let file_b = temp_dir.path().join("b.txt");
+        fs::write(&file_a, "aaa modified\n").unwrap();
+        fs::write(&file_b, "bbb modified\n").unwrap();
+
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("a.txt")).unwrap();
+        index.add_path(Path::new("b.txt")).unwrap();
+        index.write().unwrap();
+
+        let sig = repo.signature().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+        let commit_oid = repo
+            .commit(Some("HEAD"), &sig, &sig, "modify both", &tree, &[&parent])
+            .unwrap();
+
+        // Revert only a.txt from that commit
+        let result = revert_commit_file(&repo, &commit_oid.to_string(), "a.txt");
+        assert!(result.is_ok());
+
+        // a.txt should be reverted
+        let content_a = fs::read_to_string(&file_a).unwrap();
+        assert_eq!(content_a, "aaa\n");
+
+        // b.txt should remain modified
+        let content_b = fs::read_to_string(&file_b).unwrap();
+        assert_eq!(content_b, "bbb modified\n");
+    }
+
+    #[test]
+    fn test_revert_commit_file_conflict() {
+        let (temp_dir, repo) = create_test_repo();
+        // Commit A: create file
+        make_commit(&repo, &temp_dir, "file.txt", "original\n", "initial");
+        // Commit B: modify file
+        let commit_b =
+            make_commit(&repo, &temp_dir, "file.txt", "modified by B\n", "modify B");
+        // Commit C: modify file again (so reverting B will conflict)
+        make_commit(
+            &repo,
+            &temp_dir,
+            "file.txt",
+            "modified by C\n",
+            "modify C",
+        );
+
+        // Revert file.txt from commit B — should fail with RevertConflict
+        let result = revert_commit_file(&repo, &commit_b.to_string(), "file.txt");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, AppError::RevertConflict(_)),
+            "Expected RevertConflict, got: {:?}",
+            err
+        );
+
+        // File should NOT be deleted
+        let file_path = temp_dir.path().join("file.txt");
+        assert!(file_path.exists(), "File should not be deleted on conflict");
+        let content = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(content, "modified by C\n");
+    }
+
+    #[test]
+    fn test_revert_commit_file_added() {
+        let (temp_dir, repo) = create_test_repo();
+        // Initial commit so there's a parent
+        make_commit(&repo, &temp_dir, "base.txt", "base\n", "initial");
+        // Commit that adds a new file
+        let add_commit =
+            make_commit(&repo, &temp_dir, "new_file.txt", "new content\n", "add file");
+
+        let file_path = temp_dir.path().join("new_file.txt");
+        assert!(file_path.exists());
+
+        // Revert the added file — should delete it
+        let result = revert_commit_file(&repo, &add_commit.to_string(), "new_file.txt");
+        assert!(result.is_ok());
+        assert!(
+            !file_path.exists(),
+            "File added by commit should be deleted on revert"
+        );
+    }
+
+    #[test]
+    fn test_revert_commit_stages_changes() {
+        let (temp_dir, repo) = create_test_repo();
+        make_commit(&repo, &temp_dir, "file.txt", "original\n", "initial");
+        let commit_oid =
+            make_commit(&repo, &temp_dir, "file.txt", "modified\n", "modify file");
+
+        revert_commit(&repo, &commit_oid.to_string()).unwrap();
+
+        // Changes should be staged
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(
+            !statuses.staged.is_empty(),
+            "Revert should stage the changes"
+        );
+    }
+
+    #[test]
+    fn test_revert_commit_file_lines() {
+        let (temp_dir, repo) = create_test_repo();
+        make_commit(
+            &repo,
+            &temp_dir,
+            "file.txt",
+            "line1\nline2\nline3\n",
+            "initial",
+        );
+        let commit_oid = make_commit(
+            &repo,
+            &temp_dir,
+            "file.txt",
+            "line1\nmodified2\nline3\n",
+            "modify line2",
+        );
+
+        // Get the commit diff to find line indices
+        let diff =
+            super::super::diff::get_commit_file_diff(&repo, &commit_oid.to_string(), "file.txt")
+                .unwrap();
+        assert!(!diff.hunks.is_empty());
+
+        // Find deletion and addition line indices to revert
+        let mut revert_indices = Vec::new();
+        for (idx, line) in diff.hunks[0].lines.iter().enumerate() {
+            if line.line_type == super::super::diff::LineType::Deletion
+                || line.line_type == super::super::diff::LineType::Addition
+            {
+                revert_indices.push(idx);
+            }
+        }
+
+        let result = revert_commit_file_lines(
+            &repo,
+            &commit_oid.to_string(),
+            "file.txt",
+            0,
+            revert_indices,
+        );
+        assert!(result.is_ok());
+
+        // File should have the original line2 restored
+        let content = fs::read_to_string(temp_dir.path().join("file.txt")).unwrap();
+        assert!(content.contains("line2"));
+        assert!(!content.contains("modified2"));
     }
 }

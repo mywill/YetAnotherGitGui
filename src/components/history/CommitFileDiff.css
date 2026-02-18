@@ -11,29 +11,68 @@
   text-align: center;
 }
 
-.diff-hunk {
+.commit-file-diff .diff-hunk {
   margin-bottom: 1px;
 }
 
-.hunk-header {
+.commit-file-diff .hunk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
   padding: var(--spacing-xs) var(--spacing-sm);
   background: color-mix(in srgb, var(--bg-selected) 30%, transparent);
   color: var(--text-muted);
   font-size: 11px;
 }
 
-.hunk-lines {
+.commit-file-diff .hunk-info {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.commit-file-diff .hunk-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.commit-file-diff .hunk-action {
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.commit-file-diff .hunk-action:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.commit-file-diff .hunk-action.secondary {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.commit-file-diff .hunk-lines {
   display: table;
   width: 100%;
   min-width: max-content;
 }
 
-.diff-line {
+.commit-file-diff .diff-line {
   display: table-row;
   min-height: 18px;
 }
 
-.diff-line .line-number {
+.commit-file-diff .diff-line .line-number {
   display: table-cell;
   width: 40px;
   min-width: 40px;
@@ -45,11 +84,11 @@
   border-right: 1px solid var(--border-color);
 }
 
-.diff-line .line-number.old {
+.commit-file-diff .diff-line .line-number.old {
   border-right: none;
 }
 
-.diff-line .line-prefix {
+.commit-file-diff .diff-line .line-prefix {
   display: table-cell;
   width: 16px;
   min-width: 16px;
@@ -57,36 +96,58 @@
   user-select: none;
 }
 
-.diff-line .line-content {
+.commit-file-diff .diff-line .line-content {
   display: table-cell;
   white-space: pre;
   padding-right: var(--spacing-sm);
 }
 
-.diff-line.line-context {
+.commit-file-diff .diff-line.line-context {
   background: var(--bg-primary);
 }
 
-.diff-line.line-addition {
+.commit-file-diff .diff-line.line-addition {
   background: var(--color-addition-bg);
 }
 
-.diff-line.line-addition .line-prefix {
+.commit-file-diff .diff-line.line-addition .line-prefix {
   color: var(--color-addition);
 }
 
-.diff-line.line-addition .line-number {
+.commit-file-diff .diff-line.line-addition .line-number {
   background: color-mix(in srgb, var(--color-addition) 10%, var(--bg-secondary));
 }
 
-.diff-line.line-deletion {
+.commit-file-diff .diff-line.line-deletion {
   background: var(--color-deletion-bg);
 }
 
-.diff-line.line-deletion .line-prefix {
+.commit-file-diff .diff-line.line-deletion .line-prefix {
   color: var(--color-deletion);
 }
 
-.diff-line.line-deletion .line-number {
+.commit-file-diff .diff-line.line-deletion .line-number {
   background: color-mix(in srgb, var(--color-deletion) 10%, var(--bg-secondary));
+}
+
+/* Interactive line selection */
+.commit-file-diff .diff-line.selectable {
+  cursor: pointer;
+}
+
+.commit-file-diff .diff-line.selectable:hover {
+  filter: brightness(1.1);
+}
+
+.commit-file-diff .diff-line.selected {
+  outline: 1px solid var(--bg-selected);
+  outline-offset: -1px;
+}
+
+.commit-file-diff .diff-line.selected .line-number {
+  background: color-mix(in srgb, var(--bg-selected) 30%, var(--bg-secondary));
+}
+
+.commit-file-diff .diff-hunk.has-selection .diff-line.selectable:not(.selected) {
+  opacity: 0.6;
 }

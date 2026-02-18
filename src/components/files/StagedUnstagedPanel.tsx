@@ -154,7 +154,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
                 onSelect={() => loadFileDiff(file.path, true)}
                 onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
                 onDoubleClick={() => unstageFile(file.path)}
-                onRevert={() => unstageFile(file.path)}
+                extraMenuItems={[{ label: "Unstage", onClick: () => unstageFile(file.path) }]}
               />
             ))
           )}
@@ -212,8 +212,10 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
                 onSelect={() => loadFileDiff(file.path, false)}
                 onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
                 onDoubleClick={() => stageFile(file.path)}
-                onRevert={() => revertFile(file.path)}
-                onDelete={() => deleteFile(file.path)}
+                extraMenuItems={[
+                  { label: "Discard changes", onClick: () => revertFile(file.path) },
+                  { label: "Delete file", onClick: () => deleteFile(file.path) },
+                ]}
               />
             ))
           )}

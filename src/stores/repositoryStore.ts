@@ -17,6 +17,7 @@ interface RepositoryState {
   repositoryInfo: RepositoryInfo | null;
   isLoading: boolean;
   error: string | null;
+  successMessage: string | null;
 
   // Commits
   commits: GraphCommit[];
@@ -56,6 +57,7 @@ interface RepositoryState {
   loadMoreCommits: () => Promise<void>;
   loadFileStatuses: () => Promise<void>;
   loadFileDiff: (path: string, staged: boolean, isUntracked?: boolean) => Promise<void>;
+  clearError: () => void;
   clearDiff: () => void;
   stageFile: (path: string) => Promise<void>;
   unstageFile: (path: string) => Promise<void>;
@@ -76,6 +78,16 @@ interface RepositoryState {
   clearCommitDetails: () => void;
   toggleCommitFileExpanded: (filePath: string) => void;
   loadCommitFileDiff: (hash: string, filePath: string) => Promise<void>;
+
+  // History view revert actions
+  revertCommit: (hash: string) => Promise<void>;
+  revertCommitFile: (hash: string, path: string) => Promise<void>;
+  revertCommitFileLines: (
+    hash: string,
+    path: string,
+    hunkIndex: number,
+    lineIndices: number[]
+  ) => Promise<void>;
 
   // Sidebar actions
   loadBranchesAndTags: () => Promise<void>;
@@ -99,6 +111,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   repositoryInfo: null,
   isLoading: false,
   error: null,
+  successMessage: null,
 
   commits: [],
   commitsLoading: false,
@@ -216,6 +229,10 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     } catch (err) {
       set({ diffLoading: false, error: String(err) });
     }
+  },
+
+  clearError: () => {
+    set({ error: null });
   },
 
   clearDiff: () => {
@@ -417,6 +434,46 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       set({ commitFileDiffs: newDiffs });
     } catch (err) {
       set({ error: String(err) });
+    }
+  },
+
+  revertCommit: async (hash: string) => {
+    try {
+      await git.revertCommit(hash);
+      await get().loadFileStatuses();
+      set({ successMessage: `Reverted commit ${hash.slice(0, 7)}` });
+      setTimeout(() => set({ successMessage: null }), 3000);
+    } catch (err) {
+      set({ error: String(err), successMessage: null });
+    }
+  },
+
+  revertCommitFile: async (hash: string, path: string) => {
+    try {
+      await git.revertCommitFile(hash, path);
+      await get().loadFileStatuses();
+      set({ successMessage: `Reverted ${path}` });
+      setTimeout(() => set({ successMessage: null }), 3000);
+    } catch (err) {
+      set({ error: String(err), successMessage: null });
+    }
+  },
+
+  revertCommitFileLines: async (
+    hash: string,
+    path: string,
+    hunkIndex: number,
+    lineIndices: number[]
+  ) => {
+    try {
+      await git.revertCommitFileLines(hash, path, hunkIndex, lineIndices);
+      await get().loadFileStatuses();
+      // Refresh the commit file diff to reflect changes
+      await get().loadCommitFileDiff(hash, path);
+      set({ successMessage: `Reverted lines in ${path}` });
+      setTimeout(() => set({ successMessage: null }), 3000);
+    } catch (err) {
+      set({ error: String(err), successMessage: null });
     }
   },
 

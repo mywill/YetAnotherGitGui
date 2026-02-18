@@ -120,7 +120,7 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
               onSelect={() => loadFileDiff(file.path, false, true)}
               onSelectWithModifiers={handleSelectWithModifiers}
               onDoubleClick={() => stageFile(file.path)}
-              onDelete={() => deleteFile(file.path)}
+              extraMenuItems={[{ label: "Delete file", onClick: () => deleteFile(file.path) }]}
             />
           ))
         )}

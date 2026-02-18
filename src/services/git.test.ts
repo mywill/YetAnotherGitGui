@@ -336,6 +336,44 @@ describe("git service", () => {
     });
   });
 
+  describe("revertCommit", () => {
+    it("invokes revert_commit command with hash", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.revertCommit("abc123");
+
+      expect(invoke).toHaveBeenCalledWith("revert_commit", { hash: "abc123" });
+    });
+  });
+
+  describe("revertCommitFile", () => {
+    it("invokes revert_commit_file command with hash and path", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.revertCommitFile("abc123", "test.ts");
+
+      expect(invoke).toHaveBeenCalledWith("revert_commit_file", {
+        hash: "abc123",
+        path: "test.ts",
+      });
+    });
+  });
+
+  describe("revertCommitFileLines", () => {
+    it("invokes revert_commit_file_lines command with all args", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.revertCommitFileLines("abc123", "test.ts", 0, [1, 2, 3]);
+
+      expect(invoke).toHaveBeenCalledWith("revert_commit_file_lines", {
+        hash: "abc123",
+        path: "test.ts",
+        hunkIndex: 0,
+        lineIndices: [1, 2, 3],
+      });
+    });
+  });
+
   describe("deleteBranch", () => {
     it("invokes delete_branch command with branchName and isRemote", async () => {
       vi.mocked(invoke).mockResolvedValue(undefined);

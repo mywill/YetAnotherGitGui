@@ -114,6 +114,23 @@
   font-weight: normal;
 }
 
+.revert-commit-btn {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.revert-commit-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .files-list {
   flex: 1;
   min-width: 0;

@@ -1,7 +1,30 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitDetailsPanel } from "./CommitDetailsPanel";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import type { CommitDetails } from "../../types";
+
+// Mock stores
+vi.mock("../../stores/repositoryStore", () => ({
+  useRepositoryStore: vi.fn(),
+}));
+
+vi.mock("../../stores/selectionStore", () => ({
+  useSelectionStore: vi.fn(),
+}));
+
+vi.mock("../../stores/dialogStore", () => ({
+  useDialogStore: vi.fn(),
+}));
+
+// Mock CommitFileItem to avoid deep dependency chain
+vi.mock("./CommitFileItem", () => ({
+  CommitFileItem: ({ file }: { file: { path: string }; commitHash: string }) => (
+    <div data-testid="commit-file-item">{file.path}</div>
+  ),
+}));
 
 const mockCommitDetails: CommitDetails = {
   hash: "abc123def456789012345678901234567890abcd",
@@ -20,6 +43,27 @@ const mockCommitDetails: CommitDetails = {
 };
 
 describe("CommitDetailsPanel", () => {
+  const mockRevertCommit = vi.fn().mockResolvedValue(undefined);
+  const mockSetActiveView = vi.fn();
+  const mockShowConfirm = vi.fn().mockResolvedValue(true);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
+      selector({ revertCommit: mockRevertCommit })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useSelectionStore).mockImplementation((selector: any) =>
+      selector({ setActiveView: mockSetActiveView })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useDialogStore).mockImplementation((selector: any) =>
+      selector({ showConfirm: mockShowConfirm })
+    );
+  });
+
   it("shows empty state when no commit is selected", () => {
     render(<CommitDetailsPanel details={null} loading={false} />);
 
@@ -105,5 +149,80 @@ describe("CommitDetailsPanel", () => {
     // Parent hashes are shown truncated to 7 chars
     expect(screen.getByText("parent1")).toBeInTheDocument();
     expect(screen.getByText("parent2")).toBeInTheDocument();
+  });
+
+  describe("revert commit button", () => {
+    it("renders Revert commit button when commit is displayed", () => {
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+
+      expect(screen.getByText("Revert commit")).toBeInTheDocument();
+    });
+
+    it("does not render Revert commit button when no commit is selected", () => {
+      render(<CommitDetailsPanel details={null} loading={false} />);
+
+      expect(screen.queryByText("Revert commit")).not.toBeInTheDocument();
+    });
+
+    it("shows confirmation dialog with correct wording when clicked", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith({
+          title: "Revert commit",
+          message: expect.stringContaining(
+            "This will create new changes that undo this commit and stage them."
+          ),
+          confirmLabel: "Revert",
+        });
+      });
+    });
+
+    it("includes short hash in dialog message", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining("abc123d"),
+          })
+        );
+      });
+    });
+
+    it("calls revertCommit and switches to status view on confirm", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockRevertCommit).toHaveBeenCalledWith("abc123def456789012345678901234567890abcd");
+      });
+      expect(mockSetActiveView).toHaveBeenCalledWith("status");
+    });
+
+    it("does not call revertCommit when dialog is cancelled", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+
+      fireEvent.click(screen.getByText("Revert commit"));
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalled();
+      });
+      expect(mockRevertCommit).not.toHaveBeenCalled();
+      expect(mockSetActiveView).not.toHaveBeenCalled();
+    });
   });
 });

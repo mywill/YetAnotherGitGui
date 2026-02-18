@@ -14,8 +14,7 @@ interface FileItemProps {
   onSelect: () => void;
   onSelectWithModifiers?: (path: string, isCtrl: boolean, isShift: boolean) => void;
   onDoubleClick?: () => void;
-  onDelete?: () => void;
-  onRevert?: () => void;
+  extraMenuItems?: ContextMenuItem[];
 }
 
 const STATUS_ICONS: Record<FileStatusType, string> = {
@@ -37,8 +36,7 @@ export function FileItem({
   onSelect,
   onSelectWithModifiers,
   onDoubleClick,
-  onDelete,
-  onRevert,
+  extraMenuItems,
 }: FileItemProps) {
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -106,23 +104,8 @@ export function FileItem({
       ],
     },
   ];
-  if (onRevert) {
-    menuItems.push({
-      label: "Revert changes",
-      onClick: () => {
-        onRevert();
-        setContextMenu(null);
-      },
-    });
-  }
-  if (onDelete) {
-    menuItems.push({
-      label: "Delete file",
-      onClick: () => {
-        onDelete();
-        setContextMenu(null);
-      },
-    });
+  if (extraMenuItems) {
+    menuItems.push(...extraMenuItems);
   }
 
   return (

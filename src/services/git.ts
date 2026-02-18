@@ -107,6 +107,23 @@ export async function deleteFile(path: string): Promise<void> {
   return invoke("delete_file", { path });
 }
 
+export async function revertCommit(hash: string): Promise<void> {
+  return invoke("revert_commit", { hash });
+}
+
+export async function revertCommitFile(hash: string, path: string): Promise<void> {
+  return invoke("revert_commit_file", { hash, path });
+}
+
+export async function revertCommitFileLines(
+  hash: string,
+  path: string,
+  hunkIndex: number,
+  lineIndices: number[]
+): Promise<void> {
+  return invoke("revert_commit_file_lines", { hash, path, hunkIndex, lineIndices });
+}
+
 export async function deleteBranch(branchName: string, isRemote: boolean): Promise<void> {
   return invoke("delete_branch", { branchName, isRemote });
 }

@@ -1,0 +1,44 @@
+.file-status-counts {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.status-badge {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 10px;
+  border-radius: 10px;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  transition: background 0.15s;
+}
+
+.status-badge:hover {
+  background: var(--bg-selected);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.status-badge.staged .status-dot {
+  background: var(--status-added);
+}
+
+.status-badge.unstaged .status-dot {
+  background: var(--status-modified);
+}
+
+.status-badge.untracked .status-dot {
+  background: var(--bg-selected);
+}

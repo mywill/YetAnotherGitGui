@@ -89,6 +89,36 @@ pub fn revert_file(path: String, state: State<AppState>) -> Result<(), AppError>
 }
 
 #[tauri::command]
+pub fn revert_commit(hash: String, state: State<AppState>) -> Result<(), AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    git::revert_commit(repo, &hash)
+}
+
+#[tauri::command]
+pub fn revert_commit_file(hash: String, path: String, state: State<AppState>) -> Result<(), AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    git::revert_commit_file(repo, &hash, &path)
+}
+
+#[tauri::command]
+pub fn revert_commit_file_lines(
+    hash: String,
+    path: String,
+    hunk_index: usize,
+    line_indices: Vec<usize>,
+    state: State<AppState>,
+) -> Result<(), AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    git::revert_commit_file_lines(repo, &hash, &path, hunk_index, line_indices)
+}
+
+#[tauri::command]
 pub fn delete_file(path: String, state: State<AppState>) -> Result<(), AppError> {
     let repo_lock = state.repository.lock();
     let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;

@@ -1,6 +1,10 @@
+import { useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import type { CommitDetails } from "../../types";
 import { CommitFileItem } from "./CommitFileItem";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import "./CommitDetailsPanel.css";
 
 interface CommitDetailsPanelProps {
@@ -9,6 +13,24 @@ interface CommitDetailsPanelProps {
 }
 
 export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps) {
+  const revertCommit = useRepositoryStore((s) => s.revertCommit);
+  const setActiveView = useSelectionStore((s) => s.setActiveView);
+  const showConfirm = useDialogStore((s) => s.showConfirm);
+
+  const handleRevertCommit = useCallback(async () => {
+    if (!details) return;
+    const shortHash = details.hash.slice(0, 7);
+    const confirmed = await showConfirm({
+      title: "Revert commit",
+      message: `Revert commit ${shortHash}?\n\nThis will create new changes that undo this commit and stage them.`,
+      confirmLabel: "Revert",
+    });
+    if (confirmed) {
+      await revertCommit(details.hash);
+      setActiveView("status");
+    }
+  }, [details, revertCommit, setActiveView, showConfirm]);
+
   if (loading) {
     return (
       <div className="commit-details-panel loading">
@@ -71,6 +93,9 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
         <div className="files-header">
           <span>Files changed</span>
           <span className="file-count">{details.files_changed.length}</span>
+          <button className="revert-commit-btn" onClick={handleRevertCommit}>
+            Revert commit
+          </button>
         </div>
         <div className="files-list">
           {details.files_changed.map((file) => (
