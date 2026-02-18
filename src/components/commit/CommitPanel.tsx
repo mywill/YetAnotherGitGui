@@ -42,6 +42,7 @@ export function CommitPanel() {
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={isCommitting}
+        spellCheck={true}
       />
       <div className="commit-actions">
         <button

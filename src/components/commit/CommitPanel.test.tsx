@@ -38,6 +38,15 @@ describe("CommitPanel", () => {
     expect(screen.getByText("Ctrl+Enter to commit")).toBeInTheDocument();
   });
 
+  it("has spellCheck enabled on the textarea", () => {
+    setupStore();
+
+    render(<CommitPanel />);
+
+    const textarea = screen.getByPlaceholderText("Commit message...");
+    expect(textarea).toHaveAttribute("spellcheck", "true");
+  });
+
   it("disables commit button when message is empty", () => {
     setupStore({
       fileStatuses: {
