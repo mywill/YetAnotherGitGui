@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AboutDialog } from "./AboutDialog";
-import { getAppInfo } from "../../services/system";
+import { getAppInfo, checkForUpdate, downloadAndInstallUpdate } from "../../services/system";
 
 vi.mock("../../services/system", () => ({
   getAppInfo: vi.fn(),
+  checkForUpdate: vi.fn(),
+  downloadAndInstallUpdate: vi.fn(),
+  getReleaseUrl: vi.fn(
+    (v: string) => `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${v}`
+  ),
 }));
 
 describe("AboutDialog", () => {
@@ -18,6 +23,7 @@ describe("AboutDialog", () => {
       platform: "macos",
       arch: "aarch64",
     });
+    vi.mocked(checkForUpdate).mockResolvedValue({ available: false });
   });
 
   afterEach(() => {
@@ -119,5 +125,108 @@ describe("AboutDialog", () => {
     render(<AboutDialog onClose={mockOnClose} />);
 
     expect(getAppInfo).toHaveBeenCalledTimes(1);
+  });
+
+  describe("update status row", () => {
+    it("shows Update label", async () => {
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Update")).toBeInTheDocument();
+      });
+    });
+
+    it("shows checking state while update check is pending", async () => {
+      vi.mocked(checkForUpdate).mockImplementation(
+        () => new Promise(() => {}) // never resolves
+      );
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      // Wait for appInfo to load so the table renders
+      await waitFor(() => {
+        expect(screen.getByText("Version")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Checking...")).toBeInTheDocument();
+    });
+
+    it("shows up to date when no update available", async () => {
+      vi.mocked(checkForUpdate).mockResolvedValue({ available: false });
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Up to date")).toBeInTheDocument();
+      });
+    });
+
+    it("shows available version with update button", async () => {
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+      });
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/v2.0.0 available/)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
+        expect(screen.getByText("View release")).toBeInTheDocument();
+      });
+    });
+
+    it("calls downloadAndInstallUpdate when Update button clicked", async () => {
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+      });
+      vi.mocked(downloadAndInstallUpdate).mockResolvedValue(undefined);
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Update" }));
+      });
+
+      await waitFor(() => {
+        expect(downloadAndInstallUpdate).toHaveBeenCalled();
+      });
+    });
+
+    it("shows error when auto-update fails", async () => {
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+      });
+      vi.mocked(downloadAndInstallUpdate).mockRejectedValue(new Error("Failed"));
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Update" }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Auto-update is not available/)).toBeInTheDocument();
+        expect(screen.getByText("Download manually")).toBeInTheDocument();
+      });
+    });
+
+    it("shows check failed when update check errors", async () => {
+      vi.mocked(checkForUpdate).mockRejectedValue(new Error("Network error"));
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Check failed")).toBeInTheDocument();
+      });
+    });
+
+    it("checks for updates on mount", () => {
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      expect(checkForUpdate).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -26,6 +26,16 @@ export const tauriMocks = `
           if (pluginCmd === 'read_text') return '';
         }
 
+        if (pluginName === 'updater') {
+          if (pluginCmd === 'check') return null;
+          return null;
+        }
+
+        if (pluginName === 'process') {
+          if (pluginCmd === 'restart') return undefined;
+          return null;
+        }
+
         console.warn('[E2E Mock] Unhandled plugin command:', cmd);
         return null;
       }

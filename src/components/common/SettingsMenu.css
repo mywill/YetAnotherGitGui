@@ -47,9 +47,41 @@
   margin: 4px 0;
 }
 
+.settings-menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .settings-menu-uninstall-message {
   padding: 6px 12px;
   font-size: 11px;
   color: var(--text-secondary);
   word-break: break-word;
+}
+
+.update-dialog-content p {
+  margin: 0 0 8px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.update-dialog-notes {
+  background: var(--bg-primary);
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.update-dialog-notes-label {
+  font-weight: 600;
+  color: var(--text-primary) !important;
+}
+
+.update-dialog-error {
+  color: var(--color-danger, #f44336) !important;
+}
+
+.update-dialog-link a {
+  color: var(--color-accent, #2196f3);
+  font-size: var(--font-size-sm);
 }

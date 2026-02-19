@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { installCli, uninstallCli, checkCliInstalled, getAppInfo } from "./system";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import {
+  installCli,
+  uninstallCli,
+  checkCliInstalled,
+  getAppInfo,
+  checkForUpdate,
+  downloadAndInstallUpdate,
+  getReleaseUrl,
+} from "./system";
 
 // The mock is already set up in test/setup.ts
 describe("system service", () => {
@@ -103,6 +113,111 @@ describe("system service", () => {
       vi.mocked(invoke).mockRejectedValue(new Error("Command failed"));
 
       await expect(getAppInfo()).rejects.toThrow("Command failed");
+    });
+  });
+
+  describe("checkForUpdate", () => {
+    it("returns available update info when update exists", async () => {
+      vi.mocked(check).mockResolvedValue({
+        version: "1.4.0",
+        body: "Bug fixes and improvements",
+        date: "2026-01-15",
+        downloadAndInstall: vi.fn(),
+        close: vi.fn(),
+      } as never);
+
+      const result = await checkForUpdate();
+
+      expect(result).toEqual({
+        available: true,
+        version: "1.4.0",
+        notes: "Bug fixes and improvements",
+        date: "2026-01-15",
+      });
+    });
+
+    it("returns not available when no update", async () => {
+      vi.mocked(check).mockResolvedValue(null);
+
+      const result = await checkForUpdate();
+
+      expect(result).toEqual({ available: false });
+    });
+
+    it("propagates errors from check", async () => {
+      vi.mocked(check).mockRejectedValue(new Error("Network error"));
+
+      await expect(checkForUpdate()).rejects.toThrow("Network error");
+    });
+
+    it("handles update with no body or date", async () => {
+      vi.mocked(check).mockResolvedValue({
+        version: "1.4.0",
+        body: null,
+        date: null,
+        downloadAndInstall: vi.fn(),
+        close: vi.fn(),
+      } as never);
+
+      const result = await checkForUpdate();
+
+      expect(result).toEqual({
+        available: true,
+        version: "1.4.0",
+        notes: undefined,
+        date: undefined,
+      });
+    });
+  });
+
+  describe("downloadAndInstallUpdate", () => {
+    it("downloads, installs, and relaunches", async () => {
+      const mockDownloadAndInstall = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(check).mockResolvedValue({
+        version: "1.4.0",
+        body: null,
+        date: null,
+        downloadAndInstall: mockDownloadAndInstall,
+        close: vi.fn(),
+      } as never);
+
+      await downloadAndInstallUpdate();
+
+      expect(mockDownloadAndInstall).toHaveBeenCalled();
+      expect(relaunch).toHaveBeenCalled();
+    });
+
+    it("throws when no update available", async () => {
+      vi.mocked(check).mockResolvedValue(null);
+
+      await expect(downloadAndInstallUpdate()).rejects.toThrow("No update available");
+    });
+
+    it("propagates download errors", async () => {
+      const mockDownloadAndInstall = vi.fn().mockRejectedValue(new Error("Download failed"));
+      vi.mocked(check).mockResolvedValue({
+        version: "1.4.0",
+        body: null,
+        date: null,
+        downloadAndInstall: mockDownloadAndInstall,
+        close: vi.fn(),
+      } as never);
+
+      await expect(downloadAndInstallUpdate()).rejects.toThrow("Download failed");
+    });
+  });
+
+  describe("getReleaseUrl", () => {
+    it("returns correct GitHub release URL", () => {
+      expect(getReleaseUrl("1.4.0")).toBe(
+        "https://github.com/mywill/YetAnotherGitGui/releases/tag/v1.4.0"
+      );
+    });
+
+    it("handles version without v prefix", () => {
+      expect(getReleaseUrl("2.0.0")).toBe(
+        "https://github.com/mywill/YetAnotherGitGui/releases/tag/v2.0.0"
+      );
     });
   });
 });

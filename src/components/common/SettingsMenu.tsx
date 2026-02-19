@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { checkCliInstalled, installCli, uninstallCli, getAppInfo } from "../../services/system";
+import {
+  checkCliInstalled,
+  installCli,
+  uninstallCli,
+  getAppInfo,
+  checkForUpdate,
+  downloadAndInstallUpdate,
+  getReleaseUrl,
+  type UpdateInfo,
+} from "../../services/system";
+import { useRepositoryStore } from "../../stores/repositoryStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
 import "./SettingsMenu.css";
@@ -12,6 +22,11 @@ export function SettingsMenu() {
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [updateInstalling, setUpdateInstalling] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,6 +95,40 @@ export function SettingsMenu() {
     }
   };
 
+  const handleCheckForUpdates = async () => {
+    closeMenu();
+    setUpdateChecking(true);
+    setUpdateInfo(null);
+    setUpdateError(null);
+    try {
+      const info = await checkForUpdate();
+      setUpdateInfo(info);
+      if (info.available) {
+        setShowUpdateDialog(true);
+      } else {
+        setActionMessage("You're up to date!");
+      }
+    } catch {
+      useRepositoryStore.setState({ error: "Failed to check for updates." });
+    } finally {
+      setUpdateChecking(false);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    setUpdateInstalling(true);
+    setUpdateError(null);
+    try {
+      await downloadAndInstallUpdate();
+    } catch {
+      setUpdateError(
+        "Auto-update is not available for your installation type. Please download the update manually."
+      );
+    } finally {
+      setUpdateInstalling(false);
+    }
+  };
+
   return (
     <>
       <div className="settings-menu" ref={menuRef}>
@@ -131,6 +180,15 @@ export function SettingsMenu() {
               </button>
             )}
             {isMac && <div className="settings-menu-separator" role="separator" />}
+            <button
+              className="settings-menu-item"
+              role="menuitem"
+              disabled={updateChecking}
+              onClick={handleCheckForUpdates}
+            >
+              {updateChecking ? "Checking..." : "Check for Updates"}
+            </button>
+            <div className="settings-menu-separator" role="separator" />
             <button
               className="settings-menu-item"
               role="menuitem"
@@ -193,6 +251,42 @@ export function SettingsMenu() {
       )}
 
       {showAboutDialog && <AboutDialog onClose={() => setShowAboutDialog(false)} />}
+
+      {showUpdateDialog && updateInfo?.available && updateInfo.version && (
+        <ConfirmDialog
+          title="Update Available"
+          message={
+            <div className="update-dialog-content">
+              <p>
+                Version <strong>{updateInfo.version}</strong> is available.
+              </p>
+              {updateInfo.notes && (
+                <div className="update-dialog-notes">
+                  <p className="update-dialog-notes-label">Release notes:</p>
+                  <p>{updateInfo.notes}</p>
+                </div>
+              )}
+              {updateError && <p className="update-dialog-error">{updateError}</p>}
+              <p className="update-dialog-link">
+                <a
+                  href={getReleaseUrl(updateInfo.version)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View release on GitHub
+                </a>
+              </p>
+            </div>
+          }
+          confirmLabel={updateInstalling ? "Installing..." : "Update & Restart"}
+          cancelLabel="Later"
+          onConfirm={handleInstallUpdate}
+          onCancel={() => {
+            setShowUpdateDialog(false);
+            setUpdateError(null);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -1,13 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SettingsMenu } from "./SettingsMenu";
-import { checkCliInstalled, installCli, uninstallCli, getAppInfo } from "../../services/system";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import {
+  checkCliInstalled,
+  installCli,
+  uninstallCli,
+  getAppInfo,
+  checkForUpdate,
+  downloadAndInstallUpdate,
+} from "../../services/system";
 
 vi.mock("../../services/system", () => ({
   checkCliInstalled: vi.fn(),
   installCli: vi.fn(),
   uninstallCli: vi.fn(),
   getAppInfo: vi.fn(),
+  checkForUpdate: vi.fn(),
+  downloadAndInstallUpdate: vi.fn(),
+  getReleaseUrl: vi.fn(
+    (v: string) => `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${v}`
+  ),
 }));
 
 describe("SettingsMenu", () => {
@@ -19,6 +32,7 @@ describe("SettingsMenu", () => {
       platform: "macos",
       arch: "aarch64",
     });
+    vi.mocked(checkForUpdate).mockResolvedValue({ available: false });
   });
 
   afterEach(() => {
@@ -154,7 +168,7 @@ describe("SettingsMenu", () => {
       });
     });
 
-    it("does not show separator on non-macOS platforms", async () => {
+    it("does not show CLI separator on non-macOS platforms", async () => {
       vi.mocked(getAppInfo).mockResolvedValue({
         version: "1.2.0",
         tauri_version: "2.0.0",
@@ -168,8 +182,10 @@ describe("SettingsMenu", () => {
         fireEvent.click(screen.getByTitle("Settings"));
       });
 
+      // Should have exactly one separator (before About), not the macOS CLI separator
       await waitFor(() => {
-        expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+        const separators = screen.getAllByRole("separator");
+        expect(separators).toHaveLength(1);
       });
     });
   });
@@ -295,6 +311,152 @@ describe("SettingsMenu", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Install CLI Tool")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("check for updates", () => {
+    it("shows Check for Updates menu item", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      expect(screen.getByText("Check for Updates")).toBeInTheDocument();
+    });
+
+    it("shows up-to-date message when no update available", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockResolvedValue({ available: false });
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        expect(screen.getByText("You're up to date!")).toBeInTheDocument();
+      });
+    });
+
+    it("shows update dialog when update is available", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+        notes: "New features",
+      });
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Update Available")).toBeInTheDocument();
+        expect(screen.getByText("New features")).toBeInTheDocument();
+        expect(screen.getByText("Update & Restart")).toBeInTheDocument();
+        expect(screen.getByText("View release on GitHub")).toBeInTheDocument();
+      });
+    });
+
+    it("calls downloadAndInstallUpdate when Update & Restart is clicked", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+      });
+      vi.mocked(downloadAndInstallUpdate).mockResolvedValue(undefined);
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText("Update & Restart"));
+      });
+
+      await waitFor(() => {
+        expect(downloadAndInstallUpdate).toHaveBeenCalled();
+      });
+    });
+
+    it("shows error when auto-update fails", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+      });
+      vi.mocked(downloadAndInstallUpdate).mockRejectedValue(new Error("Not supported"));
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText("Update & Restart"));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Auto-update is not available/)).toBeInTheDocument();
+      });
+    });
+
+    it("dismisses update dialog when Later is clicked", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+      });
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Update Available")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Later"));
+
+      expect(screen.queryByText("Update Available")).not.toBeInTheDocument();
+    });
+
+    it("sets store error when check fails", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockRejectedValue(new Error("Network error"));
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        expect(useRepositoryStore.getState().error).toBe("Failed to check for updates.");
       });
     });
   });

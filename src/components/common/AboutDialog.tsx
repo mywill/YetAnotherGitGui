@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getAppInfo, type AppInfo } from "../../services/system";
+import {
+  getAppInfo,
+  checkForUpdate,
+  downloadAndInstallUpdate,
+  getReleaseUrl,
+  type AppInfo,
+  type UpdateInfo,
+} from "../../services/system";
 import "./AboutDialog.css";
 
 interface AboutDialogProps {
@@ -8,6 +15,11 @@ interface AboutDialogProps {
 
 export function AboutDialog({ onClose }: AboutDialogProps) {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<
+    "checking" | "up-to-date" | "available" | "installing" | "error"
+  >("checking");
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -15,6 +27,28 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
       .then(setAppInfo)
       .catch(() => setAppInfo(null));
   }, []);
+
+  useEffect(() => {
+    checkForUpdate()
+      .then((info) => {
+        setUpdateInfo(info);
+        setUpdateStatus(info.available ? "available" : "up-to-date");
+      })
+      .catch(() => {
+        setUpdateStatus("error");
+      });
+  }, []);
+
+  const handleUpdate = async () => {
+    setUpdateStatus("installing");
+    setUpdateError(null);
+    try {
+      await downloadAndInstallUpdate();
+    } catch {
+      setUpdateError("Auto-update is not available for your installation type.");
+      setUpdateStatus("available");
+    }
+  };
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -69,6 +103,56 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                 <tr>
                   <td>Architecture</td>
                   <td>{appInfo.arch}</td>
+                </tr>
+                <tr>
+                  <td>Update</td>
+                  <td className="about-update-cell">
+                    {updateStatus === "checking" && (
+                      <span className="about-update-checking">Checking...</span>
+                    )}
+                    {updateStatus === "up-to-date" && (
+                      <span className="about-update-ok">Up to date</span>
+                    )}
+                    {updateStatus === "available" && updateInfo?.version && (
+                      <span className="about-update-available">
+                        v{updateInfo.version} available{" "}
+                        <button className="about-update-btn" onClick={handleUpdate}>
+                          Update
+                        </button>
+                        <a
+                          className="about-update-link"
+                          href={getReleaseUrl(updateInfo.version)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View release
+                        </a>
+                      </span>
+                    )}
+                    {updateStatus === "installing" && (
+                      <span className="about-update-checking">Installing...</span>
+                    )}
+                    {updateStatus === "error" && (
+                      <span className="about-update-error">Check failed</span>
+                    )}
+                    {updateError && (
+                      <span className="about-update-error-detail">
+                        {updateError}
+                        {updateInfo?.version && (
+                          <>
+                            {" "}
+                            <a
+                              href={getReleaseUrl(updateInfo.version)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Download manually
+                            </a>
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </td>
                 </tr>
               </tbody>
             </table>
