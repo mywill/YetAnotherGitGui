@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.0...v1.4.1) (2026-02-19)
+
+
+### Bug Fixes
+
+* updated to the correct public key ([d36d66d](https://github.com/mywill/YetAnotherGitGui/commit/d36d66d7891657aad63c6d1d1060c1194fc302d3))
+
 # [1.4.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.3.0...v1.4.0) (2026-02-19)
 
 
