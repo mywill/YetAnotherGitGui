@@ -1,3 +1,16 @@
+# [1.4.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.3.0...v1.4.0) (2026-02-19)
+
+
+### Bug Fixes
+
+* turned on spellcheck for the OS's that support it. ([1fc486d](https://github.com/mywill/YetAnotherGitGui/commit/1fc486d52c3288b1807462eff5f4a171a57f6113))
+
+
+### Features
+
+* added the ability to revert files and commits. ([5fb6b03](https://github.com/mywill/YetAnotherGitGui/commit/5fb6b036291de68fc6ce2bf263e2f8c122f2946b))
+* added tuari plugin-updater for auto updates on OS where supported. ([def9d37](https://github.com/mywill/YetAnotherGitGui/commit/def9d37f95b1a477c360fcc91dedd2f73a157010))
+
 # [1.3.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.2.1...v1.3.0) (2026-02-15)
 
 

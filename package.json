@@ -1,6 +1,6 @@
 {
   "name": "yagg",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A Git GUI application built with Tauri",
   "packageManager": "pnpm@9.15.4",
   "author": "kd",
