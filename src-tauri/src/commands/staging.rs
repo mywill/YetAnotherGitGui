@@ -97,7 +97,11 @@ pub fn revert_commit(hash: String, state: State<AppState>) -> Result<(), AppErro
 }
 
 #[tauri::command]
-pub fn revert_commit_file(hash: String, path: String, state: State<AppState>) -> Result<(), AppError> {
+pub fn revert_commit_file(
+    hash: String,
+    path: String,
+    state: State<AppState>,
+) -> Result<(), AppError> {
     let repo_lock = state.repository.lock();
     let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
 

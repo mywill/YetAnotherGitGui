@@ -1907,8 +1907,7 @@ mod tests {
     fn test_revert_commit_modified_file() {
         let (temp_dir, repo) = create_test_repo();
         make_commit(&repo, &temp_dir, "file.txt", "original\n", "initial");
-        let commit_oid =
-            make_commit(&repo, &temp_dir, "file.txt", "modified\n", "modify file");
+        let commit_oid = make_commit(&repo, &temp_dir, "file.txt", "modified\n", "modify file");
 
         let result = revert_commit(&repo, &commit_oid.to_string());
         assert!(result.is_ok());
@@ -1922,8 +1921,13 @@ mod tests {
     fn test_revert_commit_added_file() {
         let (temp_dir, repo) = create_test_repo();
         make_commit(&repo, &temp_dir, "existing.txt", "exists\n", "initial");
-        let commit_oid =
-            make_commit(&repo, &temp_dir, "new_file.txt", "new content\n", "add file");
+        let commit_oid = make_commit(
+            &repo,
+            &temp_dir,
+            "new_file.txt",
+            "new content\n",
+            "add file",
+        );
 
         let result = revert_commit(&repo, &commit_oid.to_string());
         assert!(result.is_ok());
@@ -1991,16 +1995,9 @@ mod tests {
         // Commit A: create file
         make_commit(&repo, &temp_dir, "file.txt", "original\n", "initial");
         // Commit B: modify file
-        let commit_b =
-            make_commit(&repo, &temp_dir, "file.txt", "modified by B\n", "modify B");
+        let commit_b = make_commit(&repo, &temp_dir, "file.txt", "modified by B\n", "modify B");
         // Commit C: modify file again (so reverting B will conflict)
-        make_commit(
-            &repo,
-            &temp_dir,
-            "file.txt",
-            "modified by C\n",
-            "modify C",
-        );
+        make_commit(&repo, &temp_dir, "file.txt", "modified by C\n", "modify C");
 
         // Revert file.txt from commit B — should fail with RevertConflict
         let result = revert_commit_file(&repo, &commit_b.to_string(), "file.txt");
@@ -2025,8 +2022,13 @@ mod tests {
         // Initial commit so there's a parent
         make_commit(&repo, &temp_dir, "base.txt", "base\n", "initial");
         // Commit that adds a new file
-        let add_commit =
-            make_commit(&repo, &temp_dir, "new_file.txt", "new content\n", "add file");
+        let add_commit = make_commit(
+            &repo,
+            &temp_dir,
+            "new_file.txt",
+            "new content\n",
+            "add file",
+        );
 
         let file_path = temp_dir.path().join("new_file.txt");
         assert!(file_path.exists());
@@ -2044,8 +2046,7 @@ mod tests {
     fn test_revert_commit_stages_changes() {
         let (temp_dir, repo) = create_test_repo();
         make_commit(&repo, &temp_dir, "file.txt", "original\n", "initial");
-        let commit_oid =
-            make_commit(&repo, &temp_dir, "file.txt", "modified\n", "modify file");
+        let commit_oid = make_commit(&repo, &temp_dir, "file.txt", "modified\n", "modify file");
 
         revert_commit(&repo, &commit_oid.to_string()).unwrap();
 
