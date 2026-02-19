@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.1...v1.4.2) (2026-02-19)
+
+
+### Bug Fixes
+
+* more updates for auto update ([2217ee3](https://github.com/mywill/YetAnotherGitGui/commit/2217ee3c10f8b086dcf4e9695e6be2535c69eaa0))
+
 ## [1.4.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.0...v1.4.1) (2026-02-19)
 
 
