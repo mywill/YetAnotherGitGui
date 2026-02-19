@@ -88,6 +88,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v${{ needs.release.outputs.version }}
+          updaterJsonKeepUniversal: true
 
   build-macos:
     name: Build macOS
@@ -135,9 +136,11 @@ jobs:
             echo "has_signing=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build Tauri app (with code signing)
+      - name: Build with Tauri Action (with Apple code signing)
         if: steps.check-signing.outputs.has_signing == 'true'
+        uses: tauri-apps/tauri-action@v0
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -146,14 +149,22 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build --target aarch64-apple-darwin
+        with:
+          tagName: v${{ needs.release.outputs.version }}
+          updaterJsonKeepUniversal: true
+          args: --target aarch64-apple-darwin
 
-      - name: Build Tauri app (without code signing)
+      - name: Build with Tauri Action (without Apple code signing)
         if: steps.check-signing.outputs.has_signing != 'true'
+        uses: tauri-apps/tauri-action@v0
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build --target aarch64-apple-darwin
+        with:
+          tagName: v${{ needs.release.outputs.version }}
+          updaterJsonKeepUniversal: true
+          args: --target aarch64-apple-darwin
 
       - name: Ad-hoc sign macOS app
         if: steps.check-signing.outputs.has_signing != 'true'
@@ -172,26 +183,16 @@ jobs:
           hdiutil create -volname "$APP_NAME" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_PATH"
           echo "Created signed DMG: $DMG_PATH"
 
-      - name: Upload to GitHub Release
+      - name: Re-upload ad-hoc signed DMG
+        if: steps.check-signing.outputs.has_signing != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ needs.release.outputs.version }}"
           TAG="v${VERSION}"
 
-          # Upload DMG
           DMG_PATH=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
           if [ -n "$DMG_PATH" ]; then
-            echo "Uploading: $DMG_PATH"
+            echo "Re-uploading ad-hoc signed DMG: $DMG_PATH"
             gh release upload "$TAG" "$DMG_PATH" --clobber
-          fi
-
-          # Upload .app as tar.gz for direct download
-          APP_PATH=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
-          if [ -n "$APP_PATH" ]; then
-            APP_NAME=$(basename "$APP_PATH")
-            TAR_NAME="${APP_NAME%.app}_${VERSION}_aarch64.app.tar.gz"
-            tar -czf "$TAR_NAME" -C "$(dirname "$APP_PATH")" "$APP_NAME"
-            echo "Uploading: $TAR_NAME"
-            gh release upload "$TAG" "$TAR_NAME" --clobber
           fi
