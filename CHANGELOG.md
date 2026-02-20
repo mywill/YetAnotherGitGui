@@ -1,3 +1,12 @@
+## [1.4.5](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.4...v1.4.5) (2026-02-20)
+
+
+### Bug Fixes
+
+* Updated how the up to date message show ([41f3538](https://github.com/mywill/YetAnotherGitGui/commit/41f3538a722ded5f7cb420274eb09150200802dd))
+* Updated to correctly open the release link in the users browser. ([5707730](https://github.com/mywill/YetAnotherGitGui/commit/57077307e9083fcbbce85a415461b808cf8758f3))
+* Updated update dialog to fix text ([317f211](https://github.com/mywill/YetAnotherGitGui/commit/317f2111ad49e7ee54556d35bcc516418986e289))
+
 ## [1.4.4](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.3...v1.4.4) (2026-02-20)
 
 
