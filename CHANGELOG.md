@@ -1,3 +1,13 @@
+## [1.4.4](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.3...v1.4.4) (2026-02-20)
+
+
+### Bug Fixes
+
+* hopefully last fix for auto update ([cbe46a6](https://github.com/mywill/YetAnotherGitGui/commit/cbe46a6f64531bb91e36616b12183ba84a5f0e5c))
+* i lied one more try ([93917b5](https://github.com/mywill/YetAnotherGitGui/commit/93917b5ab8e1fbe91d26f9be0eeb8db2db10dae3))
+* last attempt.. ([d95f3eb](https://github.com/mywill/YetAnotherGitGui/commit/d95f3ebbd8d308b1837c171506146c221560a989))
+* more auto update related fixes ([0a30e30](https://github.com/mywill/YetAnotherGitGui/commit/0a30e304da23398cecebb9f5bca65bb9971ed897))
+
 ## [1.4.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.2...v1.4.3) (2026-02-19)
 
 
