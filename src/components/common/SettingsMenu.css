@@ -59,6 +59,11 @@
   word-break: break-word;
 }
 
+/* Widen the dialog when showing update content */
+.confirm-dialog:has(.update-dialog-content) {
+  max-width: 600px;
+}
+
 .update-dialog-content p {
   margin: 0 0 8px;
   font-size: var(--font-size-sm);
@@ -70,6 +75,13 @@
   border-radius: 4px;
   padding: 8px;
   margin-bottom: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
 }
 
 .update-dialog-notes-label {
