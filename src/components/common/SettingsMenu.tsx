@@ -106,7 +106,8 @@ export function SettingsMenu() {
       if (info.available) {
         setShowUpdateDialog(true);
       } else {
-        setActionMessage("You're up to date!");
+        useRepositoryStore.setState({ successMessage: "You're up to date!" });
+        setTimeout(() => useRepositoryStore.setState({ successMessage: null }), 3000);
       }
     } catch {
       useRepositoryStore.setState({ error: "Failed to check for updates." });

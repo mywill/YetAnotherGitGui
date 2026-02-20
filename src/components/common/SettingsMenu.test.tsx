@@ -328,7 +328,7 @@ describe("SettingsMenu", () => {
       expect(screen.getByText("Check for Updates")).toBeInTheDocument();
     });
 
-    it("shows up-to-date message when no update available", async () => {
+    it("shows up-to-date notification when no update available", async () => {
       vi.mocked(checkCliInstalled).mockResolvedValue(false);
       vi.mocked(checkForUpdate).mockResolvedValue({ available: false });
 
@@ -341,7 +341,8 @@ describe("SettingsMenu", () => {
       fireEvent.click(screen.getByText("Check for Updates"));
 
       await waitFor(() => {
-        expect(screen.getByText("You're up to date!")).toBeInTheDocument();
+        const state = useRepositoryStore.getState();
+        expect(state.successMessage).toBe("You're up to date!");
       });
     });
 
