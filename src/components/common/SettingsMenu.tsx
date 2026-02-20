@@ -9,6 +9,7 @@ import {
   getReleaseUrl,
   type UpdateInfo,
 } from "../../services/system";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
@@ -129,6 +130,8 @@ export function SettingsMenu() {
       setUpdateInstalling(false);
     }
   };
+
+  const releaseUrl = updateInfo?.version ? getReleaseUrl(updateInfo.version) : "";
 
   return (
     <>
@@ -270,9 +273,11 @@ export function SettingsMenu() {
               {updateError && <p className="update-dialog-error">{updateError}</p>}
               <p className="update-dialog-link">
                 <a
-                  href={getReleaseUrl(updateInfo.version)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openUrl(releaseUrl);
+                  }}
                 >
                   View release on GitHub
                 </a>

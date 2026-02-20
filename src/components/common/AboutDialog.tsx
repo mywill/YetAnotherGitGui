@@ -7,6 +7,7 @@ import {
   type AppInfo,
   type UpdateInfo,
 } from "../../services/system";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import "./AboutDialog.css";
 
 interface AboutDialogProps {
@@ -73,6 +74,8 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
     [onClose]
   );
 
+  const releaseUrl = updateInfo?.version ? getReleaseUrl(updateInfo.version) : "";
+
   return (
     <div className="confirm-dialog-backdrop" onClick={handleBackdropClick}>
       <div
@@ -121,9 +124,11 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                         </button>
                         <a
                           className="about-update-link"
-                          href={getReleaseUrl(updateInfo.version)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openUrl(releaseUrl);
+                          }}
                         >
                           View release
                         </a>
@@ -142,9 +147,11 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                           <>
                             {" "}
                             <a
-                              href={getReleaseUrl(updateInfo.version)}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openUrl(releaseUrl);
+                              }}
                             >
                               Download manually
                             </a>

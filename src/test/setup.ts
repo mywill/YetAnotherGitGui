@@ -30,6 +30,11 @@ vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock Tauri opener plugin
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openUrl: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock window.confirm and window.alert
 beforeAll(() => {
   vi.stubGlobal(

@@ -36,6 +36,11 @@ export const tauriMocks = `
           return null;
         }
 
+        if (pluginName === 'opener') {
+          if (pluginCmd === 'open_url') return undefined;
+          return null;
+        }
+
         console.warn('[E2E Mock] Unhandled plugin command:', cmd);
         return null;
       }
