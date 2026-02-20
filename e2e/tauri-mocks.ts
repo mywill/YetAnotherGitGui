@@ -216,6 +216,12 @@ export const tauriMocks = `
             arch: 'aarch64'
           };
 
+        case 'write_update_log':
+          return undefined;
+
+        case 'get_update_log_path':
+          return '/home/user/.local/share/yagg/update.log';
+
         case 'checkout_commit':
         case 'checkout_branch':
           return undefined;

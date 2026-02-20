@@ -7,6 +7,8 @@ import {
   checkForUpdate,
   downloadAndInstallUpdate,
   getReleaseUrl,
+  writeUpdateLog,
+  getUpdateLogPath,
   type UpdateInfo,
 } from "../../services/system";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -110,8 +112,11 @@ export function SettingsMenu() {
         useRepositoryStore.setState({ successMessage: "You're up to date!" });
         setTimeout(() => useRepositoryStore.setState({ successMessage: null }), 3000);
       }
-    } catch {
-      useRepositoryStore.setState({ error: "Failed to check for updates." });
+    } catch (error) {
+      await writeUpdateLog(`ERROR in settings menu check: ${String(error)}`);
+      useRepositoryStore.setState({
+        error: `Failed to check for updates: ${String(error)}`,
+      });
     } finally {
       setUpdateChecking(false);
     }
@@ -122,9 +127,12 @@ export function SettingsMenu() {
     setUpdateError(null);
     try {
       await downloadAndInstallUpdate();
-    } catch {
+    } catch (error) {
+      await writeUpdateLog(`ERROR in settings menu install: ${String(error)}`);
+      const logPath = await getUpdateLogPath();
+      const logHint = logPath ? ` Check ${logPath} for details.` : "";
       setUpdateError(
-        "Auto-update is not available for your installation type. Please download the update manually."
+        `Auto-update failed: ${String(error)}. Please download the update manually.${logHint}`
       );
     } finally {
       setUpdateInstalling(false);

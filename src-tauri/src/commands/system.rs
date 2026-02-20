@@ -1,4 +1,5 @@
 use crate::error::AppError;
+use crate::update_logger;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -125,6 +126,16 @@ pub fn check_cli_installed() -> bool {
     }
 }
 
+#[tauri::command]
+pub fn write_update_log(message: String) {
+    update_logger::write_log(&message);
+}
+
+#[tauri::command]
+pub fn get_update_log_path() -> Option<String> {
+    update_logger::get_log_path()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,6 +188,20 @@ mod tests {
         assert!(!info.tauri_version.is_empty());
         assert!(!info.platform.is_empty());
         assert!(!info.arch.is_empty());
+    }
+
+    #[test]
+    fn test_write_update_log_does_not_panic() {
+        write_update_log("Test from command".to_string());
+    }
+
+    #[test]
+    fn test_get_update_log_path_returns_value() {
+        let path = get_update_log_path();
+        if dirs::data_dir().is_some() {
+            assert!(path.is_some());
+            assert!(path.unwrap().contains("update.log"));
+        }
     }
 
     #[test]

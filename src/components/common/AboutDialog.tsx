@@ -4,6 +4,8 @@ import {
   checkForUpdate,
   downloadAndInstallUpdate,
   getReleaseUrl,
+  writeUpdateLog,
+  getUpdateLogPath,
   type AppInfo,
   type UpdateInfo,
 } from "../../services/system";
@@ -35,7 +37,8 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
         setUpdateInfo(info);
         setUpdateStatus(info.available ? "available" : "up-to-date");
       })
-      .catch(() => {
+      .catch(async (error) => {
+        await writeUpdateLog(`ERROR in about dialog check: ${String(error)}`);
         setUpdateStatus("error");
       });
   }, []);
@@ -45,8 +48,11 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
     setUpdateError(null);
     try {
       await downloadAndInstallUpdate();
-    } catch {
-      setUpdateError("Auto-update is not available for your installation type.");
+    } catch (error) {
+      await writeUpdateLog(`ERROR in about dialog install: ${String(error)}`);
+      const logPath = await getUpdateLogPath();
+      const logHint = logPath ? ` Check ${logPath} for details.` : "";
+      setUpdateError(`Auto-update failed: ${String(error)}.${logHint}`);
       setUpdateStatus("available");
     }
   };

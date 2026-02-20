@@ -7,6 +7,8 @@ vi.mock("../../services/system", () => ({
   getAppInfo: vi.fn(),
   checkForUpdate: vi.fn(),
   downloadAndInstallUpdate: vi.fn(),
+  writeUpdateLog: vi.fn().mockResolvedValue(undefined),
+  getUpdateLogPath: vi.fn().mockResolvedValue("/home/user/.local/share/yagg/update.log"),
   getReleaseUrl: vi.fn(
     (v: string) => `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${v}`
   ),
@@ -208,7 +210,7 @@ describe("AboutDialog", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Auto-update is not available/)).toBeInTheDocument();
+        expect(screen.getByText(/Auto-update failed/)).toBeInTheDocument();
         expect(screen.getByText("Download manually")).toBeInTheDocument();
       });
     });

@@ -18,6 +18,8 @@ vi.mock("../../services/system", () => ({
   getAppInfo: vi.fn(),
   checkForUpdate: vi.fn(),
   downloadAndInstallUpdate: vi.fn(),
+  writeUpdateLog: vi.fn().mockResolvedValue(undefined),
+  getUpdateLogPath: vi.fn().mockResolvedValue("/home/user/.local/share/yagg/update.log"),
   getReleaseUrl: vi.fn(
     (v: string) => `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${v}`
   ),
@@ -416,7 +418,7 @@ describe("SettingsMenu", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Auto-update is not available/)).toBeInTheDocument();
+        expect(screen.getByText(/Auto-update failed/)).toBeInTheDocument();
       });
     });
 
@@ -457,7 +459,7 @@ describe("SettingsMenu", () => {
       fireEvent.click(screen.getByText("Check for Updates"));
 
       await waitFor(() => {
-        expect(useRepositoryStore.getState().error).toBe("Failed to check for updates.");
+        expect(useRepositoryStore.getState().error).toContain("Failed to check for updates");
       });
     });
   });

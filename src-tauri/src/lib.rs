@@ -3,6 +3,7 @@ pub mod crash_handler;
 mod error;
 mod git;
 mod state;
+pub mod update_logger;
 
 use state::AppState;
 
@@ -51,6 +52,8 @@ pub fn run() {
             commands::apply_stash,
             commands::drop_stash,
             commands::get_stash_file_diff,
+            commands::write_update_log,
+            commands::get_update_log_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
