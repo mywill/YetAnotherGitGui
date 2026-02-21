@@ -137,6 +137,25 @@ xattr -cr /Applications/Yet\ Another\ Git\ Gui.app
 ### Build fails with missing dependencies
 Check that you have all [Tauri prerequisites](https://tauri.app/start/prerequisites/) installed for your platform.
 
+## Claude Code / YOLO Container
+
+This project includes setup scripts for running [Claude Code](https://github.com/anthropics/claude-code) inside a [YOLO](https://github.com/mywill/yolo)-managed Podman container. YOLO provides an isolated, reproducible environment where Claude Code can develop and test without touching your host system.
+
+The scripts live in `.yolo/`:
+
+| Script | Runs as | Purpose |
+|--------|---------|---------|
+| `root-setup.sh` | root | Installs Tauri 2.0 system libraries and Playwright's Chromium runtime deps via `apt-get` |
+| `user-setup.sh` | claude | Installs Rust (stable + clippy + rustfmt), cargo-llvm-cov, Node 22 via NVM, pnpm 9.15.4, and Playwright Chromium browsers |
+
+After YOLO builds the container, all development and test commands work out of the box:
+
+```bash
+pnpm install && pnpm tauri dev   # run the app
+pnpm test && pnpm test:e2e       # all tests
+cd src-tauri && cargo test       # Rust tests
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
