@@ -1,3 +1,11 @@
+## [1.4.6](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.5...v1.4.6) (2026-02-21)
+
+
+### Bug Fixes
+
+* missed file.. ([ed6f24e](https://github.com/mywill/YetAnotherGitGui/commit/ed6f24e17b5bef11e78dc8165616369c00590cda))
+* Updated to log out failures for the updater to help with debugging on other systems ([b9426e5](https://github.com/mywill/YetAnotherGitGui/commit/b9426e50f5b295550f7ea0d888ff1d09974a0233))
+
 ## [1.4.5](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.4...v1.4.5) (2026-02-20)
 
 
