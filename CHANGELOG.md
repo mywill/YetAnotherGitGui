@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.5.0...v1.5.1) (2026-02-22)
+
+
+### Bug Fixes
+
+* update to better support mac auto update. You may need to reinstall cli on macs ([4547f69](https://github.com/mywill/YetAnotherGitGui/commit/4547f692c35f22b29bf574ea165da9ff5e1a7b01))
+
 # [1.5.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.6...v1.5.0) (2026-02-22)
 
 
