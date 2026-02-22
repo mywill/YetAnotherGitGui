@@ -41,6 +41,11 @@ export const tauriMocks = `
           return null;
         }
 
+        if (pluginName === 'dialog') {
+          if (pluginCmd === 'open') return null;
+          return null;
+        }
+
         console.warn('[E2E Mock] Unhandled plugin command:', cmd);
         return null;
       }

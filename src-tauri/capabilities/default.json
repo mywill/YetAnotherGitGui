@@ -11,6 +11,7 @@
     "clipboard-manager:allow-read-text",
     "updater:default",
     "process:default",
-    "opener:default"
+    "opener:default",
+    "dialog:default"
   ]
 }

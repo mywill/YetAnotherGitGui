@@ -45,6 +45,23 @@ vi.mock("./components/views/StatusView", () => ({
   StatusView: () => <div data-testid="status-view">StatusView</div>,
 }));
 
+vi.mock("./components/views/WelcomeScreen", () => ({
+  WelcomeScreen: ({ error, failedPath }: { error: string | null; failedPath: string | null }) => (
+    <div data-testid="welcome-screen">
+      {error && <span data-testid="welcome-error">{error}</span>}
+      {failedPath && <span data-testid="welcome-failed-path">{failedPath}</span>}
+    </div>
+  ),
+}));
+
+vi.mock("./components/common/SettingsMenu", () => ({
+  SettingsMenu: () => <div data-testid="settings-menu">SettingsMenu</div>,
+}));
+
+vi.mock("./components/layout/FileStatusCounts", () => ({
+  FileStatusCounts: () => <div data-testid="file-status-counts">FileStatusCounts</div>,
+}));
+
 vi.mock("./components/common/ConfirmDialog", () => ({
   ConfirmDialog: ({
     title,
@@ -178,8 +195,8 @@ describe("App", () => {
     });
   });
 
-  describe("error state", () => {
-    it("shows error message when there is an error and no repository", () => {
+  describe("welcome screen state", () => {
+    it("shows welcome screen when there is an error and no repository", () => {
       setupDefaultMocks({
         error: "Repository not found",
         repositoryInfo: null,
@@ -187,35 +204,57 @@ describe("App", () => {
 
       render(<App />);
 
-      expect(screen.getByText("Failed to open repository")).toBeInTheDocument();
-      expect(screen.getByText("Repository not found")).toBeInTheDocument();
+      expect(screen.getByTestId("welcome-screen")).toBeInTheDocument();
+      expect(screen.getByTestId("welcome-error")).toHaveTextContent("Repository not found");
     });
 
-    it("shows hint about git repository", () => {
+    it("shows welcome screen with no error when no repository and no error", () => {
       setupDefaultMocks({
-        error: "Error",
+        error: null,
         repositoryInfo: null,
       });
 
       render(<App />);
 
-      expect(
-        screen.getByText("Make sure you're running this in a Git repository directory.")
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("welcome-screen")).toBeInTheDocument();
+      expect(screen.queryByTestId("welcome-error")).not.toBeInTheDocument();
     });
 
-    it("has error CSS class structure", () => {
+    it("passes failedPath to welcome screen", () => {
       setupDefaultMocks({
         error: "Error",
+        repositoryInfo: null,
+        repoPath: "/some/path",
+      });
+
+      render(<App />);
+
+      expect(screen.getByTestId("welcome-failed-path")).toHaveTextContent("/some/path");
+    });
+
+    it("renders app header with SettingsMenu on welcome screen", () => {
+      setupDefaultMocks({
+        error: null,
         repositoryInfo: null,
       });
 
       const { container } = render(<App />);
 
-      expect(container.querySelector(".app-error")).toBeInTheDocument();
-      expect(container.querySelector(".error-title")).toBeInTheDocument();
-      expect(container.querySelector(".error-message")).toBeInTheDocument();
-      expect(container.querySelector(".error-hint")).toBeInTheDocument();
+      expect(container.querySelector(".app-header")).toBeInTheDocument();
+      expect(screen.getByTestId("settings-menu")).toBeInTheDocument();
+      expect(screen.getByText("Yet Another Git Gui")).toBeInTheDocument();
+    });
+
+    it("renders app shell structure on welcome screen", () => {
+      setupDefaultMocks({
+        error: null,
+        repositoryInfo: null,
+      });
+
+      const { container } = render(<App />);
+
+      expect(container.querySelector(".app")).toBeInTheDocument();
+      expect(container.querySelector(".app-main")).toBeInTheDocument();
     });
   });
 

@@ -3,6 +3,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { Sidebar } from "./components/sidebar/Sidebar";
 import { HistoryView } from "./components/views/HistoryView";
 import { StatusView } from "./components/views/StatusView";
+import { WelcomeScreen } from "./components/views/WelcomeScreen";
 import { ConfirmDialog } from "./components/common/ConfirmDialog";
 import { SettingsMenu } from "./components/common/SettingsMenu";
 import { FileStatusCounts } from "./components/layout/FileStatusCounts";
@@ -81,14 +82,20 @@ export function App() {
     );
   }
 
-  if (error && !repositoryInfo) {
+  if (!repositoryInfo && !isLoading && !cliLoading) {
     return (
-      <div className="app-error">
-        <div className="error-title">Failed to open repository</div>
-        <div className="error-message">{error}</div>
-        <div className="error-hint">
-          Make sure you're running this in a Git repository directory.
-        </div>
+      <div className="app">
+        <header className="app-header">
+          <div className="header-left">
+            <span className="app-title">Yet Another Git Gui</span>
+          </div>
+          <div className="header-right">
+            <SettingsMenu />
+          </div>
+        </header>
+        <main className="app-main">
+          <WelcomeScreen error={error} failedPath={repoPath} />
+        </main>
       </div>
     );
   }
