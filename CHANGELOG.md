@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.6...v1.5.0) (2026-02-22)
+
+
+### Features
+
+* added new landing screen for when opening a non git folder or launching via the icon it allows you to use the menu and open a repository with the fileexporer or by path. ([efdf00b](https://github.com/mywill/YetAnotherGitGui/commit/efdf00be7798ed5bd92bd56250db3d490887d2a5))
+
 ## [1.4.6](https://github.com/mywill/YetAnotherGitGui/compare/v1.4.5...v1.4.6) (2026-02-21)
 
 
