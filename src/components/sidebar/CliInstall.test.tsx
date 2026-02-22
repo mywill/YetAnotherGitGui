@@ -106,7 +106,7 @@ describe("CliInstall", () => {
 
       fireEvent.click(screen.getByText("Install CLI Tool"));
 
-      expect(screen.getByText(/symlink at/)).toBeInTheDocument();
+      expect(screen.getByText(/\/usr\/local\/bin/)).toBeInTheDocument();
       expect(screen.getByText(/administrator password/)).toBeInTheDocument();
     });
 

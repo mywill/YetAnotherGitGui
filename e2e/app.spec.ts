@@ -1470,7 +1470,7 @@ test.describe("Settings Menu - CLI Install (not installed)", () => {
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible();
-    await expect(page.getByText(/symlink at/)).toBeVisible();
+    await expect(page.getByText(/\/usr\/local\/bin/)).toBeVisible();
     await expect(page.getByText(/administrator password/)).toBeVisible();
   });
 });

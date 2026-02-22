@@ -53,9 +53,8 @@ export function CliInstall() {
           message={
             <div className="cli-install-info">
               <p>
-                This will add the <code>yagg</code> command to your PATH by creating a symlink at{" "}
-                <code>/usr/local/bin/yagg</code>. You will be prompted for your administrator
-                password.
+                This will add the <code>yagg</code> command to <code>/usr/local/bin</code>. You will
+                be prompted for your administrator password.
               </p>
               <p>
                 Any terminals that are already open will need to be restarted, or you can run{" "}

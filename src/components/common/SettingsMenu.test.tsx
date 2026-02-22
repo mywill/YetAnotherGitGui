@@ -462,6 +462,29 @@ describe("SettingsMenu", () => {
         expect(useRepositoryStore.getState().error).toContain("Failed to check for updates");
       });
     });
+
+    it("shows symlink-specific error when update check fails due to symlink", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockRejectedValue(
+        new Error(
+          "StartingBinary found current_exe() that contains a symlink on a non-allowed platform"
+        )
+      );
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        const error = useRepositoryStore.getState().error;
+        expect(error).toContain("outdated symlink");
+        expect(error).toContain("reinstall the CLI tool");
+      });
+    });
   });
 
   describe("about dialog", () => {

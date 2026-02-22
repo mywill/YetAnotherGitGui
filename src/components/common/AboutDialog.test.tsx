@@ -225,6 +225,21 @@ describe("AboutDialog", () => {
       });
     });
 
+    it("shows symlink-specific error when update check fails due to symlink", async () => {
+      vi.mocked(checkForUpdate).mockRejectedValue(
+        new Error(
+          "StartingBinary found current_exe() that contains a symlink on a non-allowed platform"
+        )
+      );
+
+      render(<AboutDialog onClose={mockOnClose} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Check failed")).toBeInTheDocument();
+        expect(screen.getByText(/outdated CLI symlink/)).toBeInTheDocument();
+      });
+    });
+
     it("checks for updates on mount", () => {
       render(<AboutDialog onClose={mockOnClose} />);
 

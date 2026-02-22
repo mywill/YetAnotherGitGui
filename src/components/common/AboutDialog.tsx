@@ -38,7 +38,13 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
         setUpdateStatus(info.available ? "available" : "up-to-date");
       })
       .catch(async (error) => {
-        await writeUpdateLog(`ERROR in about dialog check: ${String(error)}`);
+        const errorStr = String(error);
+        await writeUpdateLog(`ERROR in about dialog check: ${errorStr}`);
+        if (errorStr.toLowerCase().includes("symlink")) {
+          setUpdateError(
+            "Update check failed due to an outdated CLI symlink. Reinstall the CLI tool from the settings menu."
+          );
+        }
         setUpdateStatus("error");
       });
   }, []);

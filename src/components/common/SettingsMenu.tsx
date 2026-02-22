@@ -113,9 +113,13 @@ export function SettingsMenu() {
         setTimeout(() => useRepositoryStore.setState({ successMessage: null }), 3000);
       }
     } catch (error) {
-      await writeUpdateLog(`ERROR in settings menu check: ${String(error)}`);
+      const errorStr = String(error);
+      await writeUpdateLog(`ERROR in settings menu check: ${errorStr}`);
+      const isSymlinkError = errorStr.toLowerCase().includes("symlink");
       useRepositoryStore.setState({
-        error: `Failed to check for updates: ${String(error)}`,
+        error: isSymlinkError
+          ? "Update check failed because the CLI tool uses an outdated symlink. Please reinstall the CLI tool from the settings menu to fix this."
+          : `Failed to check for updates: ${errorStr}`,
       });
     } finally {
       setUpdateChecking(false);
@@ -223,9 +227,8 @@ export function SettingsMenu() {
           message={
             <div className="cli-install-info">
               <p>
-                This will add the <code>yagg</code> command to your PATH by creating a symlink at{" "}
-                <code>/usr/local/bin/yagg</code>. You will be prompted for your administrator
-                password.
+                This will add the <code>yagg</code> command to <code>/usr/local/bin</code>. You will
+                be prompted for your administrator password.
               </p>
               <p>
                 Any terminals that are already open will need to be restarted, or you can run{" "}

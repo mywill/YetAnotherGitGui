@@ -70,13 +70,24 @@ pub fn install_cli() -> Result<String, AppError> {
         let exe_path = std::env::current_exe()
             .map_err(|e| AppError::InvalidPath(format!("Failed to get executable path: {}", e)))?;
 
-        let exe_str = exe_path.to_string_lossy();
-        let symlink_path = "/usr/local/bin/yagg";
+        // Resolve symlinks to get the real path to the binary
+        let resolved_path = std::fs::canonicalize(&exe_path).map_err(|e| {
+            AppError::InvalidPath(format!("Failed to resolve executable path: {}", e))
+        })?;
+        let resolved_str = resolved_path.to_string_lossy();
+        let cli_path = "/usr/local/bin/yagg";
 
-        // Use osascript to get admin privileges and create symlink
+        // Create a wrapper script instead of a symlink to avoid Tauri updater issues
+        // The updater rejects symlinks on macOS, so we use a script that exec's the real binary
+        let wrapper_script = format!("#!/bin/bash\\nexec '{}' \\\"$@\\\"", resolved_str);
+        let shell_cmd = format!(
+            "printf '{}' > '{}' && chmod +x '{}'",
+            wrapper_script, cli_path, cli_path
+        );
+
         let script = format!(
-            r#"do shell script "ln -sf '{}' '{}'" with administrator privileges"#,
-            exe_str, symlink_path
+            r#"do shell script "{}" with administrator privileges"#,
+            shell_cmd
         );
 
         let output = Command::new("osascript")
@@ -86,9 +97,7 @@ pub fn install_cli() -> Result<String, AppError> {
             .map_err(|e| AppError::InvalidPath(format!("Failed to run osascript: {}", e)))?;
 
         if output.status.success() {
-            Ok(format!(
-                "CLI installed successfully. You can now use 'yagg' from the terminal."
-            ))
+            Ok("CLI installed successfully. You can now use 'yagg' from the terminal.".to_string())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             if stderr.contains("User canceled") {
