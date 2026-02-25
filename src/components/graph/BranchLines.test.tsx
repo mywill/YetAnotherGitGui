@@ -190,7 +190,7 @@ describe("BranchLines", () => {
 
       const circle = container.querySelector("circle");
       // Should use first branch color variable
-      expect(circle?.getAttribute("fill")).toContain("var(--branch-color-1)");
+      expect(circle?.getAttribute("fill")).toContain("var(--color-branch-1)");
     });
 
     it("cycles through colors for different columns", () => {
@@ -203,7 +203,7 @@ describe("BranchLines", () => {
 
       const circle = container.querySelector("circle");
       // Column 8 % 8 = 0, so should use branch-color-1
-      expect(circle?.getAttribute("fill")).toContain("var(--branch-color-1)");
+      expect(circle?.getAttribute("fill")).toContain("var(--color-branch-1)");
     });
 
     it("uses consistent color for line stroke", () => {
@@ -216,7 +216,7 @@ describe("BranchLines", () => {
 
       const line = container.querySelector("line");
       // Column 2 uses branch-color-3
-      expect(line?.getAttribute("stroke")).toContain("var(--branch-color-3)");
+      expect(line?.getAttribute("stroke")).toContain("var(--color-branch-3)");
     });
   });
 

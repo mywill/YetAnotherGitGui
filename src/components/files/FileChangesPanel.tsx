@@ -3,7 +3,6 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
-import "./FileChangesPanel.css";
 
 interface FileChangesPanelProps {
   statuses: FileStatuses | null;
@@ -18,7 +17,6 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
   const [showUnstaged, setShowUnstaged] = useState(true);
   const [showUntracked, setShowUntracked] = useState(true);
 
-  // Adjusted defaults: Unstaged largest (200), Staged medium (120)
   const [stagedHeight, setStagedHeight] = useState(120);
   const [unstagedHeight, setUnstagedHeight] = useState(200);
 
@@ -80,17 +78,14 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
     document.body.style.userSelect = "none";
   };
 
-  // Extract arrays safely - memoized to avoid new array on every render
   const staged = useMemo(() => statuses?.staged ?? [], [statuses?.staged]);
   const unstaged = useMemo(() => statuses?.unstaged ?? [], [statuses?.unstaged]);
   const untracked = useMemo(() => statuses?.untracked ?? [], [statuses?.untracked]);
 
-  // All file paths for range selection (in display order)
   const allStagedPaths = useMemo(() => staged.map((f) => f.path), [staged]);
   const allUnstagedPaths = useMemo(() => unstaged.map((f) => f.path), [unstaged]);
   const allUntrackedPaths = useMemo(() => untracked.map((f) => f.path), [untracked]);
 
-  // Check which sections have selected files
   const selectedStagedPaths = useMemo(
     () => allStagedPaths.filter((p) => selectedFilePaths.has(p)),
     [allStagedPaths, selectedFilePaths]
@@ -104,12 +99,10 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
     [allUntrackedPaths, selectedFilePaths]
   );
 
-  // Handle file selection with modifiers
   const handleSelectWithModifiers = useCallback(
     (sectionPaths: string[], isStaged: boolean) =>
       (path: string, isCtrl: boolean, isShift: boolean) => {
         toggleFileSelection(path, isStaged, isCtrl, isShift, sectionPaths);
-        // Also load the diff for the clicked file
         const file = [...staged, ...unstaged, ...untracked].find((f) => f.path === path);
         if (file) {
           const isFileStaged = staged.some((f) => f.path === path);
@@ -119,34 +112,37 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
     [staged, unstaged, untracked, toggleFileSelection, loadFileDiff]
   );
 
-  // Early returns for loading/empty states - AFTER all hooks
   if (loading && !statuses) {
-    return <div className="file-changes-panel loading">Loading...</div>;
+    return (
+      <div className="file-changes-panel loading text-text-secondary flex h-full items-center justify-center">
+        Loading...
+      </div>
+    );
   }
 
   if (!statuses) {
-    return <div className="file-changes-panel empty">No repository open</div>;
+    return (
+      <div className="file-changes-panel empty text-text-secondary flex h-full items-center justify-center">
+        No repository open
+      </div>
+    );
   }
 
-  // Stage all unstaged files using batch method
   const handleStageAll = async () => {
     await stageFiles(allUnstagedPaths);
     clearFileSelection();
   };
 
-  // Unstage all staged files using batch method
   const handleUnstageAll = async () => {
     await unstageFiles(allStagedPaths);
     clearFileSelection();
   };
 
-  // Stage all untracked files using batch method
   const handleStageAllUntracked = async () => {
     await stageFiles(allUntrackedPaths);
     clearFileSelection();
   };
 
-  // Stage/unstage selected files
   const handleStageSelected = async () => {
     const pathsToStage = [...selectedUnstagedPaths, ...selectedUntrackedPaths];
     if (pathsToStage.length > 0) {
@@ -167,24 +163,33 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
   const hasSelectedStaged = selectedStagedPaths.length > 0;
 
   return (
-    <div className="file-changes-panel" ref={containerRef}>
+    <div className="file-changes-panel flex h-full flex-col overflow-y-auto" ref={containerRef}>
       {/* Selection action bar */}
       {(hasSelectedUnstagedOrUntracked || hasSelectedStaged) && (
-        <div className="selection-actions">
-          <span className="selection-count">
+        <div className="selection-actions border-primary bg-bg-selected flex shrink-0 items-center gap-2 border-b px-3 py-2">
+          <span className="selection-count text-text-primary mr-auto text-xs font-medium">
             {selectedFilePaths.size} file{selectedFilePaths.size !== 1 ? "s" : ""} selected
           </span>
           {hasSelectedUnstagedOrUntracked && (
-            <button className="selection-action-btn" onClick={handleStageSelected}>
+            <button
+              className="selection-action-btn bg-primary hover:bg-primary-hover rounded border-none px-2.5 py-1 text-xs text-white transition-colors duration-100"
+              onClick={handleStageSelected}
+            >
               Stage Selected
             </button>
           )}
           {hasSelectedStaged && (
-            <button className="selection-action-btn" onClick={handleUnstageSelected}>
+            <button
+              className="selection-action-btn bg-primary hover:bg-primary-hover rounded border-none px-2.5 py-1 text-xs text-white transition-colors duration-100"
+              onClick={handleUnstageSelected}
+            >
               Unstage Selected
             </button>
           )}
-          <button className="selection-action-btn secondary" onClick={clearFileSelection}>
+          <button
+            className="selection-action-btn secondary border-border text-text-secondary hover:bg-bg-hover rounded border bg-transparent px-2.5 py-1 text-xs transition-colors duration-100"
+            onClick={clearFileSelection}
+          >
             Clear Selection
           </button>
         </div>
@@ -192,16 +197,23 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
       {/* Staged changes section */}
       <div
-        className="file-section"
-        style={{ height: showStaged ? stagedHeight : "auto", flexShrink: 0 }}
+        className="file-section flex shrink-0 flex-col overflow-hidden"
+        style={{ height: showStaged ? stagedHeight : "auto" }}
       >
-        <div className="section-header clickable" onClick={() => setShowStaged(!showStaged)}>
-          <span className="toggle-icon">{showStaged ? "▼" : "▶"}</span>
-          <span className="section-title">Staged</span>
-          <span className="section-count">{staged.length}</span>
+        <div
+          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+          onClick={() => setShowStaged(!showStaged)}
+        >
+          <span className="toggle-icon text-text-secondary text-2xs w-4">
+            {showStaged ? "▼" : "▶"}
+          </span>
+          <span className="section-title flex-1 text-xs font-medium">Staged</span>
+          <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
+            {staged.length}
+          </span>
           {staged.length > 0 && (
             <button
-              className="section-action-btn"
+              className="section-action-btn bg-bg-secondary hover:bg-bg-hover ml-2 rounded px-2 py-px text-xs transition-colors duration-100"
               onClick={(e) => {
                 e.stopPropagation();
                 handleUnstageAll();
@@ -213,9 +225,11 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           )}
         </div>
         {showStaged && (
-          <div className="section-content">
+          <div className="section-content flex flex-1 flex-col overflow-y-auto">
             {staged.length === 0 ? (
-              <div className="empty-section">No staged changes</div>
+              <div className="empty-section text-text-muted flex flex-1 items-center justify-center text-xs">
+                No staged changes
+              </div>
             ) : (
               staged.map((file) => (
                 <FileItem
@@ -235,23 +249,32 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
         )}
       </div>
 
-      {/* Resizer between Staged and Unstaged */}
       {showStaged && (
-        <div className="section-resizer" onMouseDown={(e) => startResize("staged", e)} />
+        <div
+          className="section-resizer bg-border hover:bg-primary h-1 shrink-0 cursor-row-resize transition-colors duration-100"
+          onMouseDown={(e) => startResize("staged", e)}
+        />
       )}
 
       {/* Unstaged changes section */}
       <div
-        className="file-section"
-        style={{ height: showUnstaged ? unstagedHeight : "auto", flexShrink: 0 }}
+        className="file-section flex shrink-0 flex-col overflow-hidden"
+        style={{ height: showUnstaged ? unstagedHeight : "auto" }}
       >
-        <div className="section-header clickable" onClick={() => setShowUnstaged(!showUnstaged)}>
-          <span className="toggle-icon">{showUnstaged ? "▼" : "▶"}</span>
-          <span className="section-title">Unstaged</span>
-          <span className="section-count">{unstaged.length}</span>
+        <div
+          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+          onClick={() => setShowUnstaged(!showUnstaged)}
+        >
+          <span className="toggle-icon text-text-secondary text-2xs w-4">
+            {showUnstaged ? "▼" : "▶"}
+          </span>
+          <span className="section-title flex-1 text-xs font-medium">Unstaged</span>
+          <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
+            {unstaged.length}
+          </span>
           {unstaged.length > 0 && (
             <button
-              className="section-action-btn"
+              className="section-action-btn bg-bg-secondary hover:bg-bg-hover ml-2 rounded px-2 py-px text-xs transition-colors duration-100"
               onClick={(e) => {
                 e.stopPropagation();
                 handleStageAll();
@@ -263,9 +286,11 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           )}
         </div>
         {showUnstaged && (
-          <div className="section-content">
+          <div className="section-content flex flex-1 flex-col overflow-y-auto">
             {unstaged.length === 0 ? (
-              <div className="empty-section">No unstaged changes</div>
+              <div className="empty-section text-text-muted flex flex-1 items-center justify-center text-xs">
+                No unstaged changes
+              </div>
             ) : (
               unstaged.map((file) => (
                 <FileItem
@@ -288,27 +313,35 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
         )}
       </div>
 
-      {/* Resizer between Unstaged and Untracked */}
       {showUnstaged && (
-        <div className="section-resizer" onMouseDown={(e) => startResize("unstaged", e)} />
+        <div
+          className="section-resizer bg-border hover:bg-primary h-1 shrink-0 cursor-row-resize transition-colors duration-100"
+          onMouseDown={(e) => startResize("unstaged", e)}
+        />
       )}
 
-      {/* Untracked files section - fixed smaller height */}
+      {/* Untracked files section */}
       <div
-        className="file-section"
+        className="file-section flex shrink-0 flex-col overflow-hidden"
         style={{
           height: showUntracked ? UNTRACKED_HEIGHT : "auto",
-          flexShrink: 0,
           flex: showUntracked ? "none" : undefined,
         }}
       >
-        <div className="section-header clickable" onClick={() => setShowUntracked(!showUntracked)}>
-          <span className="toggle-icon">{showUntracked ? "▼" : "▶"}</span>
-          <span className="section-title">Untracked</span>
-          <span className="section-count">{untracked.length}</span>
+        <div
+          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+          onClick={() => setShowUntracked(!showUntracked)}
+        >
+          <span className="toggle-icon text-text-secondary text-2xs w-4">
+            {showUntracked ? "▼" : "▶"}
+          </span>
+          <span className="section-title flex-1 text-xs font-medium">Untracked</span>
+          <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
+            {untracked.length}
+          </span>
           {untracked.length > 0 && (
             <button
-              className="section-action-btn"
+              className="section-action-btn bg-bg-secondary hover:bg-bg-hover ml-2 rounded px-2 py-px text-xs transition-colors duration-100"
               onClick={(e) => {
                 e.stopPropagation();
                 handleStageAllUntracked();
@@ -320,9 +353,11 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           )}
         </div>
         {showUntracked && (
-          <div className="section-content">
+          <div className="section-content flex flex-1 flex-col overflow-y-auto">
             {untracked.length === 0 ? (
-              <div className="empty-section">No untracked files</div>
+              <div className="empty-section text-text-muted flex flex-1 items-center justify-center text-xs">
+                No untracked files
+              </div>
             ) : (
               untracked.map((file) => (
                 <FileItem

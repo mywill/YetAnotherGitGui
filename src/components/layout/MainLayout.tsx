@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import "./MainLayout.css";
+import clsx from "clsx";
 
 interface MainLayoutProps {
   leftPanel: React.ReactNode;
@@ -31,22 +31,33 @@ export function MainLayout({
   }, []);
 
   return (
-    <div className="main-layout">
-      <div className="left-column" style={{ width: leftWidth }}>
-        <div className="left-panel">{leftPanel}</div>
+    <div className="main-layout flex h-full w-full overflow-hidden">
+      <div
+        className="left-column border-border bg-bg-secondary flex min-w-50 flex-col border-r"
+        style={{ width: leftWidth }}
+      >
+        <div className="left-panel flex flex-1 flex-col overflow-hidden">{leftPanel}</div>
         {bottomLeftPanel && (
           <>
             <Resizer direction="horizontal" onResize={handleBottomResize} />
-            <div className="bottom-left-panel" style={{ height: bottomHeight }}>
+            <div
+              className="bottom-left-panel border-border flex min-h-25 flex-col overflow-hidden border-t"
+              style={{ height: bottomHeight }}
+            >
               {bottomLeftPanel}
             </div>
           </>
         )}
       </div>
       <Resizer direction="vertical" onResize={handleLeftResize} />
-      <div className="center-panel">{centerPanel}</div>
+      <div className="center-panel bg-bg-primary flex min-w-75 flex-1 flex-col overflow-hidden">
+        {centerPanel}
+      </div>
       <Resizer direction="vertical" onResize={handleRightResize} />
-      <div className="right-panel" style={{ width: rightWidth }}>
+      <div
+        className="right-panel border-border bg-bg-secondary flex min-w-75 flex-col overflow-hidden border-l"
+        style={{ width: rightWidth }}
+      >
         {rightPanel}
       </div>
     </div>
@@ -84,5 +95,15 @@ function Resizer({ direction, onResize }: ResizerProps) {
     [direction, onResize]
   );
 
-  return <div className={`resizer resizer-${direction}`} onMouseDown={handleMouseDown} />;
+  return (
+    <div
+      className={clsx(
+        "resizer bg-border hover:bg-bg-selected shrink-0 transition-colors duration-150",
+        `resizer-${direction}`,
+        direction === "vertical" && "w-1 cursor-col-resize",
+        direction === "horizontal" && "h-1 cursor-row-resize"
+      )}
+      onMouseDown={handleMouseDown}
+    />
+  );
 }

@@ -3,7 +3,6 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
-import "./UntrackedPanel.css";
 
 interface UntrackedPanelProps {
   statuses: FileStatuses | null;
@@ -20,19 +19,14 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
   const clearFileSelection = useSelectionStore((s) => s.clearFileSelection);
 
-  // Extract untracked safely for hooks - memoized to avoid new array on every render
   const untracked = useMemo(() => statuses?.untracked ?? [], [statuses?.untracked]);
-
-  // All file paths for range selection
   const allUntrackedPaths = useMemo(() => untracked.map((f) => f.path), [untracked]);
 
-  // Check selected files in this section
   const selectedUntrackedPaths = useMemo(
     () => allUntrackedPaths.filter((p) => selectedFilePaths.has(makeSelectionKey(p, false))),
     [allUntrackedPaths, selectedFilePaths]
   );
 
-  // Handle file selection with modifiers
   const handleSelectWithModifiers = useCallback(
     (path: string, isCtrl: boolean, isShift: boolean) => {
       toggleFileSelection(path, false, isCtrl, isShift, allUntrackedPaths);
@@ -41,7 +35,6 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
     [allUntrackedPaths, toggleFileSelection, loadFileDiff]
   );
 
-  // Early returns AFTER hooks
   if (loading && !statuses) {
     return null;
   }
@@ -69,24 +62,26 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
   const hasSelectedUntracked = selectedUntrackedPaths.length > 0;
 
   return (
-    <div className="untracked-panel">
-      <div className="section-header">
-        <div className="section-header-title">
-          <span className="section-title">Untracked</span>
-          <span className="section-count">{untracked.length}</span>
+    <div className="untracked-panel border-border flex h-full flex-col overflow-hidden border-t">
+      <div className="section-header border-border bg-bg-tertiary text-text-secondary flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
+        <div className="section-header-title flex w-full items-center gap-2">
+          <span className="section-title font-medium">Untracked</span>
+          <span className="section-count bg-bg-hover ml-auto rounded-full px-1.5 py-px text-xs">
+            {untracked.length}
+          </span>
         </div>
-        <div className="section-actions">
+        <div className="section-actions mt-1 flex min-h-6 items-center gap-1">
           {hasSelectedUntracked && (
             <>
               <button
-                className="section-action-btn"
+                className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                 onClick={handleStageSelected}
                 title="Stage selected files"
               >
                 Stage Selected
               </button>
               <button
-                className="section-action-btn secondary"
+                className="section-action-btn secondary border-border text-text-secondary hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                 onClick={handleClearSelection}
                 title="Clear selection"
               >
@@ -96,7 +91,7 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
           )}
           {untracked.length > 0 && (
             <button
-              className="section-action-btn"
+              className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
               onClick={handleStageAllUntracked}
               title="Stage all untracked files"
             >
@@ -105,9 +100,11 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
           )}
         </div>
       </div>
-      <div className="section-content">
+      <div className="section-content min-h-0 flex-1 overflow-y-auto">
         {untracked.length === 0 ? (
-          <div className="empty-section">No untracked files</div>
+          <div className="empty-section text-text-muted p-4 text-center text-xs">
+            No untracked files
+          </div>
         ) : (
           untracked.map((file) => (
             <FileItem

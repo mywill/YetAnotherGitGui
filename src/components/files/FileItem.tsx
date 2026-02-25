@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
+import clsx from "clsx";
 import type { FileStatus, FileStatusType } from "../../types";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import "./FileItem.css";
 
 interface FileItemProps {
   file: FileStatus;
@@ -25,6 +25,15 @@ const STATUS_ICONS: Record<FileStatusType, string> = {
   copied: "C",
   untracked: "?",
   conflicted: "!",
+};
+
+const STATUS_STYLE: Record<string, string> = {
+  modified: "text-status-modified bg-status-modified/15",
+  added: "text-status-added bg-status-added/15",
+  deleted: "text-status-deleted bg-status-deleted/15",
+  renamed: "text-status-modified bg-status-modified/15",
+  untracked: "text-status-untracked bg-status-untracked/15",
+  conflicted: "text-status-conflicted bg-status-conflicted/20",
 };
 
 export function FileItem({
@@ -111,7 +120,13 @@ export function FileItem({
   return (
     <>
       <div
-        className={`file-item ${isStaged ? "staged" : ""} ${isSelected ? "selected" : ""}`}
+        className={clsx(
+          "file-item hover:bg-bg-hover flex shrink-0 cursor-pointer items-center gap-2 px-3 py-1 text-xs transition-colors duration-100",
+          isStaged && "staged bg-success/8 hover:bg-success/15",
+          isSelected &&
+            "selected bg-bg-selected outline-primary hover:bg-bg-selected-hover outline outline-1 -outline-offset-1",
+          isStaged && isSelected && "bg-primary/20 hover:bg-primary/30"
+        )}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
@@ -119,16 +134,29 @@ export function FileItem({
       >
         <input
           type="checkbox"
-          className="stage-checkbox"
+          className="stage-checkbox accent-addition size-4 shrink-0 cursor-pointer"
           checked={isStaged}
           onChange={handleCheckboxChange}
           onClick={handleCheckboxClick}
           title={isStaged ? "Unstage file" : "Stage file"}
         />
-        <span className={`status-icon status-${file.status}`}>{STATUS_ICONS[file.status]}</span>
-        <span className="file-name">{fileName}</span>
-        {dirPath && <span className="file-path">{dirPath}</span>}
-        {isUntracked && <span className="untracked-badge">new</span>}
+        <span
+          className={clsx(
+            "status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold",
+            STATUS_STYLE[file.status] || ""
+          )}
+        >
+          {STATUS_ICONS[file.status]}
+        </span>
+        <span className="file-name shrink-0 font-medium">{fileName}</span>
+        {dirPath && (
+          <span className="file-path text-text-muted ml-1 flex-1 truncate">{dirPath}</span>
+        )}
+        {isUntracked && (
+          <span className="untracked-badge text-status-untracked bg-status-untracked/20 text-2xs shrink-0 rounded px-1.5 py-px">
+            new
+          </span>
+        )}
       </div>
 
       {contextMenu && (

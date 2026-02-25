@@ -15,7 +15,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
-import "./SettingsMenu.css";
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -147,7 +146,7 @@ export function SettingsMenu() {
 
   return (
     <>
-      <div className="settings-menu" ref={menuRef}>
+      <div className="settings-menu app-region-no-drag relative flex items-center" ref={menuRef}>
         <button
           className="settings-menu-button"
           onClick={() => setIsOpen(!isOpen)}
@@ -157,6 +156,7 @@ export function SettingsMenu() {
           aria-haspopup="true"
         >
           <svg
+            className="size-3.5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -170,10 +170,13 @@ export function SettingsMenu() {
         </button>
 
         {isOpen && (
-          <div className="settings-menu-dropdown" role="menu">
+          <div
+            className="settings-menu-dropdown border-border bg-bg-secondary shadow-menu absolute top-full right-0 z-100 mt-1 min-w-45 overflow-hidden rounded-md border"
+            role="menu"
+          >
             {isMac && !cliInstalled && (
               <button
-                className="settings-menu-item"
+                className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100"
                 role="menuitem"
                 onClick={() => {
                   closeMenu();
@@ -185,7 +188,7 @@ export function SettingsMenu() {
             )}
             {isMac && cliInstalled && (
               <button
-                className="settings-menu-item"
+                className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100"
                 role="menuitem"
                 onClick={() => {
                   closeMenu();
@@ -195,18 +198,20 @@ export function SettingsMenu() {
                 Uninstall CLI Tool
               </button>
             )}
-            {isMac && <div className="settings-menu-separator" role="separator" />}
+            {isMac && (
+              <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
+            )}
             <button
-              className="settings-menu-item"
+              className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100 disabled:cursor-default disabled:opacity-50"
               role="menuitem"
               disabled={updateChecking}
               onClick={handleCheckForUpdates}
             >
               {updateChecking ? "Checking..." : "Check for Updates"}
             </button>
-            <div className="settings-menu-separator" role="separator" />
+            <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
             <button
-              className="settings-menu-item"
+              className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100"
               role="menuitem"
               onClick={() => {
                 closeMenu();
@@ -219,32 +224,44 @@ export function SettingsMenu() {
         )}
       </div>
 
-      {actionMessage && <div className="settings-menu-uninstall-message">{actionMessage}</div>}
+      {actionMessage && (
+        <div className="settings-menu-uninstall-message text-text-secondary px-3 py-1.5 text-xs break-words">
+          {actionMessage}
+        </div>
+      )}
 
       {showInstallDialog && (
         <ConfirmDialog
           title="Install CLI Tool"
           message={
             <div className="cli-install-info">
-              <p>
-                This will add the <code>yagg</code> command to <code>/usr/local/bin</code>. You will
-                be prompted for your administrator password.
+              <p className="text-text-secondary mb-2 text-xs leading-normal">
+                This will add the{" "}
+                <code className="bg-bg-tertiary text-code rounded px-1 py-px">yagg</code> command to{" "}
+                <code className="bg-bg-tertiary text-code rounded px-1 py-px">/usr/local/bin</code>.
+                You will be prompted for your administrator password.
               </p>
-              <p>
+              <p className="text-text-secondary mb-2 text-xs leading-normal">
                 Any terminals that are already open will need to be restarted, or you can run{" "}
-                <code>source ~/.zshrc</code> (or your shell's equivalent) to pick up the new
-                command.
+                <code className="bg-bg-tertiary text-code rounded px-1 py-px">source ~/.zshrc</code>{" "}
+                (or your shell&apos;s equivalent) to pick up the new command.
               </p>
-              <p className="cli-install-usage-header">Usage:</p>
-              <ul className="cli-install-usage">
+              <p className="cli-install-usage-header text-text-secondary mb-1 text-xs leading-normal font-semibold">
+                Usage:
+              </p>
+              <ul className="cli-install-usage text-text-secondary mb-2 pl-5 text-xs leading-relaxed">
                 <li>
-                  <code>yagg</code> &mdash; open current directory
+                  <code className="bg-bg-tertiary text-code rounded px-1 py-px">yagg</code> &mdash;
+                  open current directory
                 </li>
                 <li>
-                  <code>yagg /path</code> &mdash; open a specific repo
+                  <code className="bg-bg-tertiary text-code rounded px-1 py-px">yagg /path</code>{" "}
+                  &mdash; open a specific repo
                 </li>
               </ul>
-              <p>You can uninstall the CLI tool at any time from the settings gear menu.</p>
+              <p className="text-text-secondary text-xs leading-normal">
+                You can uninstall the CLI tool at any time from the settings gear menu.
+              </p>
             </div>
           }
           confirmLabel="Install"
@@ -272,18 +289,23 @@ export function SettingsMenu() {
           title="Update Available"
           message={
             <div className="update-dialog-content">
-              <p>
+              <p className="text-text-secondary mb-2 text-xs">
                 Version <strong>{updateInfo.version}</strong> is available.
               </p>
               {updateInfo.notes && (
-                <div className="update-dialog-notes">
-                  <p className="update-dialog-notes-label">Release notes:</p>
-                  <p>{updateInfo.notes}</p>
+                <div className="update-dialog-notes overflow-wrap-anywhere bg-bg-primary mb-2 max-h-75 overflow-y-auto rounded p-2 text-xs leading-normal break-words whitespace-pre-wrap">
+                  <p className="update-dialog-notes-label text-text-primary font-semibold">
+                    Release notes:
+                  </p>
+                  <p className="text-text-secondary">{updateInfo.notes}</p>
                 </div>
               )}
-              {updateError && <p className="update-dialog-error">{updateError}</p>}
-              <p className="update-dialog-link">
+              {updateError && (
+                <p className="update-dialog-error text-danger mb-2 text-xs">{updateError}</p>
+              )}
+              <p className="update-dialog-link text-xs">
                 <a
+                  className="text-accent"
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();

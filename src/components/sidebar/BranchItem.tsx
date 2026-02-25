@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
+import clsx from "clsx";
 import type { BranchInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
-import "./BranchItem.css";
 
 interface BranchItemProps {
   branch: BranchInfo;
@@ -26,7 +26,6 @@ export function BranchItem({ branch }: BranchItemProps) {
 
   const handleDoubleClick = useCallback(async () => {
     if (branch.is_remote) {
-      // For remote branches, show info message
       await showConfirm({
         title: "Remote Branch",
         message: `To checkout remote branch "${branch.name}", create a local tracking branch first.`,
@@ -37,7 +36,6 @@ export function BranchItem({ branch }: BranchItemProps) {
     }
 
     if (branch.is_head) {
-      // Already on this branch
       return;
     }
 
@@ -128,15 +126,23 @@ export function BranchItem({ branch }: BranchItemProps) {
   return (
     <>
       <div
-        className={`branch-item ${branch.is_head ? "is-current" : ""} ${branch.is_remote ? "is-remote" : ""}`}
+        className={clsx(
+          "branch-item text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
+          branch.is_head && "is-current bg-badge-branch/20",
+          branch.is_remote && "is-remote text-text-secondary"
+        )}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         title={branch.name}
       >
         <BranchIcon isRemote={branch.is_remote} />
-        <span className="branch-item-name">{displayName}</span>
-        {branch.is_head && <span className="current-badge">current</span>}
+        <span className="branch-item-name flex-1 truncate">{displayName}</span>
+        {branch.is_head && (
+          <span className="current-badge bg-badge-branch text-2xs rounded px-1.5 py-px font-semibold text-black">
+            current
+          </span>
+        )}
       </div>
       {contextMenu && (
         <ContextMenu
@@ -153,7 +159,13 @@ export function BranchItem({ branch }: BranchItemProps) {
 function BranchIcon({ isRemote }: { isRemote: boolean }) {
   if (isRemote) {
     return (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="branch-icon">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        className="branch-icon text-badge-remote shrink-0"
+      >
         <path d="M1 4.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zm2.5-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
         <path d="M10 11.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zm2.5-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
         <path d="M3.5 7v4.5a.5.5 0 0 0 .5.5h6v-1H4.5V7h-1z" />
@@ -163,7 +175,13 @@ function BranchIcon({ isRemote }: { isRemote: boolean }) {
   }
 
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="branch-icon">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className="branch-icon text-badge-branch shrink-0"
+    >
       <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM4 5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm7 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM5 8v2.5a.5.5 0 0 0 .5.5h5.5V13h-5a1.5 1.5 0 0 1-1.5-1.5V8h.5z" />
       <path d="M11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm1 2.5V10h-1V7.5h1z" />
     </svg>

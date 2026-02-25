@@ -1,151 +1,196 @@
-:root {
-  /* Dark theme colors */
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-tertiary: #2d2d2d;
-  --bg-hover: #3c3c3c;
-  --bg-selected: #094771;
+@import "tailwindcss";
+@import "./tauri.css";
+@import "./grid-layout.css";
 
-  --text-primary: #cccccc;
-  --text-secondary: #9d9d9d;
-  --text-muted: #919191; /* WCAG AA compliant: 4.9:1 contrast on #252526 */
+/* ─── Theme: map existing design tokens to Tailwind ─── */
+@theme {
+  /* Background colors */
+  --color-bg-primary: #1e1e1e;
+  --color-bg-secondary: #252526;
+  --color-bg-tertiary: #2d2d2d;
+  --color-bg-hover: #3c3c3c;
+  --color-bg-selected: #094771;
+  --color-bg-selected-hover: #0d5a94;
 
-  --border-color: #3c3c3c;
-  --border-light: #4a4a4a;
+  /* Text colors */
+  --color-text-primary: #cccccc;
+  --color-text-secondary: #9d9d9d;
+  --color-text-muted: #919191;
 
-  /* Syntax colors */
+  /* Border colors */
+  --color-border: #3c3c3c;
+  --color-border-light: #4a4a4a;
+
+  /* Diff / syntax colors */
   --color-addition: #4caf50;
-  --color-addition-bg: rgba(76, 175, 80, 0.15);
   --color-deletion: #f44336;
-  --color-deletion-bg: rgba(244, 67, 54, 0.15);
 
-  /* Branch line colors */
-  --branch-color-1: #4fc3f7;
-  --branch-color-2: #81c784;
-  --branch-color-3: #ffb74d;
-  --branch-color-4: #f06292;
-  --branch-color-5: #ba68c8;
-  --branch-color-6: #4db6ac;
-  --branch-color-7: #ff8a65;
-  --branch-color-8: #90a4ae;
+  /* Branch line colors (graph) */
+  --color-branch-1: #4fc3f7;
+  --color-branch-2: #81c784;
+  --color-branch-3: #ffb74d;
+  --color-branch-4: #f06292;
+  --color-branch-5: #ba68c8;
+  --color-branch-6: #4db6ac;
+  --color-branch-7: #ff8a65;
+  --color-branch-8: #90a4ae;
 
   /* Status colors */
-  --status-modified: #e2c08d;
-  --status-added: #89d185;
-  --status-deleted: #c74e39;
-  --status-untracked: #73c991;
-  --status-conflicted: #e51400;
+  --color-status-modified: #e2c08d;
+  --color-status-added: #89d185;
+  --color-status-deleted: #c74e39;
+  --color-status-untracked: #73c991;
+  --color-status-conflicted: #e51400;
 
-  /* Ref badge colors */
-  --badge-branch: #4fc3f7;
-  --badge-remote: #81c784;
-  --badge-tag: #ffb74d;
-  --badge-head: #d81b60; /* Darker pink for WCAG AA contrast with white text (4.8:1) */
+  /* Badge colors */
+  --color-badge-branch: #4fc3f7;
+  --color-badge-remote: #81c784;
+  --color-badge-tag: #ffb74d;
+  --color-badge-head: #d81b60;
 
-  /* Selection colors (WCAG compliant) */
-  --selection-border: #569cd6;
-  --selection-bg: rgba(86, 156, 214, 0.15);
+  /* Selection colors */
+  --color-selection-border: #569cd6;
 
-  /* Sizing */
-  --font-size-sm: 12px;
-  --font-size-md: 13px;
-  --font-size-lg: 14px;
+  /* Functional colors */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-success: #4caf50;
+  --color-accent: #2196f3;
+  --color-danger: #f44336;
 
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
+  /* Font family */
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
 
-  --panel-min-width: 200px;
-  --resizer-width: 4px;
+  /* Shadows */
+  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-dialog: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+  /* Custom font sizes (smaller than text-xs = 12px) */
+  --text-2xs: 10px;
+  --text-3xs: 9px;
+  --text-code: 0.9em;
+  --text-submenu-arrow: 0.7em;
+
+  /* Animation */
+  --animate-spin: spin 1s linear infinite;
+  --animate-slide-up: slideUp 0.3s ease;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ─── Base layer: resets ─── */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+  }
+
+  /* Cross-platform button reset — explicit flex centering fixes
+     browser-default rendering differences between WebKit and Chromium */
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 4px 8px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  button:hover {
+    background: var(--color-bg-hover);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  input,
+  textarea {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    resize: none;
+  }
+
+  input:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--color-bg-selected);
+  }
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+/* ─── Component layer: shared patterns ─── */
+@layer components {
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-bg-selected);
+    border-radius: 50%;
+    animation: var(--animate-spin);
+  }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: var(--font-size-md);
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
-}
-
-/* Scrollbar styling */
+/* ─── Scrollbar styling (no Tailwind utility) ─── */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: var(--color-bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-light);
+  background: var(--color-border-light);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--color-text-muted);
 }
 
-/* Button styles */
-button {
-  font-family: inherit;
-  font-size: var(--font-size-md);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
+/* ─── Keyframes ─── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-button:hover {
-  background: var(--bg-hover);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-button.primary {
-  background: var(--bg-selected);
-  border-color: var(--bg-selected);
-}
-
-button.primary:hover {
-  background: #0d5a94;
-}
-
-/* Input styles */
-input,
-textarea {
-  font-family: inherit;
-  font-size: var(--font-size-md);
-  padding: var(--spacing-sm);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  resize: none;
-}
-
-input:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--bg-selected);
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }

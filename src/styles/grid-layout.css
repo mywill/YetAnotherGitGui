@@ -1,0 +1,7 @@
+/* CommitGraph/CommitRow grid — driven by JS custom properties */
+.commit-graph-grid {
+  grid-template-columns: var(--graph-width, 100px) 1fr var(--author-width, 120px) var(
+      --date-width,
+      100px
+    );
+}

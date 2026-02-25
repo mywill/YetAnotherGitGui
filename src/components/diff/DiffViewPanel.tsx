@@ -3,7 +3,6 @@ import { DiffHunk } from "./DiffHunk";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import "./DiffViewPanel.css";
 
 interface DiffViewPanelProps {
   diff: FileDiff | null;
@@ -21,47 +20,60 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  // Count selected files
   const selectedCount = selectedFilePaths.size;
 
   if (loading) {
-    return <div className="diff-view-panel loading">Loading diff...</div>;
+    return (
+      <div className="diff-view-panel loading text-text-secondary flex h-full flex-col items-center justify-center">
+        Loading diff...
+      </div>
+    );
   }
 
-  // Show multi-selection message when more than one file is selected
   if (selectedCount > 1) {
     return (
-      <div className="diff-view-panel multi-select">
-        <div className="multi-select-message">
-          <span className="multi-select-count">{selectedCount}</span> files selected
+      <div className="diff-view-panel multi-select text-text-secondary flex h-full flex-col items-center justify-center">
+        <div className="multi-select-message text-text-primary mb-2 text-lg font-medium">
+          <span className="multi-select-count text-primary font-semibold">{selectedCount}</span>{" "}
+          files selected
         </div>
-        <div className="multi-select-hint">Select a single file to view its diff</div>
+        <div className="multi-select-hint text-text-muted text-xs">
+          Select a single file to view its diff
+        </div>
       </div>
     );
   }
 
   if (!diff) {
-    return <div className="diff-view-panel empty">Select a file to view its diff</div>;
+    return (
+      <div className="diff-view-panel empty text-text-secondary flex h-full flex-col items-center justify-center">
+        Select a file to view its diff
+      </div>
+    );
   }
 
   if (diff.is_binary) {
     return (
-      <div className="diff-view-panel binary">
-        <div className="diff-header">
-          <span className="diff-path">{diff.path}</span>
+      <div className="diff-view-panel binary flex h-full flex-col">
+        <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
+          <span className="diff-path text-xs font-medium">{diff.path}</span>
         </div>
-        <div className="binary-message">Binary file - cannot display diff</div>
+        <div className="binary-message text-text-secondary flex flex-1 items-center justify-center">
+          Binary file - cannot display diff
+        </div>
       </div>
     );
   }
 
   if (diff.hunks.length === 0) {
     return (
-      <div className="diff-view-panel empty">
-        <div className="diff-header">
-          <span className="diff-path">{diff.path}</span>
+      <div className="diff-view-panel empty flex h-full flex-col">
+        <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
+          <span className="diff-path text-xs font-medium">{diff.path}</span>
         </div>
-        <div className="no-changes">No changes to display</div>
+        <div className="no-changes text-text-secondary flex flex-1 items-center justify-center">
+          No changes to display
+        </div>
       </div>
     );
   }
@@ -107,12 +119,14 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   };
 
   return (
-    <div className="diff-view-panel">
-      <div className="diff-header">
-        <span className="diff-path">{diff.path}</span>
-        <span className="diff-status">{staged ? "(staged)" : "(unstaged)"}</span>
+    <div className="diff-view-panel flex h-full flex-col overflow-hidden">
+      <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
+        <span className="diff-path text-xs font-medium">{diff.path}</span>
+        <span className="diff-status text-text-secondary ml-2 text-xs">
+          {staged ? "(staged)" : "(unstaged)"}
+        </span>
       </div>
-      <div className="diff-content">
+      <div className="diff-content flex-1 overflow-y-auto font-mono text-xs leading-normal">
         {diff.hunks.map((hunk, index) => (
           <DiffHunk
             key={index}

@@ -3,7 +3,6 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
-import "./StagedUnstagedPanel.css";
 
 interface StagedUnstagedPanelProps {
   statuses: FileStatuses | null;
@@ -23,15 +22,12 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
   const clearFileSelection = useSelectionStore((s) => s.clearFileSelection);
 
-  // Extract arrays safely for hooks - memoized to avoid new array on every render
   const staged = useMemo(() => statuses?.staged ?? [], [statuses?.staged]);
   const unstaged = useMemo(() => statuses?.unstaged ?? [], [statuses?.unstaged]);
 
-  // All file paths for range selection
   const allStagedPaths = useMemo(() => staged.map((f) => f.path), [staged]);
   const allUnstagedPaths = useMemo(() => unstaged.map((f) => f.path), [unstaged]);
 
-  // Check which sections have selected files
   const selectedStagedPaths = useMemo(
     () => allStagedPaths.filter((p) => selectedFilePaths.has(makeSelectionKey(p, true))),
     [allStagedPaths, selectedFilePaths]
@@ -41,24 +37,29 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
     [allUnstagedPaths, selectedFilePaths]
   );
 
-  // Handle file selection with modifiers
   const handleSelectWithModifiers = useCallback(
     (sectionPaths: string[], isStaged: boolean) =>
       (path: string, isCtrl: boolean, isShift: boolean) => {
         toggleFileSelection(path, isStaged, isCtrl, isShift, sectionPaths);
-        // Also load the diff for the clicked file
         loadFileDiff(path, isStaged);
       },
     [toggleFileSelection, loadFileDiff]
   );
 
-  // Early returns AFTER all hooks
   if (loading && !statuses) {
-    return <div className="staged-unstaged-panel loading">Loading...</div>;
+    return (
+      <div className="staged-unstaged-panel loading text-text-muted flex h-full items-center justify-center">
+        Loading...
+      </div>
+    );
   }
 
   if (!statuses) {
-    return <div className="staged-unstaged-panel empty">No repository open</div>;
+    return (
+      <div className="staged-unstaged-panel empty text-text-muted flex h-full items-center justify-center">
+        No repository open
+      </div>
+    );
   }
 
   const handleStageAll = async () => {
@@ -71,7 +72,6 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
     clearFileSelection();
   };
 
-  // Stage/unstage selected files
   const handleStageSelected = async () => {
     if (selectedUnstagedPaths.length > 0) {
       await stageFiles(selectedUnstagedPaths);
@@ -87,10 +87,6 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
   };
 
   const handleClearStagedSelection = () => {
-    // Clear only staged file selections
-    selectedStagedPaths.forEach(() => {
-      // We need to clear only selections in the staged section
-    });
     clearFileSelection();
   };
 
@@ -102,26 +98,28 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
   const hasSelectedStaged = selectedStagedPaths.length > 0;
 
   return (
-    <div className="staged-unstaged-panel">
+    <div className="staged-unstaged-panel flex h-full flex-col overflow-hidden">
       {/* Staged changes section */}
-      <div className="file-section">
-        <div className="section-header">
-          <div className="section-header-title">
-            <span className="section-title">Staged</span>
-            <span className="section-count">{staged.length}</span>
+      <div className="file-section flex min-h-15 flex-1 flex-col overflow-hidden">
+        <div className="section-header border-border bg-bg-tertiary text-text-secondary flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
+          <div className="section-header-title flex w-full items-center gap-2">
+            <span className="section-title font-medium">Staged</span>
+            <span className="section-count bg-bg-hover ml-auto rounded-full px-1.5 py-px text-xs">
+              {staged.length}
+            </span>
           </div>
-          <div className="section-actions">
+          <div className="section-actions mt-1 flex min-h-6 items-center gap-1">
             {hasSelectedStaged && (
               <>
                 <button
-                  className="section-action-btn"
+                  className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                   onClick={handleUnstageSelected}
                   title="Unstage selected files"
                 >
                   Unstage Selected
                 </button>
                 <button
-                  className="section-action-btn secondary"
+                  className="section-action-btn secondary border-border text-text-secondary hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                   onClick={handleClearStagedSelection}
                   title="Clear selection"
                 >
@@ -131,7 +129,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
             )}
             {staged.length > 0 && (
               <button
-                className="section-action-btn"
+                className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                 onClick={handleUnstageAll}
                 title="Unstage all changes"
               >
@@ -140,9 +138,11 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
             )}
           </div>
         </div>
-        <div className="section-content">
+        <div className="section-content min-h-0 flex-1 overflow-y-auto">
           {staged.length === 0 ? (
-            <div className="empty-section">No staged changes</div>
+            <div className="empty-section text-text-muted p-4 text-center text-xs">
+              No staged changes
+            </div>
           ) : (
             staged.map((file) => (
               <FileItem
@@ -162,24 +162,26 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
       </div>
 
       {/* Unstaged changes section */}
-      <div className="file-section">
-        <div className="section-header">
-          <div className="section-header-title">
-            <span className="section-title">Unstaged</span>
-            <span className="section-count">{unstaged.length}</span>
+      <div className="file-section flex min-h-15 flex-1 flex-col overflow-hidden">
+        <div className="section-header border-border bg-bg-tertiary text-text-secondary flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
+          <div className="section-header-title flex w-full items-center gap-2">
+            <span className="section-title font-medium">Unstaged</span>
+            <span className="section-count bg-bg-hover ml-auto rounded-full px-1.5 py-px text-xs">
+              {unstaged.length}
+            </span>
           </div>
-          <div className="section-actions">
+          <div className="section-actions mt-1 flex min-h-6 items-center gap-1">
             {hasSelectedUnstaged && (
               <>
                 <button
-                  className="section-action-btn"
+                  className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                   onClick={handleStageSelected}
                   title="Stage selected files"
                 >
                   Stage Selected
                 </button>
                 <button
-                  className="section-action-btn secondary"
+                  className="section-action-btn secondary border-border text-text-secondary hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                   onClick={handleClearUnstagedSelection}
                   title="Clear selection"
                 >
@@ -189,7 +191,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
             )}
             {unstaged.length > 0 && (
               <button
-                className="section-action-btn"
+                className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
                 onClick={handleStageAll}
                 title="Stage all changes"
               >
@@ -198,9 +200,11 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
             )}
           </div>
         </div>
-        <div className="section-content">
+        <div className="section-content min-h-0 flex-1 overflow-y-auto">
           {unstaged.length === 0 ? (
-            <div className="empty-section">No unstaged changes</div>
+            <div className="empty-section text-text-muted p-4 text-center text-xs">
+              No unstaged changes
+            </div>
           ) : (
             unstaged.map((file) => (
               <FileItem

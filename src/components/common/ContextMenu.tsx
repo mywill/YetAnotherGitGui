@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import "./ContextMenu.css";
+import clsx from "clsx";
 
 export interface ContextMenuItem {
   label: string;
@@ -31,7 +31,11 @@ function ContextMenuItemComponent({
   return (
     <div
       ref={itemRef}
-      className={`context-menu-item ${item.disabled ? "disabled" : ""} ${hasChildren ? "has-submenu" : ""}`}
+      className={clsx(
+        "context-menu-item hover:bg-bg-hover cursor-pointer px-3 py-1 text-xs transition-colors duration-100",
+        item.disabled && "disabled text-text-muted cursor-not-allowed hover:bg-transparent",
+        hasChildren && "has-submenu relative flex items-center justify-between"
+      )}
       onClick={() => {
         if (!item.disabled && !hasChildren && item.onClick) {
           item.onClick();
@@ -42,13 +46,16 @@ function ContextMenuItemComponent({
       onMouseLeave={() => hasChildren && setSubmenuOpen(false)}
     >
       <span>{item.label}</span>
-      {hasChildren && <span className="submenu-arrow">&#9656;</span>}
+      {hasChildren && <span className="submenu-arrow text-submenu-arrow ml-2">&#9656;</span>}
       {hasChildren && submenuOpen && (
-        <div className="context-submenu">
+        <div className="context-submenu border-border bg-bg-secondary shadow-menu absolute top-0 left-full min-w-40 rounded border py-1">
           {item.children!.map((child, idx) => (
             <div
               key={idx}
-              className={`context-menu-item ${child.disabled ? "disabled" : ""}`}
+              className={clsx(
+                "context-menu-item hover:bg-bg-hover cursor-pointer px-3 py-1 text-xs transition-colors duration-100",
+                child.disabled && "disabled text-text-muted cursor-not-allowed hover:bg-transparent"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
                 if (!child.disabled && child.onClick) {
@@ -108,7 +115,11 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   }, [x, y]);
 
   const menu = (
-    <div ref={menuRef} className="context-menu" style={{ left: x, top: y }}>
+    <div
+      ref={menuRef}
+      className="context-menu border-border bg-bg-secondary shadow-menu fixed min-w-40 rounded border py-1"
+      style={{ left: x, top: y }}
+    >
       {items.map((item, index) => (
         <ContextMenuItemComponent key={index} item={item} onClose={onClose} />
       ))}

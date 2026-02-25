@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from "react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import "./CommitPanel.css";
 
 export function CommitPanel() {
   const [message, setMessage] = useState("");
@@ -33,10 +32,10 @@ export function CommitPanel() {
   );
 
   return (
-    <div className="commit-panel">
-      <div className="commit-header">Commit</div>
+    <div className="commit-panel flex h-full flex-col gap-2 p-2">
+      <div className="commit-header text-text-secondary text-xs font-medium">Commit</div>
       <textarea
-        className="commit-message-input"
+        className="commit-message-input font-inherit min-h-15 flex-1"
         placeholder="Commit message..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
@@ -44,15 +43,15 @@ export function CommitPanel() {
         disabled={isCommitting}
         spellCheck={true}
       />
-      <div className="commit-actions">
+      <div className="commit-actions flex items-center gap-2">
         <button
-          className="commit-button primary"
+          className="commit-button primary bg-bg-selected border-bg-selected hover:bg-bg-selected-hover shrink-0"
           onClick={handleCommit}
           disabled={!message.trim() || !hasStagedChanges || isCommitting}
         >
           {isCommitting ? "Committing..." : "Commit"}
         </button>
-        <span className="commit-hint">Ctrl+Enter to commit</span>
+        <span className="commit-hint text-text-muted text-xs">Ctrl+Enter to commit</span>
       </div>
     </div>
   );

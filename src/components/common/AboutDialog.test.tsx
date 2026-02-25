@@ -98,9 +98,9 @@ describe("AboutDialog", () => {
   });
 
   it("calls onClose when backdrop is clicked", async () => {
-    const { container } = render(<AboutDialog onClose={mockOnClose} />);
+    render(<AboutDialog onClose={mockOnClose} />);
 
-    const backdrop = container.querySelector(".confirm-dialog-backdrop");
+    const backdrop = document.querySelector(".confirm-dialog-backdrop");
     fireEvent.click(backdrop!);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);

@@ -5,7 +5,6 @@ import { CommitPanel } from "../commit/CommitPanel";
 import { DiffViewPanel } from "../diff/DiffViewPanel";
 import { StashDetailsPanel } from "../sidebar/StashDetailsPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import "./StatusView.css";
 
 export function StatusView() {
   const fileStatuses = useRepositoryStore((s) => s.fileStatuses);
@@ -26,29 +25,35 @@ export function StatusView() {
   }, []);
 
   return (
-    <div className="status-view">
+    <div className="status-view flex min-h-0 flex-1 overflow-hidden">
       {/* Left: File panels only */}
-      <div className="status-left" style={{ width: leftWidth }}>
-        <div className="status-staging">
+      <div
+        className="status-left bg-bg-secondary flex max-w-112 min-w-50 flex-col overflow-hidden"
+        style={{ width: leftWidth }}
+      >
+        <div className="status-staging flex min-h-0 flex-3 flex-col overflow-hidden">
           <StagedUnstagedPanel statuses={fileStatuses} loading={fileStatusesLoading} />
         </div>
-        <div className="status-untracked">
+        <div className="status-untracked flex min-h-0 flex-1 flex-col overflow-hidden">
           <UntrackedPanel statuses={fileStatuses} loading={fileStatusesLoading} />
         </div>
       </div>
       <HorizontalResizer onResize={handleHorizontalResize} />
       {/* Right: Diff + Commit or Stash Details */}
-      <div className="status-right">
+      <div className="status-right flex min-w-75 flex-1 flex-col overflow-hidden">
         {showStashDetails ? (
-          <div className="status-stash-details">
+          <div className="status-stash-details bg-bg-primary flex-1 overflow-hidden">
             <StashDetailsPanel details={selectedStashDetails} loading={stashDetailsLoading} />
           </div>
         ) : (
           <>
-            <div className="status-diff">
+            <div className="status-diff bg-bg-primary min-h-50 flex-1 overflow-hidden">
               <DiffViewPanel diff={currentDiff} loading={diffLoading} staged={currentDiffStaged} />
             </div>
-            <div className="status-commit">
+            <div
+              className="status-commit border-border shrink-0 overflow-hidden border-t"
+              style={{ minHeight: 140, maxHeight: 220 }}
+            >
               <CommitPanel />
             </div>
           </>
@@ -87,5 +92,10 @@ function HorizontalResizer({ onResize }: ResizerProps) {
     [onResize]
   );
 
-  return <div className="status-resizer-h" onMouseDown={handleMouseDown} />;
+  return (
+    <div
+      className="status-resizer-h bg-border hover:bg-bg-selected w-1 shrink-0 cursor-col-resize transition-colors duration-150"
+      onMouseDown={handleMouseDown}
+    />
+  );
 }

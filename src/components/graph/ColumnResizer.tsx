@@ -1,5 +1,4 @@
 import { useCallback, useRef } from "react";
-import "./ColumnResizer.css";
 
 interface ColumnResizerProps {
   position: number;
@@ -36,6 +35,10 @@ export function ColumnResizer({ onResize, position }: ColumnResizerProps) {
   );
 
   return (
-    <div className="column-resizer" style={{ left: position }} onMouseDown={handleMouseDown} />
+    <div
+      className="column-resizer before:bg-border hover:bg-primary/20 hover:before:bg-bg-selected active:bg-primary/20 active:before:bg-bg-selected pointer-events-auto absolute inset-y-0 z-10 -ml-1 w-2 cursor-col-resize bg-transparent transition-colors duration-150 before:absolute before:inset-y-1 before:left-0.75 before:w-0.5 before:rounded-sm before:content-['']"
+      style={{ left: position }}
+      onMouseDown={handleMouseDown}
+    />
   );
 }

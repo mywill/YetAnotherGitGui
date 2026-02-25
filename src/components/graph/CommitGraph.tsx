@@ -6,7 +6,6 @@ import { ColumnResizer } from "./ColumnResizer";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import "./CommitGraph.css";
 
 const ROW_HEIGHT = 28;
 const MIN_WIDTH = 60;
@@ -137,16 +136,23 @@ export function CommitGraph({ commits, onLoadMore, hasMore }: CommitGraphProps) 
   } as React.CSSProperties;
 
   return (
-    <div className="commit-graph" ref={containerRef} style={containerStyle}>
-      <div className="commit-graph-header">
-        <div className="header-cell">Graph</div>
-        <div className="header-cell">Message</div>
-        <div className="header-cell">Author</div>
-        <div className="header-cell">Date</div>
+    <div
+      className="commit-graph relative flex h-full flex-col overflow-hidden"
+      ref={containerRef}
+      style={containerStyle}
+    >
+      <div
+        className="commit-graph-header commit-graph-grid border-border bg-bg-tertiary text-text-secondary shrink-0 items-center border-b px-2 text-xs"
+        style={{ display: "grid", height: "28px", columnGap: "24px" }}
+      >
+        <div className="header-cell truncate">Graph</div>
+        <div className="header-cell truncate">Message</div>
+        <div className="header-cell truncate">Author</div>
+        <div className="header-cell truncate text-right">Date</div>
       </div>
 
       {/* Resize handles */}
-      <div className="column-resizers">
+      <div className="column-resizers pointer-events-none absolute inset-x-0 top-0 h-7">
         <ColumnResizer position={graphResizerPos} onResize={handleGraphResize} />
         <ColumnResizer position={authorResizerPos} onResize={handleMessageResize} />
         <ColumnResizer position={dateResizerPos} onResize={handleAuthorResize} />

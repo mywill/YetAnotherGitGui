@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { CommitGraph } from "../graph/CommitGraph";
 import { CommitDetailsPanel } from "../history/CommitDetailsPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import "./HistoryView.css";
 
 export function HistoryView() {
   const commits = useRepositoryStore((s) => s.commits);
@@ -18,12 +17,15 @@ export function HistoryView() {
   }, []);
 
   return (
-    <div className="history-view">
-      <div className="history-graph">
+    <div className="history-view flex min-h-0 flex-1 overflow-hidden">
+      <div className="history-graph bg-bg-primary min-h-0 min-w-100 flex-1 overflow-hidden">
         <CommitGraph commits={commits} onLoadMore={loadMoreCommits} hasMore={hasMoreCommits} />
       </div>
       <Resizer onResize={handleResize} />
-      <div className="history-details" style={{ width: detailsWidth }}>
+      <div
+        className="history-details border-border bg-bg-secondary max-w-150 min-w-75 overflow-hidden border-l"
+        style={{ width: detailsWidth }}
+      >
         <CommitDetailsPanel details={selectedCommitDetails} loading={commitDetailsLoading} />
       </div>
     </div>
@@ -59,5 +61,10 @@ function Resizer({ onResize }: ResizerProps) {
     [onResize]
   );
 
-  return <div className="history-resizer" onMouseDown={handleMouseDown} />;
+  return (
+    <div
+      className="history-resizer bg-border hover:bg-bg-selected w-1 shrink-0 cursor-col-resize transition-colors duration-150"
+      onMouseDown={handleMouseDown}
+    />
+  );
 }

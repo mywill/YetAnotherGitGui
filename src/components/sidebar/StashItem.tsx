@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
+import clsx from "clsx";
 import type { StashInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
-import "./StashItem.css";
 
 interface StashItemProps {
   stash: StashInfo;
@@ -123,15 +123,20 @@ export function StashItem({ stash }: StashItemProps) {
   return (
     <>
       <div
-        className={`stash-item ${isSelected ? "is-selected" : ""}`}
+        className={clsx(
+          "stash-item text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
+          isSelected && "is-selected bg-bg-selected hover:bg-bg-selected-hover"
+        )}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         title={stash.message}
       >
         <StashIcon />
-        <span className="stash-item-name">{stashName}</span>
-        <span className="stash-item-message">{getShortMessage()}</span>
+        <span className="stash-item-name text-text-primary shrink-0 font-mono">{stashName}</span>
+        <span className="stash-item-message text-text-secondary text-2xs flex-1 truncate">
+          {getShortMessage()}
+        </span>
       </div>
       {contextMenu && (
         <ContextMenu
@@ -147,7 +152,13 @@ export function StashItem({ stash }: StashItemProps) {
 
 function StashIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="stash-icon">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className="stash-icon text-text-secondary shrink-0"
+    >
       <path d="M2 3h12v2H2V3zm1 3h10v2H3V6zm1 3h8v2H4V9zm1 3h6v2H5v-2z" />
     </svg>
   );

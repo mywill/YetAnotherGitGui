@@ -143,20 +143,20 @@ describe("ConfirmDialog", () => {
 
   describe("CSS structure", () => {
     it("has correct CSS class structure", () => {
-      const { container } = render(<ConfirmDialog {...defaultProps} />);
+      render(<ConfirmDialog {...defaultProps} />);
 
-      expect(container.querySelector(".confirm-dialog-backdrop")).toBeInTheDocument();
-      expect(container.querySelector(".confirm-dialog")).toBeInTheDocument();
-      expect(container.querySelector(".confirm-dialog-header")).toBeInTheDocument();
-      expect(container.querySelector(".confirm-dialog-body")).toBeInTheDocument();
-      expect(container.querySelector(".confirm-dialog-actions")).toBeInTheDocument();
+      expect(document.querySelector(".confirm-dialog-backdrop")).toBeInTheDocument();
+      expect(document.querySelector(".confirm-dialog")).toBeInTheDocument();
+      expect(document.querySelector(".confirm-dialog-header")).toBeInTheDocument();
+      expect(document.querySelector(".confirm-dialog-body")).toBeInTheDocument();
+      expect(document.querySelector(".confirm-dialog-actions")).toBeInTheDocument();
     });
 
     it("has correct button CSS classes", () => {
-      const { container } = render(<ConfirmDialog {...defaultProps} />);
+      render(<ConfirmDialog {...defaultProps} />);
 
-      expect(container.querySelector(".dialog-btn.cancel")).toBeInTheDocument();
-      expect(container.querySelector(".dialog-btn.confirm")).toBeInTheDocument();
+      expect(document.querySelector(".dialog-btn.cancel")).toBeInTheDocument();
+      expect(document.querySelector(".dialog-btn.confirm")).toBeInTheDocument();
     });
   });
 });

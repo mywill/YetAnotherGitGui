@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
+import clsx from "clsx";
 import type { DiffHunk as DiffHunkType } from "../../types";
-import "./DiffHunk.css";
 
 interface DiffHunkProps {
   hunk: DiffHunkType;
@@ -26,7 +26,6 @@ export function DiffHunk({
   const lastClickedRef = useRef<number | null>(null);
   const selectionStartRef = useRef<number | null>(null);
 
-  // Filter out header lines - only show context, addition, deletion
   const visibleLines = hunk.lines
     .map((line, idx) => ({ ...line, originalIndex: idx }))
     .filter((line) => line.line_type !== "header");
@@ -36,7 +35,6 @@ export function DiffHunk({
       if (!canSelectLines) return;
       if (lineType === "context") return;
 
-      // Shift-click for range selection (consecutive lines only)
       if (e.shiftKey && lastClickedRef.current !== null) {
         const start = Math.min(lastClickedRef.current, originalIndex);
         const end = Math.max(lastClickedRef.current, originalIndex);
@@ -52,19 +50,15 @@ export function DiffHunk({
         return;
       }
 
-      // If clicking on already-selected single line, unselect it
       if (selectedLines.size === 1 && selectedLines.has(originalIndex)) {
         setSelectedLines(new Set());
         lastClickedRef.current = null;
         return;
       }
 
-      // Normal click: start fresh selection
       setIsSelecting(true);
       selectionStartRef.current = originalIndex;
       lastClickedRef.current = originalIndex;
-
-      // Start fresh selection with just this line
       setSelectedLines(new Set([originalIndex]));
     },
     [canSelectLines, hunk.lines, selectedLines]
@@ -76,7 +70,6 @@ export function DiffHunk({
       if (lineType === "context") return;
       if (selectionStartRef.current === null) return;
 
-      // Select range from start to current
       const start = Math.min(selectionStartRef.current, originalIndex);
       const end = Math.max(selectionStartRef.current, originalIndex);
 
@@ -120,44 +113,58 @@ export function DiffHunk({
 
   const hasSelection = selectedLines.size > 0;
 
-  // Extract a cleaner version of the hunk header (e.g., "@@ -1,3 +1,4 @@")
   const hunkInfo = hunk.header.split("@@").slice(0, 2).join("@@") + "@@";
 
   return (
     <div
-      className={`diff-hunk ${hasSelection ? "has-selection" : ""}`}
+      className={clsx("diff-hunk relative", hasSelection && "has-selection")}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <div className="hunk-header">
-        <span className="hunk-info">{hunkInfo.trim()}</span>
-        <div className="hunk-actions">
+      <div className="hunk-header border-border bg-bg-tertiary flex items-center justify-between border-b px-2 py-1 text-xs">
+        <span className="hunk-info text-text-muted font-mono">{hunkInfo.trim()}</span>
+        <div className="hunk-actions flex gap-1">
           {selectedLines.size > 0 && canSelectLines && (
-            <button className="hunk-action" onClick={handleStageSelected}>
+            <button
+              className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+              onClick={handleStageSelected}
+            >
               Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
             </button>
           )}
-          <button className="hunk-action" onClick={onAction}>
+          <button
+            className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+            onClick={onAction}
+          >
             {actionLabel}
           </button>
           {selectedLines.size > 0 && canSelectLines && onDiscardLines && (
-            <button className="hunk-action" onClick={handleDiscardSelected}>
+            <button
+              className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+              onClick={handleDiscardSelected}
+            >
               Discard {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
             </button>
           )}
           {onDiscardHunk && (
-            <button className="hunk-action" onClick={onDiscardHunk}>
+            <button
+              className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+              onClick={onDiscardHunk}
+            >
               Discard hunk
             </button>
           )}
           {selectedLines.size > 0 && canSelectLines && (
-            <button className="hunk-action secondary" onClick={clearSelection}>
+            <button
+              className="hunk-action secondary hover:bg-bg-hover rounded bg-transparent px-2 py-px text-xs"
+              onClick={clearSelection}
+            >
               Clear
             </button>
           )}
         </div>
       </div>
-      <div className="hunk-lines">
+      <div className="hunk-lines bg-bg-primary table w-full min-w-max">
         {visibleLines.map((line) => {
           const isSelectable =
             canSelectLines && (line.line_type === "addition" || line.line_type === "deletion");
@@ -166,16 +173,36 @@ export function DiffHunk({
           return (
             <div
               key={line.originalIndex}
-              className={`diff-line line-${line.line_type} ${isSelectable ? "selectable" : ""} ${isSelected ? "selected" : ""}`}
+              className={clsx(
+                "diff-line table-row min-h-4.5",
+                `line-${line.line_type}`,
+                line.line_type === "addition" && "bg-addition/15",
+                line.line_type === "deletion" && "bg-deletion/15",
+                line.line_type === "context" && "bg-transparent",
+                isSelectable && "selectable cursor-pointer hover:brightness-110",
+                isSelected && "selected outline-primary outline outline-2 -outline-offset-2",
+                isSelected && line.line_type === "addition" && "bg-addition/25",
+                isSelected && line.line_type === "deletion" && "bg-deletion/25"
+              )}
               onMouseDown={(e) => handleMouseDown(line.originalIndex, line.line_type, e)}
               onMouseEnter={() => handleMouseEnter(line.originalIndex, line.line_type)}
             >
-              <span className="line-number old">{line.old_lineno ?? ""}</span>
-              <span className="line-number new">{line.new_lineno ?? ""}</span>
-              <span className="line-prefix">
+              <span className="line-number old border-border text-text-muted table-cell w-10 min-w-10 border-r bg-black/10 px-1 text-right select-none">
+                {line.old_lineno ?? ""}
+              </span>
+              <span className="line-number new border-border text-text-muted table-cell w-10 min-w-10 border-r bg-black/5 px-1 text-right select-none">
+                {line.new_lineno ?? ""}
+              </span>
+              <span
+                className={clsx(
+                  "line-prefix table-cell w-5 min-w-5 text-center select-none",
+                  line.line_type === "addition" && "text-addition",
+                  line.line_type === "deletion" && "text-deletion"
+                )}
+              >
                 {line.line_type === "addition" ? "+" : line.line_type === "deletion" ? "-" : " "}
               </span>
-              <span className="line-content">{line.content}</span>
+              <span className="line-content table-cell pr-2 whitespace-pre">{line.content}</span>
             </div>
           );
         })}

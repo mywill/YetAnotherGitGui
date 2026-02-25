@@ -1,14 +1,14 @@
 import type { GraphCommit } from "../../types";
 
 const BRANCH_COLORS = [
-  "var(--branch-color-1)",
-  "var(--branch-color-2)",
-  "var(--branch-color-3)",
-  "var(--branch-color-4)",
-  "var(--branch-color-5)",
-  "var(--branch-color-6)",
-  "var(--branch-color-7)",
-  "var(--branch-color-8)",
+  "var(--color-branch-1)",
+  "var(--color-branch-2)",
+  "var(--color-branch-3)",
+  "var(--color-branch-4)",
+  "var(--color-branch-5)",
+  "var(--color-branch-6)",
+  "var(--color-branch-7)",
+  "var(--color-branch-8)",
 ];
 
 const COLUMN_WIDTH = 12;
@@ -26,7 +26,7 @@ export function BranchLines({ commit }: BranchLinesProps) {
   const getColor = (column: number) => BRANCH_COLORS[column % BRANCH_COLORS.length];
 
   return (
-    <svg width="100%" height={height} className="branch-lines-svg">
+    <svg width="100%" height={height} className="branch-lines-svg block">
       {/* Draw connection lines */}
       {commit.lines.map((line, i) => {
         const fromX = COLUMN_WIDTH + line.from_column * COLUMN_WIDTH;
