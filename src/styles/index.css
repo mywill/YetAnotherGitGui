@@ -51,6 +51,10 @@
   /* Selection colors */
   --color-selection-border: #569cd6;
 
+  /* Toast colors (WCAG AA compliant with white text) */
+  --color-toast-success: #2e7d32;
+  --color-toast-error: #c62828;
+
   /* Functional colors */
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
@@ -186,11 +190,11 @@
 
 @keyframes slideUp {
   from {
-    transform: translateX(-50%) translateY(100%);
+    transform: translateY(100%);
     opacity: 0;
   }
   to {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }

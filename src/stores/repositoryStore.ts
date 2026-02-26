@@ -11,13 +11,13 @@ import type {
   StashDetails,
 } from "../types";
 import * as git from "../services/git";
+import { useNotificationStore } from "./notificationStore";
+import { cleanErrorMessage } from "../utils/errorMessages";
 
 interface RepositoryState {
   // Repository info
   repositoryInfo: RepositoryInfo | null;
   isLoading: boolean;
-  error: string | null;
-  successMessage: string | null;
 
   // Commits
   commits: GraphCommit[];
@@ -57,7 +57,6 @@ interface RepositoryState {
   loadMoreCommits: () => Promise<void>;
   loadFileStatuses: () => Promise<void>;
   loadFileDiff: (path: string, staged: boolean, isUntracked?: boolean) => Promise<void>;
-  clearError: () => void;
   clearDiff: () => void;
   stageFile: (path: string) => Promise<void>;
   unstageFile: (path: string) => Promise<void>;
@@ -110,8 +109,6 @@ const COMMITS_PER_PAGE = 100;
 export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   repositoryInfo: null,
   isLoading: false,
-  error: null,
-  successMessage: null,
 
   commits: [],
   commitsLoading: false,
@@ -140,7 +137,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   stashFileDiffs: new Map(),
 
   openRepository: async (path: string) => {
-    set({ isLoading: true, error: null, fileStatusesLoading: true, commitsLoading: true });
+    set({ isLoading: true, fileStatusesLoading: true, commitsLoading: true });
     try {
       const info = await git.openRepository(path);
       // Reset loading states before triggering data loads
@@ -154,8 +151,8 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       // Load initial data
       await Promise.all([get().loadMoreCommits(), get().loadFileStatuses()]);
     } catch (err) {
+      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
       set({
-        error: String(err),
         isLoading: false,
         fileStatusesLoading: false,
         commitsLoading: false,
@@ -181,7 +178,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         await get().loadFileDiff(currentDiffPath, currentDiffStaged);
       }
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -199,7 +196,8 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         hasMoreCommits: newCommits.length === COMMITS_PER_PAGE,
       });
     } catch (err) {
-      set({ commitsLoading: false, error: String(err) });
+      set({ commitsLoading: false });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -209,7 +207,8 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       const statuses = await git.getFileStatuses();
       set({ fileStatuses: statuses, fileStatusesLoading: false });
     } catch (err) {
-      set({ fileStatusesLoading: false, error: String(err) });
+      set({ fileStatusesLoading: false });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -227,12 +226,9 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       const diff = await git.getFileDiff(path, staged, isUntracked);
       set({ currentDiff: diff, diffLoading: false });
     } catch (err) {
-      set({ diffLoading: false, error: String(err) });
+      set({ diffLoading: false });
+      useNotificationStore.getState().showError(String(err));
     }
-  },
-
-  clearError: () => {
-    set({ error: null });
   },
 
   clearDiff: () => {
@@ -250,7 +246,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         await get().loadFileDiff(path, true);
       }
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -265,7 +261,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         await get().loadFileDiff(path, false);
       }
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -277,7 +273,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       // Only refresh once after all files are staged
       await get().loadFileStatuses();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -289,7 +285,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       // Only refresh once after all files are unstaged
       await get().loadFileStatuses();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -299,7 +295,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       await get().loadFileDiff(path, false);
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -309,7 +305,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       await get().loadFileDiff(path, true);
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -319,7 +315,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       await get().loadFileDiff(path, false);
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -329,7 +325,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       await get().loadFileDiff(path, false);
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -339,7 +335,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       await get().loadFileDiff(path, false);
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -350,7 +346,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       get().clearDiff();
       await get().refreshRepository();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -359,7 +355,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await git.checkoutCommit(hash);
       await get().refreshRepository();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -374,7 +370,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         set({ currentDiff: null, currentDiffPath: null });
       }
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -392,7 +388,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         set({ currentDiff: null, currentDiffPath: null });
       }
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -402,7 +398,8 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       const details = await git.getCommitDetails(hash);
       set({ selectedCommitDetails: details, commitDetailsLoading: false });
     } catch (err) {
-      set({ commitDetailsLoading: false, error: String(err) });
+      set({ commitDetailsLoading: false });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -433,7 +430,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       newDiffs.set(filePath, diff);
       set({ commitFileDiffs: newDiffs });
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -441,10 +438,9 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     try {
       await git.revertCommit(hash);
       await get().loadFileStatuses();
-      set({ successMessage: `Reverted commit ${hash.slice(0, 7)}` });
-      setTimeout(() => set({ successMessage: null }), 3000);
+      useNotificationStore.getState().showSuccess(`Reverted commit ${hash.slice(0, 7)}`);
     } catch (err) {
-      set({ error: String(err), successMessage: null });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -452,10 +448,9 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     try {
       await git.revertCommitFile(hash, path);
       await get().loadFileStatuses();
-      set({ successMessage: `Reverted ${path}` });
-      setTimeout(() => set({ successMessage: null }), 3000);
+      useNotificationStore.getState().showSuccess(`Reverted ${path}`);
     } catch (err) {
-      set({ error: String(err), successMessage: null });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -470,10 +465,9 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       // Refresh the commit file diff to reflect changes
       await get().loadCommitFileDiff(hash, path);
-      set({ successMessage: `Reverted lines in ${path}` });
-      setTimeout(() => set({ successMessage: null }), 3000);
+      useNotificationStore.getState().showSuccess(`Reverted lines in ${path}`);
     } catch (err) {
-      set({ error: String(err), successMessage: null });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -486,7 +480,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       ]);
       set({ branches, tags, stashes });
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -495,7 +489,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await git.checkoutBranch(branchName);
       await get().refreshRepository();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -505,7 +499,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().refreshRepository();
       await get().loadBranchesAndTags();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -515,7 +509,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().refreshRepository();
       await get().loadBranchesAndTags();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -524,7 +518,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       const stashes = await git.listStashes();
       set({ stashes });
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -538,7 +532,8 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       const details = await git.getStashDetails(index);
       set({ selectedStashDetails: details, stashDetailsLoading: false });
     } catch (err) {
-      set({ stashDetailsLoading: false, error: String(err) });
+      set({ stashDetailsLoading: false });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -556,7 +551,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().refreshRepository();
       await get().loadBranchesAndTags();
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -575,7 +570,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
         });
       }
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 
@@ -598,7 +593,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       newDiffs.set(filePath, diff);
       set({ stashFileDiffs: newDiffs });
     } catch (err) {
-      set({ error: String(err) });
+      useNotificationStore.getState().showError(String(err));
     }
   },
 }));

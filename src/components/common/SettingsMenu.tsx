@@ -12,7 +12,7 @@ import {
   type UpdateInfo,
 } from "../../services/system";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useNotificationStore } from "../../stores/notificationStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
 
@@ -23,7 +23,6 @@ export function SettingsMenu() {
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -75,25 +74,23 @@ export function SettingsMenu() {
 
   const handleInstall = async () => {
     setShowInstallDialog(false);
-    setActionMessage(null);
     try {
       const result = await installCli();
-      setActionMessage(result);
+      useNotificationStore.getState().showSuccess(result);
       setCliInstalled(true);
     } catch (error) {
-      setActionMessage(String(error));
+      useNotificationStore.getState().showError(String(error));
     }
   };
 
   const handleUninstall = async () => {
     setShowUninstallDialog(false);
-    setActionMessage(null);
     try {
       const result = await uninstallCli();
-      setActionMessage(result);
+      useNotificationStore.getState().showSuccess(result);
       setCliInstalled(false);
     } catch (error) {
-      setActionMessage(String(error));
+      useNotificationStore.getState().showError(String(error));
     }
   };
 
@@ -108,18 +105,19 @@ export function SettingsMenu() {
       if (info.available) {
         setShowUpdateDialog(true);
       } else {
-        useRepositoryStore.setState({ successMessage: "You're up to date!" });
-        setTimeout(() => useRepositoryStore.setState({ successMessage: null }), 3000);
+        useNotificationStore.getState().showSuccess("You're up to date!");
       }
     } catch (error) {
       const errorStr = String(error);
       await writeUpdateLog(`ERROR in settings menu check: ${errorStr}`);
       const isSymlinkError = errorStr.toLowerCase().includes("symlink");
-      useRepositoryStore.setState({
-        error: isSymlinkError
-          ? "Update check failed because the CLI tool uses an outdated symlink. Please reinstall the CLI tool from the settings menu to fix this."
-          : `Failed to check for updates: ${errorStr}`,
-      });
+      useNotificationStore
+        .getState()
+        .showError(
+          isSymlinkError
+            ? "Update check failed because the CLI tool uses an outdated symlink. Please reinstall the CLI tool from the settings menu to fix this."
+            : `Failed to check for updates: ${errorStr}`
+        );
     } finally {
       setUpdateChecking(false);
     }
@@ -223,12 +221,6 @@ export function SettingsMenu() {
           </div>
         )}
       </div>
-
-      {actionMessage && (
-        <div className="settings-menu-uninstall-message text-text-secondary px-3 py-1.5 text-xs break-words">
-          {actionMessage}
-        </div>
-      )}
 
       {showInstallDialog && (
         <ConfirmDialog

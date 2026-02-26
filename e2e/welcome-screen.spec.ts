@@ -41,14 +41,14 @@ test.describe("Welcome Screen", () => {
   test("shows friendly error message without git2 internals", async ({
     page,
   }) => {
-    await expect(page.locator(".welcome-error")).toBeVisible({
+    await expect(page.locator(".notification-toast")).toBeVisible({
       timeout: 10000,
     });
-    await expect(page.locator(".welcome-error")).toContainText(
+    await expect(page.locator(".notification-toast")).toContainText(
       "No git repository found at",
     );
     // Should NOT contain raw git2 class/code noise
-    await expect(page.locator(".welcome-error")).not.toContainText(
+    await expect(page.locator(".notification-toast")).not.toContainText(
       "class=Repository",
     );
   });

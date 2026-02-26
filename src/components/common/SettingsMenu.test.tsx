@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SettingsMenu } from "./SettingsMenu";
-import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useNotificationStore } from "../../stores/notificationStore";
 import {
   checkCliInstalled,
   installCli,
@@ -25,6 +25,18 @@ vi.mock("../../services/system", () => ({
   ),
 }));
 
+const mockShowSuccess = vi.fn();
+const mockShowError = vi.fn();
+
+vi.mock("../../stores/notificationStore", () => ({
+  useNotificationStore: {
+    getState: () => ({
+      showSuccess: mockShowSuccess,
+      showError: mockShowError,
+    }),
+  },
+}));
+
 describe("SettingsMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,6 +47,16 @@ describe("SettingsMenu", () => {
       arch: "aarch64",
     });
     vi.mocked(checkForUpdate).mockResolvedValue({ available: false });
+    // Reset mock functions
+    mockShowSuccess.mockReset();
+    mockShowError.mockReset();
+    // Ensure getState is available on the mock
+    Object.assign(useNotificationStore, {
+      getState: () => ({
+        showSuccess: mockShowSuccess,
+        showError: mockShowError,
+      }),
+    });
   });
 
   afterEach(() => {
@@ -232,6 +254,26 @@ describe("SettingsMenu", () => {
       });
     });
 
+    it("shows success notification after install", async () => {
+      vi.mocked(installCli).mockResolvedValue("CLI installed successfully.");
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText("Install CLI Tool"));
+      });
+
+      fireEvent.click(screen.getByText("Install"));
+
+      await waitFor(() => {
+        expect(mockShowSuccess).toHaveBeenCalledWith("CLI installed successfully.");
+      });
+    });
+
     it("closes dialog when Cancel is clicked", async () => {
       render(<SettingsMenu />);
 
@@ -343,8 +385,7 @@ describe("SettingsMenu", () => {
       fireEvent.click(screen.getByText("Check for Updates"));
 
       await waitFor(() => {
-        const state = useRepositoryStore.getState();
-        expect(state.successMessage).toBe("You're up to date!");
+        expect(mockShowSuccess).toHaveBeenCalledWith("You're up to date!");
       });
     });
 
@@ -446,7 +487,7 @@ describe("SettingsMenu", () => {
       expect(screen.queryByText("Update Available")).not.toBeInTheDocument();
     });
 
-    it("sets store error when check fails", async () => {
+    it("shows error notification when check fails", async () => {
       vi.mocked(checkCliInstalled).mockResolvedValue(false);
       vi.mocked(checkForUpdate).mockRejectedValue(new Error("Network error"));
 
@@ -459,7 +500,9 @@ describe("SettingsMenu", () => {
       fireEvent.click(screen.getByText("Check for Updates"));
 
       await waitFor(() => {
-        expect(useRepositoryStore.getState().error).toContain("Failed to check for updates");
+        expect(mockShowError).toHaveBeenCalledWith(
+          expect.stringContaining("Failed to check for updates")
+        );
       });
     });
 
@@ -480,9 +523,10 @@ describe("SettingsMenu", () => {
       fireEvent.click(screen.getByText("Check for Updates"));
 
       await waitFor(() => {
-        const error = useRepositoryStore.getState().error;
-        expect(error).toContain("outdated symlink");
-        expect(error).toContain("reinstall the CLI tool");
+        expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("outdated symlink"));
+        expect(mockShowError).toHaveBeenCalledWith(
+          expect.stringContaining("reinstall the CLI tool")
+        );
       });
     });
   });

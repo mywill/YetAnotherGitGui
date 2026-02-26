@@ -16,42 +16,53 @@ vi.mock("../../stores/repositoryStore", () => ({
     selector({ openRepository: mockOpenRepository }),
 }));
 
+const mockShowError = vi.fn();
+vi.mock("../../stores/notificationStore", () => ({
+  useNotificationStore: vi.fn(),
+  notificationStore: {
+    getState: () => ({ showError: mockShowError }),
+  },
+}));
+
+// Make useNotificationStore.getState() accessible via the module mock
+import { useNotificationStore } from "../../stores/notificationStore";
+
 describe("WelcomeScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("shows error notice when error prop is provided", () => {
-    render(<WelcomeScreen error="Not a git repository" failedPath={null} />);
-    expect(screen.getByText(/Not a git repository/)).toBeInTheDocument();
-  });
-
-  it("hides error notice when error is null", () => {
-    render(<WelcomeScreen error={null} failedPath={null} />);
-    expect(screen.queryByText("⚠")).not.toBeInTheDocument();
+    // Provide getState on the mock so component code works
+    Object.assign(useNotificationStore, {
+      getState: () => ({ showError: mockShowError }),
+    });
   });
 
   it("pre-fills path input with failedPath", () => {
-    render(<WelcomeScreen error="Error" failedPath="/home/user/notARepo" />);
+    render(<WelcomeScreen failedPath="/home/user/notARepo" />);
     const input = screen.getByLabelText("Repository path") as HTMLInputElement;
     expect(input.value).toBe("/home/user/notARepo");
   });
 
+  it("input is empty when failedPath is null", () => {
+    render(<WelcomeScreen failedPath={null} />);
+    const input = screen.getByLabelText("Repository path") as HTMLInputElement;
+    expect(input.value).toBe("");
+  });
+
   it("Open button is disabled when input is empty", () => {
-    render(<WelcomeScreen error={null} failedPath={null} />);
+    render(<WelcomeScreen failedPath={null} />);
     const openButton = screen.getByRole("button", { name: "Open" });
     expect(openButton).toBeDisabled();
   });
 
   it("Open button is enabled when input has text", () => {
-    render(<WelcomeScreen error={null} failedPath="/some/path" />);
+    render(<WelcomeScreen failedPath="/some/path" />);
     const openButton = screen.getByRole("button", { name: "Open" });
     expect(openButton).toBeEnabled();
   });
 
   it("calls openRepository when Open is clicked", async () => {
     mockOpenRepository.mockResolvedValue(undefined);
-    render(<WelcomeScreen error={null} failedPath="/some/repo" />);
+    render(<WelcomeScreen failedPath="/some/repo" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
 
@@ -62,7 +73,7 @@ describe("WelcomeScreen", () => {
 
   it("calls openRepository on Enter key in input", async () => {
     mockOpenRepository.mockResolvedValue(undefined);
-    render(<WelcomeScreen error={null} failedPath="/some/repo" />);
+    render(<WelcomeScreen failedPath="/some/repo" />);
 
     const input = screen.getByLabelText("Repository path");
     fireEvent.keyDown(input, { key: "Enter" });
@@ -72,14 +83,14 @@ describe("WelcomeScreen", () => {
     });
   });
 
-  it("shows open error when openRepository fails", async () => {
+  it("shows open error via notification store when openRepository fails", async () => {
     mockOpenRepository.mockRejectedValue(new Error("Not a git repo"));
-    render(<WelcomeScreen error={null} failedPath="/bad/path" />);
+    render(<WelcomeScreen failedPath="/bad/path" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Not a git repo/)).toBeInTheDocument();
+      expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Not a git repo"));
     });
   });
 
@@ -87,7 +98,7 @@ describe("WelcomeScreen", () => {
     mockDialogOpen.mockResolvedValue("/selected/repo");
     mockOpenRepository.mockResolvedValue(undefined);
 
-    render(<WelcomeScreen error={null} failedPath="/default/path" />);
+    render(<WelcomeScreen failedPath="/default/path" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Browse..." }));
 
@@ -106,7 +117,7 @@ describe("WelcomeScreen", () => {
   it("Browse does nothing when dialog is cancelled", async () => {
     mockDialogOpen.mockResolvedValue(null);
 
-    render(<WelcomeScreen error={null} failedPath={null} />);
+    render(<WelcomeScreen failedPath={null} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Browse..." }));
 
@@ -118,7 +129,7 @@ describe("WelcomeScreen", () => {
   });
 
   it("renders Open a Repository card", () => {
-    render(<WelcomeScreen error={null} failedPath={null} />);
+    render(<WelcomeScreen failedPath={null} />);
     expect(screen.getByText("Open a Repository")).toBeInTheDocument();
     expect(screen.getByText("Select a Git repository to open")).toBeInTheDocument();
   });

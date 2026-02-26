@@ -23,6 +23,11 @@ vi.mock("./hooks/useCliArgs", () => ({
   useCliArgs: vi.fn(),
 }));
 
+// Mock NotificationToast as a no-op since it's tested separately
+vi.mock("./components/common/NotificationToast", () => ({
+  NotificationToast: () => null,
+}));
+
 // Mock child components to simplify testing
 vi.mock("./components/layout/AppLayout", () => ({
   AppLayout: ({ sidebar, children }: { sidebar: React.ReactNode; children: React.ReactNode }) => (
@@ -46,9 +51,8 @@ vi.mock("./components/views/StatusView", () => ({
 }));
 
 vi.mock("./components/views/WelcomeScreen", () => ({
-  WelcomeScreen: ({ error, failedPath }: { error: string | null; failedPath: string | null }) => (
+  WelcomeScreen: ({ failedPath }: { failedPath: string | null }) => (
     <div data-testid="welcome-screen">
-      {error && <span data-testid="welcome-error">{error}</span>}
       {failedPath && <span data-testid="welcome-failed-path">{failedPath}</span>}
     </div>
   ),
@@ -84,7 +88,6 @@ describe("App", () => {
   const mockOpenRepository = vi.fn();
   const mockRefreshRepository = vi.fn();
   const mockLoadBranchesAndTags = vi.fn();
-  const mockClearError = vi.fn();
   const mockCloseDialog = vi.fn();
   const mockOnConfirm = vi.fn();
 
@@ -106,8 +109,6 @@ describe("App", () => {
         remotes: string[];
       } | null;
       isLoading?: boolean;
-      error?: string | null;
-      successMessage?: string | null;
       cliLoading?: boolean;
       repoPath?: string | null;
       activeView?: "history" | "status";
@@ -123,8 +124,6 @@ describe("App", () => {
         remotes: ["origin"],
       },
       isLoading = false,
-      error = null,
-      successMessage = null,
       cliLoading = false,
       repoPath = "/test/repo",
       activeView = "status",
@@ -135,12 +134,9 @@ describe("App", () => {
     const repoState = {
       repositoryInfo,
       isLoading,
-      error,
-      successMessage,
       openRepository: mockOpenRepository,
       refreshRepository: mockRefreshRepository,
       loadBranchesAndTags: mockLoadBranchesAndTags,
-      clearError: mockClearError,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,33 +192,18 @@ describe("App", () => {
   });
 
   describe("welcome screen state", () => {
-    it("shows welcome screen when there is an error and no repository", () => {
+    it("shows welcome screen when no repository is open", () => {
       setupDefaultMocks({
-        error: "Repository not found",
         repositoryInfo: null,
       });
 
       render(<App />);
 
       expect(screen.getByTestId("welcome-screen")).toBeInTheDocument();
-      expect(screen.getByTestId("welcome-error")).toHaveTextContent("Repository not found");
-    });
-
-    it("shows welcome screen with no error when no repository and no error", () => {
-      setupDefaultMocks({
-        error: null,
-        repositoryInfo: null,
-      });
-
-      render(<App />);
-
-      expect(screen.getByTestId("welcome-screen")).toBeInTheDocument();
-      expect(screen.queryByTestId("welcome-error")).not.toBeInTheDocument();
     });
 
     it("passes failedPath to welcome screen", () => {
       setupDefaultMocks({
-        error: "Error",
         repositoryInfo: null,
         repoPath: "/some/path",
       });
@@ -234,7 +215,6 @@ describe("App", () => {
 
     it("renders app header with SettingsMenu on welcome screen", () => {
       setupDefaultMocks({
-        error: null,
         repositoryInfo: null,
       });
 
@@ -247,7 +227,6 @@ describe("App", () => {
 
     it("renders app shell structure on welcome screen", () => {
       setupDefaultMocks({
-        error: null,
         repositoryInfo: null,
       });
 
@@ -423,7 +402,7 @@ describe("App", () => {
     });
 
     it("does not refresh when no repository is open", () => {
-      setupDefaultMocks({ repositoryInfo: null, error: null });
+      setupDefaultMocks({ repositoryInfo: null });
 
       // Re-render with no repository
       const { unmount } = render(<App />);
@@ -463,72 +442,6 @@ describe("App", () => {
     });
   });
 
-  describe("error toast", () => {
-    it("shows error toast when error exists with repository open", () => {
-      setupDefaultMocks({
-        error: "Failed to stage file",
-        repositoryInfo: {
-          path: "/test/repo",
-          current_branch: "main",
-          is_detached: false,
-          remotes: [],
-        },
-      });
-
-      const { container } = render(<App />);
-
-      expect(container.querySelector(".app-error-toast")).toBeInTheDocument();
-      expect(screen.getByText("Failed to stage file")).toBeInTheDocument();
-    });
-
-    it("does not show error toast when no error", () => {
-      setupDefaultMocks({ error: null });
-
-      const { container } = render(<App />);
-
-      expect(container.querySelector(".app-error-toast")).not.toBeInTheDocument();
-    });
-
-    it("dismisses error toast on click", () => {
-      setupDefaultMocks({
-        error: "Failed to stage file",
-        repositoryInfo: {
-          path: "/test/repo",
-          current_branch: "main",
-          is_detached: false,
-          remotes: [],
-        },
-      });
-
-      const { container } = render(<App />);
-      const toast = container.querySelector(".app-error-toast");
-      expect(toast).toBeInTheDocument();
-
-      fireEvent.click(toast!);
-      expect(mockClearError).toHaveBeenCalled();
-    });
-
-    it("auto-dismisses error toast after 10 seconds", () => {
-      vi.useFakeTimers();
-      setupDefaultMocks({
-        error: "Failed to stage file",
-        repositoryInfo: {
-          path: "/test/repo",
-          current_branch: "main",
-          is_detached: false,
-          remotes: [],
-        },
-      });
-
-      render(<App />);
-
-      expect(mockClearError).not.toHaveBeenCalled();
-      vi.advanceTimersByTime(10000);
-      expect(mockClearError).toHaveBeenCalled();
-      vi.useRealTimers();
-    });
-  });
-
   describe("repository initialization", () => {
     it("calls openRepository when repoPath is available", async () => {
       setupDefaultMocks({ repoPath: "/test/path" });
@@ -557,42 +470,11 @@ describe("App", () => {
     });
 
     it("does not call loadBranchesAndTags when no repository info", () => {
-      setupDefaultMocks({ repositoryInfo: null, error: null, cliLoading: true });
+      setupDefaultMocks({ repositoryInfo: null, cliLoading: true });
 
       render(<App />);
 
       expect(mockLoadBranchesAndTags).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("success toast", () => {
-    it("shows success toast when successMessage is set", () => {
-      setupDefaultMocks({ successMessage: "Reverted commit abc123d" });
-
-      const { container } = render(<App />);
-
-      expect(container.querySelector(".app-success-toast")).toBeInTheDocument();
-      expect(screen.getByText("Reverted commit abc123d")).toBeInTheDocument();
-    });
-
-    it("does not show success toast when successMessage is null", () => {
-      setupDefaultMocks({ successMessage: null });
-
-      const { container } = render(<App />);
-
-      expect(container.querySelector(".app-success-toast")).not.toBeInTheDocument();
-    });
-
-    it("can show both error toast and success toast at the same time", () => {
-      setupDefaultMocks({
-        error: "Something failed",
-        successMessage: "Reverted file.ts",
-      });
-
-      const { container } = render(<App />);
-
-      expect(container.querySelector(".app-error-toast")).toBeInTheDocument();
-      expect(container.querySelector(".app-success-toast")).toBeInTheDocument();
     });
   });
 

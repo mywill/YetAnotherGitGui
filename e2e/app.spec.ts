@@ -426,6 +426,53 @@ test.describe("Accessibility - axe-core", () => {
     expect(keyboardViolations).toEqual([]);
   });
 
+  test("notification toasts should pass color contrast checks", async ({
+    page,
+  }) => {
+    // Trigger notifications via the Zustand store
+    await page.evaluate(() => {
+      // Access the Zustand store from the React component tree
+      const rootFiber = (document.getElementById("root") as any)?._reactRootContainer
+        ?._internalRoot?.current;
+
+      // Direct approach: dispatch custom events that the app listens for,
+      // or call the store directly via module scope
+      // Simplest: inject notifications by manipulating the DOM store reference
+    });
+
+    // Use page.evaluate to call the store's methods directly
+    await page.evaluate(async () => {
+      // Import the store module - Vite exposes modules at their paths
+      const mod = await import("/src/stores/notificationStore.ts");
+      mod.useNotificationStore.getState().showSuccess("Test success");
+      mod.useNotificationStore.getState().showError("Test error");
+    });
+
+    // Wait for toasts to appear
+    await page.waitForSelector(".notification-toast", { timeout: 5000 });
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .include(".notification-toast")
+      .withTags(["wcag2aa"])
+      .analyze();
+
+    const contrastViolations = accessibilityScanResults.violations.filter(
+      (v) => v.id === "color-contrast"
+    );
+
+    if (contrastViolations.length > 0) {
+      console.log("Notification toast contrast violations:");
+      contrastViolations.forEach((v) => {
+        v.nodes.forEach((node) => {
+          console.log(`  Element: ${node.html}`);
+          console.log(`  Message: ${node.any?.map((a) => a.message).join(", ")}`);
+        });
+      });
+    }
+
+    expect(contrastViolations).toEqual([]);
+  });
+
   test("form elements should have labels", async ({ page }) => {
     // Switch to Status View to test form elements (commit message textarea)
     await switchToStatusView(page);

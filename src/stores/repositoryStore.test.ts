@@ -5,13 +5,26 @@ import * as git from "../services/git";
 // Mock the git service
 vi.mock("../services/git");
 
+const mockShowError = vi.fn();
+const mockShowSuccess = vi.fn();
+
+vi.mock("./notificationStore", () => ({
+  useNotificationStore: {
+    getState: () => ({
+      showError: mockShowError,
+      showSuccess: mockShowSuccess,
+    }),
+  },
+}));
+
 describe("repositoryStore", () => {
   beforeEach(() => {
     // Reset store state before each test
+    mockShowError.mockReset();
+    mockShowSuccess.mockReset();
     useRepositoryStore.setState({
       repositoryInfo: null,
       isLoading: false,
-      error: null,
       commits: [],
       commitsLoading: false,
       hasMoreCommits: true,
@@ -138,7 +151,7 @@ describe("repositoryStore", () => {
       const { openRepository } = useRepositoryStore.getState();
       await openRepository("/invalid/path");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Repository not found");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Repository not found");
       expect(useRepositoryStore.getState().isLoading).toBe(false);
     });
   });
@@ -189,7 +202,7 @@ describe("repositoryStore", () => {
       const { stageFile } = useRepositoryStore.getState();
       await stageFile("test.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Stage failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Stage failed");
     });
   });
 
@@ -323,7 +336,7 @@ describe("repositoryStore", () => {
       const { createCommit } = useRepositoryStore.getState();
       await createCommit("Test message");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Commit failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Commit failed");
     });
   });
 
@@ -369,7 +382,7 @@ describe("repositoryStore", () => {
       const { stageFiles } = useRepositoryStore.getState();
       await stageFiles(["file1.ts"]);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Stage failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Stage failed");
     });
   });
 
@@ -413,7 +426,7 @@ describe("repositoryStore", () => {
       const { unstageFiles } = useRepositoryStore.getState();
       await unstageFiles(["file1.ts"]);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Unstage failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Unstage failed");
     });
   });
 
@@ -545,17 +558,6 @@ describe("repositoryStore", () => {
 
       expect(useRepositoryStore.getState().currentDiffPath).toBe("test.ts");
       expect(useRepositoryStore.getState().currentDiffStaged).toBe(true);
-    });
-  });
-
-  describe("clearError", () => {
-    it("clears the error state", () => {
-      useRepositoryStore.setState({ error: "Something failed" });
-
-      const { clearError } = useRepositoryStore.getState();
-      clearError();
-
-      expect(useRepositoryStore.getState().error).toBeNull();
     });
   });
 
@@ -695,7 +697,7 @@ describe("repositoryStore", () => {
       const { loadStashes } = useRepositoryStore.getState();
       await loadStashes();
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Failed to list stashes");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Failed to list stashes");
     });
   });
 
@@ -755,7 +757,7 @@ describe("repositoryStore", () => {
       const { loadStashDetails } = useRepositoryStore.getState();
       await loadStashDetails(99);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Stash not found");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Stash not found");
       expect(useRepositoryStore.getState().stashDetailsLoading).toBe(false);
     });
   });
@@ -829,7 +831,7 @@ describe("repositoryStore", () => {
       const { applyStash } = useRepositoryStore.getState();
       await applyStash(0);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Apply failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Apply failed");
     });
   });
 
@@ -903,7 +905,7 @@ describe("repositoryStore", () => {
       const { dropStash } = useRepositoryStore.getState();
       await dropStash(0);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Drop failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Drop failed");
     });
   });
 
@@ -963,7 +965,7 @@ describe("repositoryStore", () => {
       const { loadStashFileDiff } = useRepositoryStore.getState();
       await loadStashFileDiff(0, "test.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Diff failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Diff failed");
     });
   });
 
@@ -1108,7 +1110,7 @@ describe("repositoryStore", () => {
       const { refreshRepository } = useRepositoryStore.getState();
       await refreshRepository();
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Refresh failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Refresh failed");
     });
   });
 
@@ -1140,7 +1142,7 @@ describe("repositoryStore", () => {
       const { stageHunk } = useRepositoryStore.getState();
       await stageHunk("test.ts", 0);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Stage hunk failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Stage hunk failed");
     });
   });
 
@@ -1172,7 +1174,7 @@ describe("repositoryStore", () => {
       const { unstageHunk } = useRepositoryStore.getState();
       await unstageHunk("test.ts", 0);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Unstage hunk failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Unstage hunk failed");
     });
   });
 
@@ -1204,7 +1206,7 @@ describe("repositoryStore", () => {
       const { stageLines } = useRepositoryStore.getState();
       await stageLines("test.ts", 0, [1]);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Stage lines failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Stage lines failed");
     });
   });
 
@@ -1236,7 +1238,7 @@ describe("repositoryStore", () => {
       const { discardHunk } = useRepositoryStore.getState();
       await discardHunk("test.ts", 0);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Discard failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Discard failed");
     });
   });
 
@@ -1268,7 +1270,7 @@ describe("repositoryStore", () => {
       const { discardLines } = useRepositoryStore.getState();
       await discardLines("test.ts", 0, [1]);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Discard lines failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Discard lines failed");
     });
   });
 
@@ -1314,7 +1316,7 @@ describe("repositoryStore", () => {
       const { checkoutCommit } = useRepositoryStore.getState();
       await checkoutCommit("invalid");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Checkout failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Checkout failed");
     });
   });
 
@@ -1378,7 +1380,7 @@ describe("repositoryStore", () => {
       const { loadCommitDetails } = useRepositoryStore.getState();
       await loadCommitDetails("invalid");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Commit not found");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Commit not found");
       expect(useRepositoryStore.getState().commitDetailsLoading).toBe(false);
     });
   });
@@ -1465,7 +1467,7 @@ describe("repositoryStore", () => {
       const { loadCommitFileDiff } = useRepositoryStore.getState();
       await loadCommitFileDiff("abc123", "test.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Diff failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Diff failed");
     });
   });
 
@@ -1511,7 +1513,7 @@ describe("repositoryStore", () => {
       const { checkoutBranch } = useRepositoryStore.getState();
       await checkoutBranch("nonexistent");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Checkout failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Checkout failed");
     });
   });
 
@@ -1597,7 +1599,7 @@ describe("repositoryStore", () => {
       const { deleteBranch } = useRepositoryStore.getState();
       await deleteBranch("main", false);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Delete failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Delete failed");
     });
   });
 
@@ -1646,7 +1648,7 @@ describe("repositoryStore", () => {
       const { deleteTag } = useRepositoryStore.getState();
       await deleteTag("v1.0.0");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Delete failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Delete failed");
     });
   });
 
@@ -1657,7 +1659,7 @@ describe("repositoryStore", () => {
       const { unstageFile } = useRepositoryStore.getState();
       await unstageFile("test.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Unstage failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Unstage failed");
     });
   });
 
@@ -1668,7 +1670,7 @@ describe("repositoryStore", () => {
       const { revertFile } = useRepositoryStore.getState();
       await revertFile("test.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Revert failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Revert failed");
     });
   });
 
@@ -1680,7 +1682,7 @@ describe("repositoryStore", () => {
       const { deleteFile } = useRepositoryStore.getState();
       await deleteFile("test.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Delete failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Delete failed");
     });
   });
 
@@ -1691,7 +1693,7 @@ describe("repositoryStore", () => {
       const { loadFileDiff } = useRepositoryStore.getState();
       await loadFileDiff("test.ts", false);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Diff failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Diff failed");
       expect(useRepositoryStore.getState().diffLoading).toBe(false);
     });
   });
@@ -1716,7 +1718,7 @@ describe("repositoryStore", () => {
       const { loadMoreCommits } = useRepositoryStore.getState();
       await loadMoreCommits();
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Load failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Load failed");
       expect(useRepositoryStore.getState().commitsLoading).toBe(false);
     });
   });
@@ -1728,7 +1730,7 @@ describe("repositoryStore", () => {
       const { loadFileStatuses } = useRepositoryStore.getState();
       await loadFileStatuses();
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Status failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Status failed");
       expect(useRepositoryStore.getState().fileStatusesLoading).toBe(false);
     });
   });
@@ -1740,7 +1742,7 @@ describe("repositoryStore", () => {
       const { loadBranchesAndTags } = useRepositoryStore.getState();
       await loadBranchesAndTags();
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Load failed");
+      expect(mockShowError).toHaveBeenCalledWith("Error: Load failed");
     });
   });
 
@@ -1789,7 +1791,7 @@ describe("repositoryStore", () => {
       expect(git.revertCommit).toHaveBeenCalledWith("abc123");
       expect(git.getFileStatuses).toHaveBeenCalled();
       expect(useRepositoryStore.getState().fileStatuses?.staged).toHaveLength(1);
-      expect(useRepositoryStore.getState().successMessage).toBe("Reverted commit abc123");
+      expect(mockShowSuccess).toHaveBeenCalledWith("Reverted commit abc123");
     });
 
     it("sets error on failure", async () => {
@@ -1798,8 +1800,8 @@ describe("repositoryStore", () => {
       const { revertCommit } = useRepositoryStore.getState();
       await revertCommit("abc123");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Revert failed");
-      expect(useRepositoryStore.getState().successMessage).toBeNull();
+      expect(mockShowError).toHaveBeenCalledWith("Error: Revert failed");
+      expect(mockShowSuccess).not.toHaveBeenCalled();
     });
   });
 
@@ -1817,7 +1819,7 @@ describe("repositoryStore", () => {
 
       expect(git.revertCommitFile).toHaveBeenCalledWith("abc123", "file.ts");
       expect(git.getFileStatuses).toHaveBeenCalled();
-      expect(useRepositoryStore.getState().successMessage).toBe("Reverted file.ts");
+      expect(mockShowSuccess).toHaveBeenCalledWith("Reverted file.ts");
     });
 
     it("sets error on failure", async () => {
@@ -1826,8 +1828,8 @@ describe("repositoryStore", () => {
       const { revertCommitFile } = useRepositoryStore.getState();
       await revertCommitFile("abc123", "file.ts");
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Revert failed");
-      expect(useRepositoryStore.getState().successMessage).toBeNull();
+      expect(mockShowError).toHaveBeenCalledWith("Error: Revert failed");
+      expect(mockShowSuccess).not.toHaveBeenCalled();
     });
   });
 
@@ -1851,7 +1853,7 @@ describe("repositoryStore", () => {
       expect(git.revertCommitFileLines).toHaveBeenCalledWith("abc123", "file.ts", 0, [1, 2]);
       expect(git.getFileStatuses).toHaveBeenCalled();
       expect(git.getCommitFileDiff).toHaveBeenCalledWith("abc123", "file.ts");
-      expect(useRepositoryStore.getState().successMessage).toBe("Reverted lines in file.ts");
+      expect(mockShowSuccess).toHaveBeenCalledWith("Reverted lines in file.ts");
     });
 
     it("sets error on failure", async () => {
@@ -1860,8 +1862,8 @@ describe("repositoryStore", () => {
       const { revertCommitFileLines } = useRepositoryStore.getState();
       await revertCommitFileLines("abc123", "file.ts", 0, [1, 2]);
 
-      expect(useRepositoryStore.getState().error).toBe("Error: Lines revert failed");
-      expect(useRepositoryStore.getState().successMessage).toBeNull();
+      expect(mockShowError).toHaveBeenCalledWith("Error: Lines revert failed");
+      expect(mockShowSuccess).not.toHaveBeenCalled();
     });
   });
 });

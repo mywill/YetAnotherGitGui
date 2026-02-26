@@ -6,7 +6,9 @@ import { StatusView } from "./components/views/StatusView";
 import { WelcomeScreen } from "./components/views/WelcomeScreen";
 import { ConfirmDialog } from "./components/common/ConfirmDialog";
 import { SettingsMenu } from "./components/common/SettingsMenu";
+import { NotificationToast } from "./components/common/NotificationToast";
 import { FileStatusCounts } from "./components/layout/FileStatusCounts";
+import { useNotificationStore } from "./stores/notificationStore";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
@@ -18,23 +20,11 @@ export function App() {
 
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
   const isLoading = useRepositoryStore((s) => s.isLoading);
-  const error = useRepositoryStore((s) => s.error);
-  const successMessage = useRepositoryStore((s) => s.successMessage);
   const openRepository = useRepositoryStore((s) => s.openRepository);
   const refreshRepository = useRepositoryStore((s) => s.refreshRepository);
   const loadBranchesAndTags = useRepositoryStore((s) => s.loadBranchesAndTags);
 
-  const clearError = useRepositoryStore((s) => s.clearError);
-
   const activeView = useSelectionStore((s) => s.activeView);
-
-  // Auto-dismiss error toast after 5 seconds
-  useEffect(() => {
-    if (error && repositoryInfo) {
-      const timer = setTimeout(clearError, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, repositoryInfo, clearError]);
 
   const dialogIsOpen = useDialogStore((s) => s.isOpen);
   const dialogTitle = useDialogStore((s) => s.title);
@@ -95,8 +85,9 @@ export function App() {
           </div>
         </header>
         <main className="app-main flex-1 overflow-hidden">
-          <WelcomeScreen error={error} failedPath={repoPath} />
+          <WelcomeScreen failedPath={repoPath} />
         </main>
+        <NotificationToast />
       </div>
     );
   }
@@ -125,6 +116,19 @@ export function App() {
           </div>
         )}
         <div className="header-right app-region-no-drag flex h-full shrink-0 items-center gap-2">
+          {/* DEBUG: Remove after stacking validation */}
+          <button
+            className="h-6.5 px-2 leading-none text-green-400"
+            onClick={() => useNotificationStore.getState().showSuccess("Success " + Date.now())}
+          >
+            Test Success
+          </button>
+          <button
+            className="h-6.5 px-2 leading-none text-red-400"
+            onClick={() => useNotificationStore.getState().showError("Error " + Date.now())}
+          >
+            Test Error
+          </button>
           <button
             className="h-6.5 px-2 leading-none"
             onClick={refreshRepository}
@@ -143,20 +147,7 @@ export function App() {
         </AppLayout>
       </main>
 
-      {error && repositoryInfo && (
-        <div
-          className="app-error-toast animate-slide-up bg-status-deleted fixed bottom-3 left-1/2 -translate-x-1/2 cursor-pointer rounded px-3 py-2 text-xs text-white"
-          onClick={clearError}
-          title="Click to dismiss"
-        >
-          {error}
-        </div>
-      )}
-      {successMessage && (
-        <div className="app-success-toast animate-slide-up bg-status-added fixed bottom-3 left-1/2 -translate-x-1/2 rounded px-3 py-2 text-xs text-white">
-          {successMessage}
-        </div>
-      )}
+      <NotificationToast />
 
       {dialogIsOpen && (
         <ConfirmDialog
