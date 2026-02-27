@@ -131,6 +131,7 @@ export function FileItem({
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         data-testid="file-item"
+        title={file.path}
       >
         <input
           type="checkbox"

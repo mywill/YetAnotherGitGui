@@ -73,9 +73,9 @@ export function App() {
   if (!repositoryInfo && !isLoading && !cliLoading) {
     return (
       <div className="app flex h-full w-full flex-col">
-        <header className="app-header app-region-drag border-border bg-bg-tertiary flex h-9 shrink-0 items-center justify-between border-b px-3 text-xs leading-none">
+        <header className="app-header app-region-drag border-border bg-bg-tertiary flex h-9 shrink-0 items-center justify-between border-b px-3 text-xs">
           <div className="header-left flex h-full min-w-0 shrink items-center gap-3 overflow-hidden">
-            <span className="app-title text-sm leading-none font-semibold">
+            <span className="app-title text-sm leading-normal font-semibold">
               Yet Another Git Gui
             </span>
           </div>
@@ -93,18 +93,22 @@ export function App() {
 
   return (
     <div className="app flex h-full w-full flex-col">
-      <header className="app-header app-region-drag border-border bg-bg-tertiary flex h-9 shrink-0 items-center justify-between border-b px-3 text-xs leading-none">
+      <header className="app-header app-region-drag border-border bg-bg-tertiary flex h-9 shrink-0 items-center justify-between border-b px-3 text-xs">
         <div className="header-left flex h-full min-w-0 shrink items-center gap-3 overflow-hidden">
-          <span className="app-title text-sm leading-none font-semibold">Yet Another Git Gui</span>
+          <span className="app-title text-sm leading-normal font-semibold">
+            Yet Another Git Gui
+          </span>
           {repositoryInfo && (
             <>
-              <span className="repo-path text-text-secondary max-w-75 truncate text-xs leading-none">
+              <span className="repo-path text-text-secondary max-w-75 truncate text-xs leading-normal">
                 {repositoryInfo.path}
               </span>
-              <span className="branch-indicator app-region-no-drag bg-bg-selected rounded px-2 py-0.5 text-xs leading-none">
-                {repositoryInfo.is_detached
-                  ? "HEAD detached"
-                  : repositoryInfo.current_branch || "No branch"}
+              <span className="branch-indicator app-region-no-drag bg-bg-selected grid h-5 place-items-center rounded px-2 text-xs">
+                <span>
+                  {repositoryInfo.is_detached
+                    ? "HEAD detached"
+                    : repositoryInfo.current_branch || "No branch"}
+                </span>
               </span>
             </>
           )}
@@ -116,7 +120,7 @@ export function App() {
         )}
         <div className="header-right app-region-no-drag flex h-full shrink-0 items-center gap-2">
           <button
-            className="h-6.5 px-2"
+            className="h-6.5 px-2 leading-normal"
             onClick={refreshRepository}
             disabled={isLoading}
             title="Refresh (F5 or Ctrl+R)"
