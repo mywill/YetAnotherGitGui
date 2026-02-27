@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useDialogStore } from "./dialogStore";
 import type {
   RepositoryInfo,
   GraphCommit,
@@ -375,7 +376,12 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   },
 
   deleteFile: async (path: string) => {
-    const confirmed = window.confirm(`Delete ${path}? This cannot be undone.`);
+    const confirmed = await useDialogStore.getState().showConfirm({
+      title: "Delete file",
+      message: `Delete ${path}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
     if (!confirmed) return;
 
     try {

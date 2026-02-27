@@ -331,7 +331,10 @@ describe("App", () => {
     it("has correct title attribute", () => {
       render(<App />);
 
-      expect(screen.getByRole("button", { name: "Refresh" })).toHaveAttribute("title", "Refresh (F5 or Ctrl+R)");
+      expect(screen.getByRole("button", { name: "Refresh" })).toHaveAttribute(
+        "title",
+        "Refresh (F5 or Ctrl+R)"
+      );
     });
 
     it("is disabled when loading", () => {

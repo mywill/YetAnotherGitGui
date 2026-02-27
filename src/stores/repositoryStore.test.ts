@@ -7,6 +7,7 @@ vi.mock("../services/git");
 
 const mockShowError = vi.fn();
 const mockShowSuccess = vi.fn();
+const mockShowConfirm = vi.fn();
 
 vi.mock("./notificationStore", () => ({
   useNotificationStore: {
@@ -17,11 +18,20 @@ vi.mock("./notificationStore", () => ({
   },
 }));
 
+vi.mock("./dialogStore", () => ({
+  useDialogStore: {
+    getState: () => ({
+      showConfirm: mockShowConfirm,
+    }),
+  },
+}));
+
 describe("repositoryStore", () => {
   beforeEach(() => {
     // Reset store state before each test
     mockShowError.mockReset();
     mockShowSuccess.mockReset();
+    mockShowConfirm.mockReset();
     useRepositoryStore.setState({
       repositoryInfo: null,
       isLoading: false,
@@ -469,7 +479,7 @@ describe("repositoryStore", () => {
 
   describe("deleteFile", () => {
     it("shows confirmation dialog before deleting", async () => {
-      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      mockShowConfirm.mockResolvedValue(true);
       vi.mocked(git.deleteFile).mockResolvedValue(undefined);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
@@ -480,21 +490,22 @@ describe("repositoryStore", () => {
       const { deleteFile } = useRepositoryStore.getState();
       await deleteFile("test.ts");
 
-      expect(confirmSpy).toHaveBeenCalledWith("Delete test.ts? This cannot be undone.");
+      expect(mockShowConfirm).toHaveBeenCalledWith({
+        title: "Delete file",
+        message: "Delete test.ts? This cannot be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      });
       expect(git.deleteFile).toHaveBeenCalledWith("test.ts");
-
-      confirmSpy.mockRestore();
     });
 
     it("does not delete if user cancels confirmation", async () => {
-      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      mockShowConfirm.mockResolvedValue(false);
 
       const { deleteFile } = useRepositoryStore.getState();
       await deleteFile("test.ts");
 
       expect(git.deleteFile).not.toHaveBeenCalled();
-
-      confirmSpy.mockRestore();
     });
 
     it("clears diff if viewing the deleted file", async () => {
@@ -503,7 +514,7 @@ describe("repositoryStore", () => {
         currentDiff: { path: "test.ts", hunks: [], is_binary: false },
       });
 
-      vi.spyOn(window, "confirm").mockReturnValue(true);
+      mockShowConfirm.mockResolvedValue(true);
       vi.mocked(git.deleteFile).mockResolvedValue(undefined);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
@@ -1676,7 +1687,7 @@ describe("repositoryStore", () => {
 
   describe("deleteFile error handling", () => {
     it("sets error state on failure", async () => {
-      vi.spyOn(window, "confirm").mockReturnValue(true);
+      mockShowConfirm.mockResolvedValue(true);
       vi.mocked(git.deleteFile).mockRejectedValue(new Error("Delete failed"));
 
       const { deleteFile } = useRepositoryStore.getState();
