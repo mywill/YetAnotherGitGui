@@ -8,7 +8,6 @@ import { ConfirmDialog } from "./components/common/ConfirmDialog";
 import { SettingsMenu } from "./components/common/SettingsMenu";
 import { NotificationToast } from "./components/common/NotificationToast";
 import { FileStatusCounts } from "./components/layout/FileStatusCounts";
-import { useNotificationStore } from "./stores/notificationStore";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
@@ -116,21 +115,8 @@ export function App() {
           </div>
         )}
         <div className="header-right app-region-no-drag flex h-full shrink-0 items-center gap-2">
-          {/* DEBUG: Remove after stacking validation */}
           <button
-            className="h-6.5 px-2 leading-none text-green-400"
-            onClick={() => useNotificationStore.getState().showSuccess("Success " + Date.now())}
-          >
-            Test Success
-          </button>
-          <button
-            className="h-6.5 px-2 leading-none text-red-400"
-            onClick={() => useNotificationStore.getState().showError("Error " + Date.now())}
-          >
-            Test Error
-          </button>
-          <button
-            className="h-6.5 px-2 leading-none"
+            className="h-6.5 px-2"
             onClick={refreshRepository}
             disabled={isLoading}
             title="Refresh (F5 or Ctrl+R)"

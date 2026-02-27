@@ -25,4 +25,7 @@ apt-get update && apt-get install -y --no-install-recommends \
   libxrandr2 \
   libgbm1 \
   libasound2 \
+  libevent-2.1-7 \
+  libgstreamer-plugins-bad1.0-0 \
+  libx264-dev \
   && apt-get clean && rm -rf /var/lib/apt/lists/*

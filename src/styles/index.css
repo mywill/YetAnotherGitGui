@@ -110,7 +110,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
+    line-height: normal;
     font-family: inherit;
     font-size: 13px;
     padding: 4px 8px;

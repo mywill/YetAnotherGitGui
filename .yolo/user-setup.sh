@@ -26,7 +26,7 @@ corepack prepare pnpm@9.15.4 --activate
 # whether claude runs `install` or `test`. Using npx avoids needing project
 # node_modules at container build time.
 export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
-npx playwright@1.58.2 install chromium
+npx playwright@1.58.2 install chromium webkit
 
 # --- Persist paths in shell configs ---
 {

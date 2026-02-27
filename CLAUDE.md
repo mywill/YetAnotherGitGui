@@ -185,6 +185,7 @@ npx tsc --noEmit
   - `repositoryStore.ts` - Main store for repo state, commits, file statuses, diffs
   - `selectionStore.ts` - UI selection state (view mode, selected commit/file)
   - `dialogStore.ts` - Confirmation dialog state
+  - `notificationStore.ts` - Stacking notification toasts (errors auto-dismiss 10s, success 3s)
 - **Tauri IPC**: All git operations go through `src/services/git.ts` which invokes Rust commands
 - **Components**: `src/components/` organized by feature:
   - `graph/` - Commit graph visualization
@@ -208,8 +209,17 @@ npx tsc --noEmit
 Frontend components → Zustand actions → `git.ts` invoke() → Tauri commands → git module → git2
 
 ## Key Dependencies
-- **Frontend**: React 18, Zustand, react-window (virtualization)
+- **Frontend**: React 18, Zustand, react-window (virtualization), Tailwind CSS v4, clsx
 - **Backend**: Tauri 2.0, git2, serde, chrono, parking_lot
+
+## Styling
+
+- **Tailwind CSS v4** with CSS-based config (no `tailwind.config.js`)
+- Custom theme tokens defined in `@theme` block in `src/styles/index.css`
+- Key token categories: backgrounds, text, borders, status colors, branch colors, toast colors
+- Toast colors (`--color-toast-success`, `--color-toast-error`) are WCAG AA compliant with white text
+- `prettier-plugin-tailwindcss` auto-sorts classes
+- When adding new colors, prefer adding to the `@theme` block rather than inline values
 
 ## CLI Usage
 The app accepts an optional path argument: `yagg [path]` to open a specific repository.
@@ -238,5 +248,14 @@ pnpm test:e2e:ui             # Run with interactive UI
 - Tauri APIs are mocked in `src/test/setup.ts`
 - Rust tests use `tempfile` for temporary git repos
 - E2E tests are in `e2e/` directory with Tauri mocks in `e2e/tauri-mocks.ts`
+- Zustand stores can be accessed in E2E tests via dynamic import: `await page.evaluate(async () => { const mod = await import('/src/stores/notificationStore.ts'); mod.useNotificationStore.getState().showError('test'); })`
 
 See `TESTING.md` for comprehensive testing documentation.
+
+## Accessibility
+
+- E2E tests use `@axe-core/playwright` for WCAG 2 AA compliance scanning
+- axe-core tests are in `e2e/app.spec.ts` under the "Accessibility - axe-core" describe block
+- **Critical pattern**: axe-core only scans elements visible in the DOM at scan time. Transient UI (notifications, tooltips, dialogs) must be triggered before scanning.
+- Example: notification toast contrast test triggers toasts via `page.evaluate(() => import('/src/stores/notificationStore.ts'))` before running axe
+- When adding new UI with custom colors, add a corresponding axe-core E2E test
