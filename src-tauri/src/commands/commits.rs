@@ -21,6 +21,18 @@ pub fn get_commit_graph(
 }
 
 #[tauri::command]
+pub fn get_all_commit_graph(state: State<AppState>) -> Result<Vec<git::GraphCommit>, AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    let commits = git::get_all_commits(repo)?;
+    let refs = git::collect_refs(repo)?;
+    let graph = git::build_commit_graph(commits, refs);
+
+    Ok(graph)
+}
+
+#[tauri::command]
 pub fn get_commit_details(
     hash: String,
     state: State<AppState>,
@@ -123,6 +135,45 @@ mod tests {
 
         let diff = result.unwrap();
         assert_eq!(diff.path, "initial.txt");
+    }
+
+    #[test]
+    fn test_get_all_commit_graph_returns_all() {
+        let (temp_dir, repo) = create_test_repo();
+
+        // Create 150 commits
+        for i in 0..150 {
+            let filename = format!("file_{}.txt", i);
+            let content = format!("content {}", i);
+            let message = format!("Commit {}", i);
+
+            let file_path = temp_dir.path().join(&filename);
+            fs::write(&file_path, &content).unwrap();
+
+            let mut index = repo.index().unwrap();
+            index.add_path(Path::new(&filename)).unwrap();
+            index.write().unwrap();
+
+            let sig = repo.signature().unwrap();
+            let tree_id = index.write_tree().unwrap();
+            let tree = repo.find_tree(tree_id).unwrap();
+
+            let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+            let parents: Vec<&git2::Commit> = parent.iter().collect();
+
+            repo.commit(Some("HEAD"), &sig, &sig, &message, &tree, &parents)
+                .unwrap();
+        }
+
+        let commits = git::get_all_commits(&repo).unwrap();
+        let refs = git::collect_refs(&repo).unwrap();
+        let graph = git::build_commit_graph(commits, refs);
+
+        assert_eq!(
+            graph.len(),
+            150,
+            "Should return all 150 commits, not truncated"
+        );
     }
 
     #[test]

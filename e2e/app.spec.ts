@@ -266,21 +266,21 @@ test.describe("Commit Graph", () => {
     const commitRows = page.locator(".commit-row");
     await expect(commitRows.first()).toBeVisible({ timeout: 10000 });
 
-    // Count should match mock (1 commit in mock data)
-    await expect(commitRows).toHaveCount(1);
+    // Count should match mock (5 commits in mock data)
+    await expect(commitRows).toHaveCount(5);
   });
 
   test("displays commit message in commit row", async ({ page }) => {
-    // Should show the mock commit message in the commit row (not the stash)
-    await expect(page.locator(".commit-row .commit-message")).toHaveText(
+    // Should show the mock commit message in the first commit row
+    await expect(page.locator(".commit-row .commit-message").first()).toHaveText(
       "Initial commit",
       { timeout: 10000 }
     );
   });
 
   test("displays commit author in commit row", async ({ page }) => {
-    // Should show author name from mock
-    await expect(page.getByText("Test User")).toBeVisible({ timeout: 10000 });
+    // Should show author name from mock in the first commit row
+    await expect(page.locator(".commit-row").first().getByText("Test User")).toBeVisible({ timeout: 10000 });
   });
 
   test("commit row is clickable and selectable", async ({ page }) => {
@@ -305,6 +305,45 @@ test.describe("Commit Graph", () => {
     await expect(page.locator(".ref-badge").getByText("main")).toBeVisible({
       timeout: 10000,
     });
+  });
+
+  test("every visible commit has a graph node circle", async ({ page }) => {
+    // Every commit row should have a circle SVG element for the node
+    const commitRows = page.locator(".commit-row");
+    await expect(commitRows.first()).toBeVisible({ timeout: 10000 });
+
+    const count = await commitRows.count();
+    for (let i = 0; i < count; i++) {
+      const graphCol = commitRows.nth(i).locator(".graph-col");
+      const circle = graphCol.locator("svg circle");
+      await expect(circle).toBeVisible();
+    }
+  });
+
+  test("graph lines are continuous across rows", async ({ page }) => {
+    // With the mock data that includes branches and merges,
+    // verify that SVG line/path elements exist in commit rows
+    const commitRows = page.locator(".commit-row");
+    await expect(commitRows.first()).toBeVisible({ timeout: 10000 });
+
+    // The merge commit (2nd row) should have line elements
+    const mergeRow = commitRows.nth(1);
+    const graphCol = mergeRow.locator(".graph-col");
+    const svg = graphCol.locator("svg");
+    await expect(svg).toBeVisible();
+
+    // Should have path element for merge curve
+    const mergePath = svg.locator("path");
+    await expect(mergePath).toBeVisible();
+
+    // Verify that SVG elements (lines or paths) are rendered in graph columns
+    // across multiple rows, confirming graph continuity
+    const fourthRow = commitRows.nth(3);
+    const fourthGraphCol = fourthRow.locator(".graph-col");
+    const fourthSvg = fourthGraphCol.locator("svg");
+    // The 4th row has pass-through and from-above lines - check SVG has child elements
+    const svgChildCount = await fourthSvg.locator("line, path").count();
+    expect(svgChildCount).toBeGreaterThan(0);
   });
 
   test("graph column renders branch lines SVG", async ({ page }) => {

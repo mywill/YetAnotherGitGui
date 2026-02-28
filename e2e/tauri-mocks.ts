@@ -73,6 +73,7 @@ export const tauriMocks = `
             head_hash: 'abc123def456789'
           };
 
+        case 'get_all_commit_graph':
         case 'get_commit_graph':
           return [
             {
@@ -84,9 +85,77 @@ export const tauriMocks = `
               timestamp: Date.now() / 1000,
               parent_hashes: [],
               column: 0,
-              lines: [],
+              lines: [
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'from_above' }
+              ],
               refs: [{ name: 'main', ref_type: 'branch', is_head: true }],
               is_tip: true
+            },
+            {
+              hash: 'bbb222ccc333ddd',
+              short_hash: 'bbb222c',
+              message: 'Add feature branch',
+              author_name: 'Test User',
+              author_email: 'test@example.com',
+              timestamp: Date.now() / 1000 - 3600,
+              parent_hashes: ['ccc333ddd444eee', 'fff666ggg777hhh'],
+              column: 0,
+              lines: [
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'from_above' },
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'to_parent' },
+                { from_column: 0, to_column: 1, is_merge: true, line_type: 'to_parent' }
+              ],
+              refs: [],
+              is_tip: false
+            },
+            {
+              hash: 'fff666ggg777hhh',
+              short_hash: 'fff666g',
+              message: 'Feature work',
+              author_name: 'Test User',
+              author_email: 'test@example.com',
+              timestamp: Date.now() / 1000 - 5400,
+              parent_hashes: ['ddd444eee555fff'],
+              column: 1,
+              lines: [
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'pass_through' },
+                { from_column: 1, to_column: 1, is_merge: false, line_type: 'from_above' },
+                { from_column: 1, to_column: 1, is_merge: false, line_type: 'to_parent' }
+              ],
+              refs: [{ name: 'feature/test', ref_type: 'branch', is_head: false }],
+              is_tip: true
+            },
+            {
+              hash: 'ccc333ddd444eee',
+              short_hash: 'ccc333d',
+              message: 'Second commit on main',
+              author_name: 'Test User',
+              author_email: 'test@example.com',
+              timestamp: Date.now() / 1000 - 7200,
+              parent_hashes: ['ddd444eee555fff'],
+              column: 0,
+              lines: [
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'from_above' },
+                { from_column: 1, to_column: 1, is_merge: false, line_type: 'pass_through' },
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'to_parent' }
+              ],
+              refs: [],
+              is_tip: false
+            },
+            {
+              hash: 'ddd444eee555fff',
+              short_hash: 'ddd444e',
+              message: 'First commit',
+              author_name: 'Test User',
+              author_email: 'test@example.com',
+              timestamp: Date.now() / 1000 - 10800,
+              parent_hashes: [],
+              column: 0,
+              lines: [
+                { from_column: 0, to_column: 0, is_merge: false, line_type: 'from_above' }
+              ],
+              refs: [{ name: 'v1.0.0', ref_type: 'tag', is_head: false }],
+              is_tip: false
             }
           ];
 

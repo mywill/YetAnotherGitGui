@@ -12,11 +12,9 @@ const MIN_WIDTH = 60;
 
 interface CommitGraphProps {
   commits: GraphCommit[];
-  onLoadMore: () => void;
-  hasMore: boolean;
 }
 
-export function CommitGraph({ commits, onLoadMore, hasMore }: CommitGraphProps) {
+export function CommitGraph({ commits }: CommitGraphProps) {
   const listRef = useRef<List>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedCommitHash = useSelectionStore((s) => s.selectedCommitHash);
@@ -34,15 +32,17 @@ export function CommitGraph({ commits, onLoadMore, hasMore }: CommitGraphProps) 
   const [dateWidth, setDateWidth] = useState(120);
   const [containerWidth, setContainerWidth] = useState(0);
 
-  // Track container width with ResizeObserver
+  // Track container size with ResizeObserver
+  const [containerHeight, setContainerHeight] = useState(0);
   useEffect(() => {
-    const updateWidth = () => {
+    const updateSize = () => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.clientWidth);
+        setContainerHeight(containerRef.current.clientHeight);
       }
     };
-    updateWidth();
-    const resizeObserver = new ResizeObserver(updateWidth);
+    updateSize();
+    const resizeObserver = new ResizeObserver(updateSize);
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
@@ -60,26 +60,6 @@ export function CommitGraph({ commits, onLoadMore, hasMore }: CommitGraphProps) 
       clearScrollToCommit();
     }
   }, [scrollToCommit, commits, clearScrollToCommit, loadCommitDetails]);
-
-  const handleScroll = useCallback(
-    ({
-      scrollOffset,
-      scrollUpdateWasRequested,
-    }: {
-      scrollOffset: number;
-      scrollUpdateWasRequested: boolean;
-    }) => {
-      if (scrollUpdateWasRequested) return;
-
-      const listHeight = Number(listRef.current?.props.height) || 0;
-      const totalHeight = commits.length * ROW_HEIGHT;
-
-      if (scrollOffset + listHeight >= totalHeight - ROW_HEIGHT * 10 && hasMore) {
-        onLoadMore();
-      }
-    },
-    [commits.length, hasMore, onLoadMore]
-  );
 
   const handleSelect = useCallback(
     (hash: string) => {
@@ -160,12 +140,10 @@ export function CommitGraph({ commits, onLoadMore, hasMore }: CommitGraphProps) 
 
       <List
         ref={listRef}
-        height={600}
+        height={Math.max(0, containerHeight - ROW_HEIGHT)}
         width="100%"
         itemCount={commits.length}
         itemSize={ROW_HEIGHT}
-        onScroll={handleScroll}
-        style={{ height: "calc(100% - 28px)" }}
       >
         {({ index, style }) => (
           <CommitRow

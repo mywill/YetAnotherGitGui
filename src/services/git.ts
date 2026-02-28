@@ -27,6 +27,10 @@ export async function getCommitGraph(skip: number, limit: number): Promise<Graph
   return invoke("get_commit_graph", { skip, limit });
 }
 
+export async function getAllCommitGraph(): Promise<GraphCommit[]> {
+  return invoke("get_all_commit_graph");
+}
+
 export async function getCommitDetails(hash: string): Promise<CommitDetails> {
   return invoke("get_commit_details", { hash });
 }

@@ -69,8 +69,19 @@ export function BranchLines({ commit }: BranchLinesProps) {
               strokeWidth={2}
             />
           );
+        } else if (fromX !== toX) {
+          // Convergence line — branch rejoining (|/ pattern)
+          return (
+            <path
+              key={i}
+              d={`M ${fromX} ${nodeY} Q ${fromX} ${height} ${toX} ${height}`}
+              fill="none"
+              stroke={getColor(line.from_column)}
+              strokeWidth={2}
+            />
+          );
         } else {
-          // Normal continuation line from node down to next row
+          // Normal straight continuation line from node down to next row
           return (
             <line
               key={i}
@@ -85,17 +96,15 @@ export function BranchLines({ commit }: BranchLinesProps) {
         }
       })}
 
-      {/* Draw the commit node - only for branch tips */}
-      {commit.is_tip && (
-        <circle
-          cx={nodeX}
-          cy={nodeY}
-          r={NODE_RADIUS}
-          fill={getColor(commit.column)}
-          stroke={getColor(commit.column)}
-          strokeWidth={1}
-        />
-      )}
+      {/* Draw the commit node for every commit */}
+      <circle
+        cx={nodeX}
+        cy={nodeY}
+        r={NODE_RADIUS}
+        fill={commit.is_tip ? getColor(commit.column) : "var(--color-bg-primary)"}
+        stroke={getColor(commit.column)}
+        strokeWidth={commit.is_tip ? 1 : 2}
+      />
     </svg>
   );
 }

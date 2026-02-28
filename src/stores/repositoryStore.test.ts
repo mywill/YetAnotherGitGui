@@ -68,7 +68,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -97,7 +97,7 @@ describe("repositoryStore", () => {
       };
 
       vi.mocked(git.openRepository).mockResolvedValue(repoInfo);
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -122,7 +122,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([
         {
           hash: "abc123",
           short_hash: "abc123",
@@ -279,7 +279,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "def456",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -316,7 +316,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "def456",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -587,39 +587,105 @@ describe("repositoryStore", () => {
     });
   });
 
-  describe("loadMoreCommits", () => {
-    it("appends new commits to existing list", async () => {
-      const existingCommits = [
+  describe("loadAllCommits", () => {
+    it("loads all commits at once", async () => {
+      useRepositoryStore.setState({
+        commits: [],
+        hasMoreCommits: false,
+        repositoryInfo: { path: "/test", current_branch: "main", is_detached: false, remotes: [] },
+      });
+
+      const mockCommits = Array.from({ length: 500 }, (_, i) => ({
+        hash: `hash${i}`,
+        short_hash: `hash${i}`.slice(0, 7),
+        message: `Commit ${i}`,
+        author_name: "Test",
+        author_email: "test@test.com",
+        timestamp: 1234567890 - i,
+        parent_hashes: i < 499 ? [`hash${i + 1}`] : [],
+        column: 0,
+        lines: [],
+        refs: [],
+        is_tip: i === 0,
+      }));
+
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue(mockCommits);
+
+      const { loadAllCommits } = useRepositoryStore.getState();
+      await loadAllCommits();
+
+      expect(useRepositoryStore.getState().commits).toHaveLength(500);
+      expect(useRepositoryStore.getState().hasMoreCommits).toBe(false);
+    });
+
+    it("does not load if already loading", async () => {
+      useRepositoryStore.setState({
+        commitsLoading: true,
+        repositoryInfo: { path: "/test", current_branch: "main", is_detached: false, remotes: [] },
+      });
+
+      const { loadAllCommits } = useRepositoryStore.getState();
+      await loadAllCommits();
+
+      expect(git.getAllCommitGraph).not.toHaveBeenCalled();
+    });
+
+    it("does not load if no repository is open", async () => {
+      useRepositoryStore.setState({
+        repositoryInfo: null,
+        commitsLoading: false,
+        commits: [],
+      });
+
+      const { loadAllCommits } = useRepositoryStore.getState();
+      await loadAllCommits();
+
+      expect(git.getAllCommitGraph).not.toHaveBeenCalled();
+    });
+
+    it("replaces existing commits on reload", async () => {
+      useRepositoryStore.setState({
+        commits: [
+          {
+            hash: "old",
+            short_hash: "old",
+            message: "Old",
+            author_name: "Test",
+            author_email: "test@test.com",
+            timestamp: 1234567890,
+            parent_hashes: [],
+            column: 0,
+            lines: [],
+            refs: [],
+            is_tip: true,
+          },
+        ],
+        hasMoreCommits: false,
+        repositoryInfo: { path: "/test", current_branch: "main", is_detached: false, remotes: [] },
+      });
+
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([
         {
-          hash: "abc123",
-          short_hash: "abc123",
-          message: "First",
+          hash: "new1",
+          short_hash: "new1",
+          message: "New 1",
           author_name: "Test",
           author_email: "test@test.com",
           timestamp: 1234567890,
-          parent_hashes: [],
+          parent_hashes: ["new2"],
           column: 0,
           lines: [],
           refs: [],
           is_tip: true,
         },
-      ];
-
-      useRepositoryStore.setState({
-        commits: existingCommits,
-        hasMoreCommits: true,
-        repositoryInfo: { path: "/test", current_branch: "main", is_detached: false, remotes: [] },
-      });
-
-      vi.mocked(git.getCommitGraph).mockResolvedValue([
         {
-          hash: "def456",
-          short_hash: "def456",
-          message: "Second",
+          hash: "new2",
+          short_hash: "new2",
+          message: "New 2",
           author_name: "Test",
           author_email: "test@test.com",
           timestamp: 1234567880,
-          parent_hashes: ["abc123"],
+          parent_hashes: [],
           column: 0,
           lines: [],
           refs: [],
@@ -627,50 +693,11 @@ describe("repositoryStore", () => {
         },
       ]);
 
-      const { loadMoreCommits } = useRepositoryStore.getState();
-      await loadMoreCommits();
+      const { loadAllCommits } = useRepositoryStore.getState();
+      await loadAllCommits();
 
       expect(useRepositoryStore.getState().commits).toHaveLength(2);
-    });
-
-    it("does not load if already loading", async () => {
-      useRepositoryStore.setState({
-        commitsLoading: true,
-        hasMoreCommits: true,
-      });
-
-      const { loadMoreCommits } = useRepositoryStore.getState();
-      await loadMoreCommits();
-
-      expect(git.getCommitGraph).not.toHaveBeenCalled();
-    });
-
-    it("does not load if no more commits", async () => {
-      useRepositoryStore.setState({
-        commitsLoading: false,
-        hasMoreCommits: false,
-      });
-
-      const { loadMoreCommits } = useRepositoryStore.getState();
-      await loadMoreCommits();
-
-      expect(git.getCommitGraph).not.toHaveBeenCalled();
-    });
-
-    it("does not load if no repository is open", async () => {
-      // This test prevents the race condition where loadMoreCommits
-      // is called before openRepository completes
-      useRepositoryStore.setState({
-        repositoryInfo: null,
-        commitsLoading: false,
-        hasMoreCommits: true,
-        commits: [],
-      });
-
-      const { loadMoreCommits } = useRepositoryStore.getState();
-      await loadMoreCommits();
-
-      expect(git.getCommitGraph).not.toHaveBeenCalled();
+      expect(useRepositoryStore.getState().commits[0].hash).toBe("new1");
     });
   });
 
@@ -819,7 +846,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1048,7 +1075,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "def456",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1085,7 +1112,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1307,7 +1334,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "def456",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1504,7 +1531,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "def456",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1550,7 +1577,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1588,7 +1615,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1636,7 +1663,7 @@ describe("repositoryStore", () => {
         remotes: [],
         head_hash: "abc123",
       });
-      vi.mocked(git.getCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -1709,7 +1736,7 @@ describe("repositoryStore", () => {
     });
   });
 
-  describe("loadMoreCommits error handling", () => {
+  describe("loadAllCommits error handling", () => {
     it("sets error state on failure", async () => {
       useRepositoryStore.setState({
         repositoryInfo: {
@@ -1721,13 +1748,13 @@ describe("repositoryStore", () => {
         },
         commits: [],
         commitsLoading: false,
-        hasMoreCommits: true,
+        hasMoreCommits: false,
       });
 
-      vi.mocked(git.getCommitGraph).mockRejectedValue(new Error("Load failed"));
+      vi.mocked(git.getAllCommitGraph).mockRejectedValue(new Error("Load failed"));
 
-      const { loadMoreCommits } = useRepositoryStore.getState();
-      await loadMoreCommits();
+      const { loadAllCommits } = useRepositoryStore.getState();
+      await loadAllCommits();
 
       expect(mockShowError).toHaveBeenCalledWith("Error: Load failed");
       expect(useRepositoryStore.getState().commitsLoading).toBe(false);

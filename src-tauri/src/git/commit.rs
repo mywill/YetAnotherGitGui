@@ -69,6 +69,35 @@ pub fn get_commits(
     Ok(commits)
 }
 
+pub fn get_all_commits(repo: &Repository) -> Result<Vec<CommitInfo>, AppError> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL)?;
+
+    // Start from HEAD
+    if let Ok(head) = repo.head() {
+        if let Some(target) = head.target() {
+            revwalk.push(target)?;
+        }
+    }
+
+    // Also include all branch tips
+    for (branch, _) in repo.branches(None)?.flatten() {
+        if let Some(target) = branch.get().target() {
+            let _ = revwalk.push(target);
+        }
+    }
+
+    let commits: Vec<CommitInfo> = revwalk
+        .filter_map(|oid| oid.ok())
+        .filter_map(|oid| {
+            let commit = repo.find_commit(oid).ok()?;
+            Some(commit_to_info(&commit))
+        })
+        .collect();
+
+    Ok(commits)
+}
+
 pub fn get_commit_details(repo: &Repository, hash: &str) -> Result<CommitDetails, AppError> {
     let oid = Oid::from_str(hash)?;
     let commit = repo.find_commit(oid)?;

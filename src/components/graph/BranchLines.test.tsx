@@ -67,13 +67,32 @@ describe("BranchLines", () => {
       expect(circle).toBeInTheDocument();
     });
 
-    it("does not render circle for non-tip commits", () => {
+    it("renders circle for non-tip commits", () => {
       const commit = createMockCommit({ is_tip: false });
 
       const { container } = render(<BranchLines commit={commit} />);
 
       const circle = container.querySelector("circle");
-      expect(circle).not.toBeInTheDocument();
+      expect(circle).toBeInTheDocument();
+    });
+
+    it("renders filled circle for tips and outlined for non-tips", () => {
+      const tipCommit = createMockCommit({ is_tip: true, column: 0 });
+      const nonTipCommit = createMockCommit({ is_tip: false, column: 0 });
+
+      const { container: tipContainer } = render(<BranchLines commit={tipCommit} />);
+      const { container: nonTipContainer } = render(<BranchLines commit={nonTipCommit} />);
+
+      const tipCircle = tipContainer.querySelector("circle");
+      const nonTipCircle = nonTipContainer.querySelector("circle");
+
+      // Tip gets filled with branch color, non-tip gets bg-primary fill
+      expect(tipCircle?.getAttribute("fill")).toContain("var(--color-branch-1)");
+      expect(nonTipCircle?.getAttribute("fill")).toBe("var(--color-bg-primary)");
+
+      // Non-tip has thicker stroke
+      expect(tipCircle).toHaveAttribute("stroke-width", "1");
+      expect(nonTipCircle).toHaveAttribute("stroke-width", "2");
     });
 
     it("positions circle based on column", () => {
@@ -159,6 +178,25 @@ describe("BranchLines", () => {
       expect(path).toHaveAttribute("fill", "none");
       // Should have quadratic bezier curve
       expect(path.getAttribute("d")).toContain("Q");
+    });
+
+    it("renders convergence line as curved path", () => {
+      const commit = createMockCommit({
+        column: 1,
+        lines: [{ from_column: 1, to_column: 0, is_merge: false, line_type: "to_parent" }],
+      });
+
+      const { container } = render(<BranchLines commit={commit} />);
+
+      const paths = container.querySelectorAll("path");
+      expect(paths.length).toBe(1);
+
+      const path = paths[0];
+      expect(path).toHaveAttribute("fill", "none");
+      // Should have quadratic bezier curve
+      expect(path.getAttribute("d")).toContain("Q");
+      // Should use the from_column color (column 1 = branch-2)
+      expect(path.getAttribute("stroke")).toContain("var(--color-branch-2)");
     });
 
     it("renders normal continuation line from node down", () => {

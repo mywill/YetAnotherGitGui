@@ -55,7 +55,7 @@ interface RepositoryState {
   // Actions
   openRepository: (path: string) => Promise<void>;
   refreshRepository: () => Promise<void>;
-  loadMoreCommits: () => Promise<void>;
+  loadAllCommits: () => Promise<void>;
   loadFileStatuses: () => Promise<void>;
   loadFileDiff: (path: string, staged: boolean, isUntracked?: boolean) => Promise<void>;
   clearDiff: () => void;
@@ -105,8 +105,6 @@ interface RepositoryState {
   loadStashFileDiff: (index: number, filePath: string) => Promise<void>;
 }
 
-const COMMITS_PER_PAGE = 100;
-
 export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   repositoryInfo: null,
   isLoading: false,
@@ -150,7 +148,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       });
 
       // Load initial data
-      await Promise.all([get().loadMoreCommits(), get().loadFileStatuses()]);
+      await Promise.all([get().loadAllCommits(), get().loadFileStatuses()]);
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
       set({
@@ -165,13 +163,13 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     const { repositoryInfo } = get();
     if (!repositoryInfo) return;
 
-    set({ commits: [], hasMoreCommits: true });
+    set({ commits: [], hasMoreCommits: false });
 
     try {
       const info = await git.getRepositoryInfo();
       set({ repositoryInfo: info });
 
-      await Promise.all([get().loadMoreCommits(), get().loadFileStatuses()]);
+      await Promise.all([get().loadAllCommits(), get().loadFileStatuses()]);
 
       // Refresh current diff if one is selected
       const { currentDiffPath, currentDiffStaged } = get();
@@ -183,18 +181,18 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     }
   },
 
-  loadMoreCommits: async () => {
-    const { commits, commitsLoading, hasMoreCommits, repositoryInfo } = get();
-    // Don't load if already loading, no more commits, or no repository open
-    if (commitsLoading || !hasMoreCommits || !repositoryInfo) return;
+  loadAllCommits: async () => {
+    const { commitsLoading, repositoryInfo } = get();
+    // Don't load if already loading or no repository open
+    if (commitsLoading || !repositoryInfo) return;
 
     set({ commitsLoading: true });
     try {
-      const newCommits = await git.getCommitGraph(commits.length, COMMITS_PER_PAGE);
+      const allCommits = await git.getAllCommitGraph();
       set({
-        commits: [...commits, ...newCommits],
+        commits: allCommits,
         commitsLoading: false,
-        hasMoreCommits: newCommits.length === COMMITS_PER_PAGE,
+        hasMoreCommits: false,
       });
     } catch (err) {
       set({ commitsLoading: false });

@@ -5,8 +5,6 @@ import { useRepositoryStore } from "../../stores/repositoryStore";
 
 export function HistoryView() {
   const commits = useRepositoryStore((s) => s.commits);
-  const hasMoreCommits = useRepositoryStore((s) => s.hasMoreCommits);
-  const loadMoreCommits = useRepositoryStore((s) => s.loadMoreCommits);
   const selectedCommitDetails = useRepositoryStore((s) => s.selectedCommitDetails);
   const commitDetailsLoading = useRepositoryStore((s) => s.commitDetailsLoading);
 
@@ -19,7 +17,7 @@ export function HistoryView() {
   return (
     <div className="history-view flex min-h-0 flex-1 overflow-hidden">
       <div className="history-graph bg-bg-primary min-h-0 min-w-100 flex-1 overflow-hidden">
-        <CommitGraph commits={commits} onLoadMore={loadMoreCommits} hasMore={hasMoreCommits} />
+        <CommitGraph commits={commits} />
       </div>
       <Resizer onResize={handleResize} />
       <div
