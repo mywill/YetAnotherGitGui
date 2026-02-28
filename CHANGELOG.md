@@ -1,3 +1,16 @@
+# [1.6.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.5.1...v1.6.0) (2026-02-28)
+
+
+### Bug Fixes
+
+* fixed issue with delete on mac and linux ([39d5678](https://github.com/mywill/YetAnotherGitGui/commit/39d56780b937cbc4cb7dfc4def17827f3e33bcd5))
+* Updated the graph to better render larger repos and properly handle branching ([f7a3657](https://github.com/mywill/YetAnotherGitGui/commit/f7a3657a03591c9a057254705998369b5017cd24))
+
+
+### Features
+
+* hover over effect added to the files in status view to show the full file path ([5f463b7](https://github.com/mywill/YetAnotherGitGui/commit/5f463b7250aa53fcf24c677a39e643ba04aeca95))
+
 ## [1.5.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.5.0...v1.5.1) (2026-02-22)
 
 
