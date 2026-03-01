@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from "react";
-import { FixedSizeList as List } from "react-window";
+import { List, type ListImperativeAPI, type RowComponentProps } from "react-window";
 import type { GraphCommit } from "../../types";
 import { CommitRow } from "./CommitRow";
 import { ColumnResizer } from "./ColumnResizer";
@@ -10,12 +10,42 @@ import { useDialogStore } from "../../stores/dialogStore";
 const ROW_HEIGHT = 28;
 const MIN_WIDTH = 60;
 
+interface CommitRowRendererProps {
+  commits: GraphCommit[];
+  selectedCommitHash: string | null;
+  headHash: string | null;
+  handleSelect: (hash: string) => void;
+  handleDoubleClick: (hash: string) => void;
+}
+
+function CommitRowRenderer({
+  index,
+  style,
+  commits,
+  selectedCommitHash,
+  headHash,
+  handleSelect,
+  handleDoubleClick,
+}: RowComponentProps<CommitRowRendererProps>) {
+  const commit = commits[index];
+  return (
+    <CommitRow
+      style={style}
+      commit={commit}
+      isSelected={commit.hash === selectedCommitHash}
+      isHead={commit.hash === headHash}
+      onSelect={() => handleSelect(commit.hash)}
+      onDoubleClick={() => handleDoubleClick(commit.hash)}
+    />
+  );
+}
+
 interface CommitGraphProps {
   commits: GraphCommit[];
 }
 
 export function CommitGraph({ commits }: CommitGraphProps) {
-  const listRef = useRef<List>(null);
+  const listRef = useRef<ListImperativeAPI>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedCommitHash = useSelectionStore((s) => s.selectedCommitHash);
   const selectCommit = useSelectionStore((s) => s.selectCommit);
@@ -32,17 +62,15 @@ export function CommitGraph({ commits }: CommitGraphProps) {
   const [dateWidth, setDateWidth] = useState(120);
   const [containerWidth, setContainerWidth] = useState(0);
 
-  // Track container size with ResizeObserver
-  const [containerHeight, setContainerHeight] = useState(0);
+  // Track container width with ResizeObserver (for column resizer positions)
   useEffect(() => {
-    const updateSize = () => {
+    const updateWidth = () => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.clientWidth);
-        setContainerHeight(containerRef.current.clientHeight);
       }
     };
-    updateSize();
-    const resizeObserver = new ResizeObserver(updateSize);
+    updateWidth();
+    const resizeObserver = new ResizeObserver(updateWidth);
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
@@ -54,7 +82,7 @@ export function CommitGraph({ commits }: CommitGraphProps) {
     if (scrollToCommit && listRef.current) {
       const index = commits.findIndex((c) => c.hash === scrollToCommit);
       if (index >= 0) {
-        listRef.current.scrollToItem(index, "center");
+        listRef.current.scrollToRow({ index, align: "center" });
         loadCommitDetails(scrollToCommit);
       }
       clearScrollToCommit();
@@ -139,23 +167,19 @@ export function CommitGraph({ commits }: CommitGraphProps) {
       </div>
 
       <List
-        ref={listRef}
-        height={Math.max(0, containerHeight - ROW_HEIGHT)}
-        width="100%"
-        itemCount={commits.length}
-        itemSize={ROW_HEIGHT}
-      >
-        {({ index, style }) => (
-          <CommitRow
-            style={style}
-            commit={commits[index]}
-            isSelected={commits[index].hash === selectedCommitHash}
-            isHead={commits[index].hash === headHash}
-            onSelect={() => handleSelect(commits[index].hash)}
-            onDoubleClick={() => handleDoubleClick(commits[index].hash)}
-          />
-        )}
-      </List>
+        listRef={listRef}
+        rowCount={commits.length}
+        rowHeight={ROW_HEIGHT}
+        rowComponent={CommitRowRenderer}
+        rowProps={{
+          commits,
+          selectedCommitHash,
+          headHash: headHash ?? null,
+          handleSelect,
+          handleDoubleClick,
+        }}
+        style={{ flex: 1 }}
+      />
     </div>
   );
 }

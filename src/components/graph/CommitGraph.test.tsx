@@ -39,6 +39,38 @@ vi.mock("./ColumnResizer", () => ({
   ColumnResizer: () => <div data-testid="column-resizer" />,
 }));
 
+// Mock react-window v2 List to render all rows directly in jsdom
+vi.mock("react-window", () => ({
+  List: ({
+    rowComponent: RowComponent,
+    rowCount,
+    rowProps,
+  }: {
+    rowComponent: React.ComponentType<Record<string, unknown>>;
+    rowCount: number;
+    rowHeight: number;
+    rowProps: Record<string, unknown>;
+    listRef?: unknown;
+    style?: React.CSSProperties;
+  }) => (
+    <div data-testid="virtual-list">
+      {Array.from({ length: rowCount }, (_, index) => (
+        <RowComponent
+          key={index}
+          index={index}
+          style={{ position: "absolute", top: index * 28, height: 28, width: "100%" }}
+          ariaAttributes={{
+            "aria-posinset": index + 1,
+            "aria-setsize": rowCount,
+            role: "listitem" as const,
+          }}
+          {...rowProps}
+        />
+      ))}
+    </div>
+  ),
+}));
+
 const mockSelectCommit = vi.fn();
 const mockLoadCommitDetails = vi.fn();
 const mockCheckoutCommit = vi.fn();
@@ -105,7 +137,7 @@ describe("CommitGraph", () => {
   });
 
   it("renders with no commits", () => {
-    const { container } = render(<CommitGraph commits={[]} onLoadMore={vi.fn()} hasMore={false} />);
+    const { container } = render(<CommitGraph commits={[]} />);
 
     expect(container.querySelector(".commit-graph")).toBeInTheDocument();
     expect(container.querySelector(".commit-graph-header")).toBeInTheDocument();
@@ -118,7 +150,7 @@ describe("CommitGraph", () => {
       createMockCommit({ hash: "commit3", message: "Third commit" }),
     ];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     // Should render all commits
     expect(screen.getByText("First commit")).toBeInTheDocument();
@@ -132,7 +164,7 @@ describe("CommitGraph", () => {
       createMockCommit({ hash: "commit2", author_name: "Jane Smith" }),
     ];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     expect(screen.getByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
@@ -141,7 +173,7 @@ describe("CommitGraph", () => {
   it("renders branch lines for each commit", () => {
     const commits = [createMockCommit({ hash: "commit1" }), createMockCommit({ hash: "commit2" })];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     expect(screen.getByTestId("branch-lines-commit1")).toBeInTheDocument();
     expect(screen.getByTestId("branch-lines-commit2")).toBeInTheDocument();
@@ -150,7 +182,7 @@ describe("CommitGraph", () => {
   it("calls selectCommit and loadCommitDetails when commit is clicked", () => {
     const commits = [createMockCommit({ hash: "clickable-commit" })];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     const commitRow = screen.getByText("Test commit message").closest(".commit-row");
     fireEvent.click(commitRow!);
@@ -162,7 +194,7 @@ describe("CommitGraph", () => {
   it("shows HEAD badge for head commit", () => {
     const commits = [createMockCommit({ hash: "abc123def456789" })];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     expect(screen.getByText("HEAD")).toBeInTheDocument();
   });
@@ -177,7 +209,7 @@ describe("CommitGraph", () => {
       }),
     ];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("v1.0.0")).toBeInTheDocument();
@@ -186,7 +218,7 @@ describe("CommitGraph", () => {
   it("shows confirmation dialog on double-click", async () => {
     const commits = [createMockCommit({ hash: "double-click-commit" })];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     const commitRow = screen.getByText("Test commit message").closest(".commit-row");
 
@@ -206,7 +238,7 @@ describe("CommitGraph", () => {
     mockShowConfirm.mockResolvedValue(true);
     const commits = [createMockCommit({ hash: "checkout-commit" })];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     const commitRow = screen.getByText("Test commit message").closest(".commit-row");
     fireEvent.mouseDown(commitRow!, { detail: 2 });
@@ -220,7 +252,7 @@ describe("CommitGraph", () => {
     mockShowConfirm.mockResolvedValue(false);
     const commits = [createMockCommit({ hash: "no-checkout-commit" })];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     const commitRow = screen.getByText("Test commit message").closest(".commit-row");
     fireEvent.mouseDown(commitRow!, { detail: 2 });
@@ -249,7 +281,7 @@ describe("CommitGraph", () => {
       createMockCommit({ hash: "other-commit", message: "Other" }),
     ];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     const selectedRow = screen.getByText("Selected").closest(".commit-row");
     const otherRow = screen.getByText("Other").closest(".commit-row");
@@ -264,7 +296,7 @@ describe("CommitGraph", () => {
       createMockCommit({ hash: "other-hash", message: "Other commit" }),
     ];
 
-    render(<CommitGraph commits={commits} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={commits} />);
 
     const headRow = screen.getByText("HEAD commit").closest(".commit-row");
     const otherRow = screen.getByText("Other commit").closest(".commit-row");
@@ -274,7 +306,7 @@ describe("CommitGraph", () => {
   });
 
   it("renders column resizers", () => {
-    render(<CommitGraph commits={[]} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={[]} />);
 
     // Should have 3 column resizers
     const resizers = screen.getAllByTestId("column-resizer");
@@ -282,7 +314,7 @@ describe("CommitGraph", () => {
   });
 
   it("renders header with column names", () => {
-    render(<CommitGraph commits={[]} onLoadMore={vi.fn()} hasMore={false} />);
+    render(<CommitGraph commits={[]} />);
 
     expect(screen.getByText("Graph")).toBeInTheDocument();
     expect(screen.getByText("Message")).toBeInTheDocument();
