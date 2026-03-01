@@ -7,11 +7,12 @@ import { useDialogStore } from "../../stores/dialogStore";
 import type { GraphCommit } from "../../types";
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+global.ResizeObserver = class ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  constructor() {}
+} as unknown as typeof globalThis.ResizeObserver;
 
 // Mock the stores
 vi.mock("../../stores/repositoryStore", () => ({
