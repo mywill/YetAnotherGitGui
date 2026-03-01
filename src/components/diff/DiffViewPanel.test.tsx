@@ -67,6 +67,8 @@ describe("DiffViewPanel", () => {
           discardHunk: mockDiscardHunk,
           discardLines: mockDiscardLines,
           currentDiffPath: "test.txt",
+          currentDiffIsUntracked: false,
+          loadDiffHunk: vi.fn(),
         };
         return selector(state);
       }
@@ -111,6 +113,7 @@ describe("DiffViewPanel", () => {
       path: "image.png",
       hunks: [],
       is_binary: true,
+      total_lines: 0,
     };
 
     render(<DiffViewPanel diff={binaryDiff} loading={false} staged={false} />);
@@ -124,6 +127,7 @@ describe("DiffViewPanel", () => {
       path: "empty.txt",
       hunks: [],
       is_binary: false,
+      total_lines: 0,
     };
 
     render(<DiffViewPanel diff={emptyDiff} loading={false} staged={false} />);
@@ -142,6 +146,7 @@ describe("DiffViewPanel", () => {
           old_lines: 3,
           new_start: 1,
           new_lines: 4,
+          is_loaded: true,
           lines: [
             { content: "line 1", line_type: "context", old_lineno: 1, new_lineno: 1 },
             { content: "new line", line_type: "addition", old_lineno: null, new_lineno: 2 },
@@ -149,6 +154,7 @@ describe("DiffViewPanel", () => {
         },
       ],
       is_binary: false,
+      total_lines: 2,
     };
 
     render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
@@ -168,10 +174,12 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 1,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
       ],
       is_binary: false,
+      total_lines: 0,
     };
 
     render(<DiffViewPanel diff={diff} loading={false} staged={true} />);
@@ -189,10 +197,12 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 1,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
       ],
       is_binary: false,
+      total_lines: 0,
     };
 
     render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
@@ -213,10 +223,12 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 1,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
       ],
       is_binary: false,
+      total_lines: 0,
     };
 
     render(<DiffViewPanel diff={diff} loading={false} staged={true} />);
@@ -237,6 +249,7 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 1,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
         {
@@ -245,10 +258,12 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 10,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
       ],
       is_binary: false,
+      total_lines: 0,
     };
 
     render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
@@ -267,10 +282,12 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 1,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
       ],
       is_binary: false,
+      total_lines: 0,
     };
 
     const { container } = render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
@@ -290,10 +307,12 @@ describe("DiffViewPanel", () => {
           old_lines: 1,
           new_start: 1,
           new_lines: 1,
+          is_loaded: true,
           lines: [],
         },
       ],
       is_binary: false,
+      total_lines: 0,
     };
 
     it("passes discard props for unstaged diffs", () => {
@@ -405,10 +424,12 @@ describe("DiffViewPanel", () => {
             old_lines: 1,
             new_start: 1,
             new_lines: 1,
+            is_loaded: true,
             lines: [],
           },
         ],
         is_binary: false,
+        total_lines: 0,
       };
 
       render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
@@ -438,10 +459,12 @@ describe("DiffViewPanel", () => {
             old_lines: 1,
             new_start: 1,
             new_lines: 1,
+            is_loaded: true,
             lines: [],
           },
         ],
         is_binary: false,
+        total_lines: 0,
       };
 
       render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
@@ -464,6 +487,196 @@ describe("DiffViewPanel", () => {
       const { container } = render(<DiffViewPanel diff={null} loading={false} staged={false} />);
 
       expect(container.querySelector(".diff-view-panel.multi-select")).toBeInTheDocument();
+    });
+  });
+
+  describe("collapsed hunks", () => {
+    const mockLoadDiffHunk = vi.fn();
+
+    beforeEach(() => {
+      vi.mocked(useRepositoryStore).mockImplementation(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (selector: any) => {
+          const state = {
+            stageHunk: vi.fn(),
+            unstageHunk: vi.fn(),
+            stageLines: vi.fn(),
+            discardHunk: vi.fn(),
+            discardLines: vi.fn(),
+            currentDiffPath: "large-file.ts",
+            currentDiffIsUntracked: false,
+            loadDiffHunk: mockLoadDiffHunk,
+          };
+          return selector(state);
+        }
+      );
+    });
+
+    it("renders collapsed placeholder for unloaded hunks", () => {
+      const diff: FileDiff = {
+        path: "large-file.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [{ content: "line 1", line_type: "context", old_lineno: 1, new_lineno: 1 }],
+          },
+          {
+            header: "@@ -100,5 +100,6 @@",
+            old_start: 100,
+            old_lines: 5,
+            new_start: 100,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 50,
+      };
+
+      const { container } = render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      expect(container.querySelector(".collapsed-hunk")).toBeInTheDocument();
+      expect(screen.getByText("Load hunk")).toBeInTheDocument();
+      expect(screen.getByText("~11 lines")).toBeInTheDocument();
+    });
+
+    it("shows truncation summary bar when hunks are collapsed", () => {
+      const diff: FileDiff = {
+        path: "large-file.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [
+              { content: "line 1", line_type: "context", old_lineno: 1, new_lineno: 1 },
+              { content: "line 2", line_type: "addition", old_lineno: null, new_lineno: 2 },
+            ],
+          },
+          {
+            header: "@@ -100,5 +100,6 @@",
+            old_start: 100,
+            old_lines: 5,
+            new_start: 100,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 20,
+      };
+
+      const { container } = render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      expect(container.querySelector(".truncation-bar")).toBeInTheDocument();
+      expect(screen.getByText(/showing 2 of 20 lines/)).toBeInTheDocument();
+      expect(screen.getByText(/1 hunk collapsed/)).toBeInTheDocument();
+      expect(screen.getByText("Load All")).toBeInTheDocument();
+    });
+
+    it("calls loadDiffHunk when Load hunk button is clicked", () => {
+      const diff: FileDiff = {
+        path: "large-file.ts",
+        hunks: [
+          {
+            header: "@@ -100,5 +100,6 @@",
+            old_start: 100,
+            old_lines: 5,
+            new_start: 100,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 20,
+      };
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByText("Load hunk"));
+
+      expect(mockLoadDiffHunk).toHaveBeenCalledWith("large-file.ts", false, 0, undefined);
+    });
+
+    it("calls loadDiffHunk for all collapsed hunks on Load All", async () => {
+      const diff: FileDiff = {
+        path: "large-file.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [],
+          },
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+          {
+            header: "@@ -100,5 +100,6 @@",
+            old_start: 100,
+            old_lines: 5,
+            new_start: 100,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 40,
+      };
+
+      render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByText("Load All"));
+
+      await vi.waitFor(() => {
+        expect(mockLoadDiffHunk).toHaveBeenCalledTimes(2);
+        expect(mockLoadDiffHunk).toHaveBeenCalledWith("large-file.ts", false, 1, undefined);
+        expect(mockLoadDiffHunk).toHaveBeenCalledWith("large-file.ts", false, 2, undefined);
+      });
+    });
+
+    it("does not show truncation bar when all hunks are loaded", () => {
+      const diff: FileDiff = {
+        path: "small-file.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 5,
+      };
+
+      const { container } = render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+      expect(container.querySelector(".truncation-bar")).not.toBeInTheDocument();
     });
   });
 });

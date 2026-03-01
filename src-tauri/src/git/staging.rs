@@ -1112,6 +1112,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 3,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),
@@ -1156,6 +1157,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 3,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),
@@ -1243,6 +1245,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 4,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1289,6 +1292,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 5,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1343,6 +1347,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 2,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1384,6 +1389,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 2,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1426,6 +1432,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 3,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1473,6 +1480,7 @@ mod tests {
             old_lines: 3,
             new_start: 3,
             new_lines: 4,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1521,6 +1529,7 @@ mod tests {
             old_lines: 2,
             new_start: 1,
             new_lines: 3,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1".to_string(),
@@ -1561,6 +1570,7 @@ mod tests {
             old_lines: 2,
             new_start: 1,
             new_lines: 3,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),
@@ -1600,6 +1610,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 2,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),
@@ -1639,6 +1650,7 @@ mod tests {
             old_lines: 2,
             new_start: 1,
             new_lines: 4,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),
@@ -1684,6 +1696,7 @@ mod tests {
             old_lines: 3,
             new_start: 1,
             new_lines: 3,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),
@@ -1728,6 +1741,7 @@ mod tests {
             old_lines: 1,
             new_start: 1,
             new_lines: 2,
+            is_loaded: true,
             lines: vec![
                 DiffLine {
                     content: "line1\n".to_string(),

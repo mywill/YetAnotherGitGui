@@ -55,6 +55,19 @@ pub fn get_commit_file_diff(
     git::get_commit_file_diff(repo, &hash, &file_path)
 }
 
+#[tauri::command]
+pub fn get_commit_diff_hunk(
+    hash: String,
+    file_path: String,
+    hunk_index: usize,
+    state: State<AppState>,
+) -> Result<git::DiffHunk, AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    git::get_commit_diff_hunk(repo, &hash, &file_path, hunk_index)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

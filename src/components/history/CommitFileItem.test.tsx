@@ -163,6 +163,7 @@ describe("CommitFileItem", () => {
       path: "src/main.ts",
       hunks: [],
       is_binary: false,
+      total_lines: 0,
     };
 
     (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(

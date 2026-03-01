@@ -198,6 +198,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { stageFile } = useRepositoryStore.getState();
@@ -248,6 +249,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { unstageFile } = useRepositoryStore.getState();
@@ -302,7 +304,7 @@ describe("repositoryStore", () => {
           remotes: [],
           head_hash: "abc123",
         },
-        currentDiff: { path: "test.ts", hunks: [], is_binary: false },
+        currentDiff: { path: "test.ts", hunks: [], is_binary: false, total_lines: 0 },
         currentDiffPath: "test.ts",
         commits: [],
         hasMoreCommits: true,
@@ -459,7 +461,7 @@ describe("repositoryStore", () => {
     it("clears diff if viewing the reverted file", async () => {
       useRepositoryStore.setState({
         currentDiffPath: "test.ts",
-        currentDiff: { path: "test.ts", hunks: [], is_binary: false },
+        currentDiff: { path: "test.ts", hunks: [], is_binary: false, total_lines: 0 },
       });
 
       vi.mocked(git.revertFile).mockResolvedValue(undefined);
@@ -511,7 +513,7 @@ describe("repositoryStore", () => {
     it("clears diff if viewing the deleted file", async () => {
       useRepositoryStore.setState({
         currentDiffPath: "test.ts",
-        currentDiff: { path: "test.ts", hunks: [], is_binary: false },
+        currentDiff: { path: "test.ts", hunks: [], is_binary: false, total_lines: 0 },
       });
 
       mockShowConfirm.mockResolvedValue(true);
@@ -541,6 +543,7 @@ describe("repositoryStore", () => {
                   path: "test.ts",
                   hunks: [],
                   is_binary: false,
+                  total_lines: 0,
                 }),
               100
             )
@@ -562,6 +565,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { loadFileDiff } = useRepositoryStore.getState();
@@ -575,7 +579,7 @@ describe("repositoryStore", () => {
   describe("clearDiff", () => {
     it("clears current diff state", () => {
       useRepositoryStore.setState({
-        currentDiff: { path: "test.ts", hunks: [], is_binary: false },
+        currentDiff: { path: "test.ts", hunks: [], is_binary: false, total_lines: 0 },
         currentDiffPath: "test.ts",
       });
 
@@ -769,7 +773,7 @@ describe("repositoryStore", () => {
       useRepositoryStore.setState({
         expandedStashFiles: new Set(["old-file.ts"]),
         stashFileDiffs: new Map([
-          ["old-file.ts", { path: "old-file.ts", hunks: [], is_binary: false }],
+          ["old-file.ts", { path: "old-file.ts", hunks: [], is_binary: false, total_lines: 0 }],
         ]),
       });
 
@@ -812,7 +816,9 @@ describe("repositoryStore", () => {
           files_changed: [],
         },
         expandedStashFiles: new Set(["file.ts"]),
-        stashFileDiffs: new Map([["file.ts", { path: "file.ts", hunks: [], is_binary: false }]]),
+        stashFileDiffs: new Map([
+          ["file.ts", { path: "file.ts", hunks: [], is_binary: false, total_lines: 0 }],
+        ]),
       });
 
       const { clearStashDetails } = useRepositoryStore.getState();
@@ -898,7 +904,9 @@ describe("repositoryStore", () => {
           files_changed: [],
         },
         expandedStashFiles: new Set(["file.ts"]),
-        stashFileDiffs: new Map([["file.ts", { path: "file.ts", hunks: [], is_binary: false }]]),
+        stashFileDiffs: new Map([
+          ["file.ts", { path: "file.ts", hunks: [], is_binary: false, total_lines: 0 }],
+        ]),
       });
 
       vi.mocked(git.dropStash).mockResolvedValue(undefined);
@@ -983,9 +991,11 @@ describe("repositoryStore", () => {
             new_start: 1,
             new_lines: 4,
             lines: [],
+            is_loaded: true,
           },
         ],
         is_binary: false,
+        total_lines: 0,
       };
 
       vi.mocked(git.getStashFileDiff).mockResolvedValue(mockDiff);
@@ -1122,6 +1132,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { refreshRepository } = useRepositoryStore.getState();
@@ -1164,6 +1175,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { stageHunk } = useRepositoryStore.getState();
@@ -1196,6 +1208,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { unstageHunk } = useRepositoryStore.getState();
@@ -1228,6 +1241,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { stageLines } = useRepositoryStore.getState();
@@ -1260,6 +1274,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { discardHunk } = useRepositoryStore.getState();
@@ -1292,6 +1307,7 @@ describe("repositoryStore", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { discardLines } = useRepositoryStore.getState();
@@ -1390,7 +1406,7 @@ describe("repositoryStore", () => {
       useRepositoryStore.setState({
         expandedCommitFiles: new Set(["old-file.ts"]),
         commitFileDiffs: new Map([
-          ["old-file.ts", { path: "old-file.ts", hunks: [], is_binary: false }],
+          ["old-file.ts", { path: "old-file.ts", hunks: [], is_binary: false, total_lines: 0 }],
         ]),
       });
 
@@ -1437,7 +1453,9 @@ describe("repositoryStore", () => {
           files_changed: [],
         },
         expandedCommitFiles: new Set(["file.ts"]),
-        commitFileDiffs: new Map([["file.ts", { path: "file.ts", hunks: [], is_binary: false }]]),
+        commitFileDiffs: new Map([
+          ["file.ts", { path: "file.ts", hunks: [], is_binary: false, total_lines: 0 }],
+        ]),
       });
 
       const { clearCommitDetails } = useRepositoryStore.getState();
@@ -1485,9 +1503,11 @@ describe("repositoryStore", () => {
             new_start: 1,
             new_lines: 4,
             lines: [],
+            is_loaded: true,
           },
         ],
         is_binary: false,
+        total_lines: 0,
       };
 
       vi.mocked(git.getCommitFileDiff).mockResolvedValue(mockDiff);
@@ -1796,13 +1816,16 @@ describe("repositoryStore", () => {
           files_changed: [],
         },
         expandedStashFiles: new Set(["file.ts"]),
-        stashFileDiffs: new Map([["file.ts", { path: "file.ts", hunks: [], is_binary: false }]]),
+        stashFileDiffs: new Map([
+          ["file.ts", { path: "file.ts", hunks: [], is_binary: false, total_lines: 0 }],
+        ]),
       });
 
       vi.mocked(git.getFileDiff).mockResolvedValue({
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { loadFileDiff } = useRepositoryStore.getState();
@@ -1883,6 +1906,7 @@ describe("repositoryStore", () => {
         path: "file.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       });
 
       const { revertCommitFileLines } = useRepositoryStore.getState();

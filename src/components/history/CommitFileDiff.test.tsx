@@ -23,7 +23,7 @@ describe("CommitFileDiff", () => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
-      selector({ revertCommitFileLines: mockRevertCommitFileLines })
+      selector({ revertCommitFileLines: mockRevertCommitFileLines, loadCommitDiffHunk: vi.fn() })
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(useDialogStore).mockImplementation((selector: any) =>
@@ -37,6 +37,7 @@ describe("CommitFileDiff", () => {
         path: "image.png",
         hunks: [],
         is_binary: true,
+        total_lines: 0,
       };
 
       render(<CommitFileDiff diff={binaryDiff} />);
@@ -49,6 +50,7 @@ describe("CommitFileDiff", () => {
         path: "image.png",
         hunks: [],
         is_binary: true,
+        total_lines: 0,
       };
 
       const { container } = render(<CommitFileDiff diff={binaryDiff} />);
@@ -63,6 +65,7 @@ describe("CommitFileDiff", () => {
         path: "unchanged.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       };
 
       render(<CommitFileDiff diff={emptyDiff} />);
@@ -75,6 +78,7 @@ describe("CommitFileDiff", () => {
         path: "unchanged.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       };
 
       const { container } = render(<CommitFileDiff diff={emptyDiff} />);
@@ -93,6 +97,7 @@ describe("CommitFileDiff", () => {
           old_lines: 3,
           new_start: 1,
           new_lines: 4,
+          is_loaded: true,
           lines: [
             { content: "const x = 1;", line_type: "context", old_lineno: 1, new_lineno: 1 },
             { content: "const y = 2;", line_type: "deletion", old_lineno: 2, new_lineno: null },
@@ -102,6 +107,7 @@ describe("CommitFileDiff", () => {
         },
       ],
       is_binary: false,
+      total_lines: 4,
     };
 
     it("renders all lines in hunk", () => {
@@ -163,6 +169,7 @@ describe("CommitFileDiff", () => {
             old_lines: 2,
             new_start: 1,
             new_lines: 2,
+            is_loaded: true,
             lines: [
               { content: "first hunk content", line_type: "context", old_lineno: 1, new_lineno: 1 },
             ],
@@ -173,6 +180,7 @@ describe("CommitFileDiff", () => {
             old_lines: 2,
             new_start: 10,
             new_lines: 2,
+            is_loaded: true,
             lines: [
               {
                 content: "second hunk content",
@@ -184,6 +192,7 @@ describe("CommitFileDiff", () => {
           },
         ],
         is_binary: false,
+        total_lines: 2,
       };
 
       const { container } = render(<CommitFileDiff diff={multiHunkDiff} />);
@@ -207,10 +216,12 @@ describe("CommitFileDiff", () => {
             old_lines: 1,
             new_start: 1,
             new_lines: 1,
+            is_loaded: true,
             lines: [{ content: "test", line_type: "context", old_lineno: 1, new_lineno: 1 }],
           },
         ],
         is_binary: false,
+        total_lines: 1,
       };
 
       const { container } = render(<CommitFileDiff diff={sampleDiff} />);
@@ -236,6 +247,7 @@ describe("CommitFileDiff", () => {
           old_lines: 3,
           new_start: 1,
           new_lines: 4,
+          is_loaded: true,
           lines: [
             { content: "const x = 1;", line_type: "context", old_lineno: 1, new_lineno: 1 },
             { content: "const y = 2;", line_type: "deletion", old_lineno: 2, new_lineno: null },
@@ -245,6 +257,7 @@ describe("CommitFileDiff", () => {
         },
       ],
       is_binary: false,
+      total_lines: 4,
     };
 
     it("shows Revert hunk button when commitHash and filePath are provided", () => {
@@ -378,6 +391,120 @@ describe("CommitFileDiff", () => {
 
       expect(screen.queryByText("Clear")).not.toBeInTheDocument();
       expect(screen.queryByText(/Revert \d+ line/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("collapsed hunks", () => {
+    const mockLoadCommitDiffHunk = vi.fn();
+
+    beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
+        selector({
+          revertCommitFileLines: vi.fn(),
+          loadCommitDiffHunk: mockLoadCommitDiffHunk,
+        })
+      );
+    });
+
+    it("renders collapsed placeholder for unloaded hunks", () => {
+      const diff: FileDiff = {
+        path: "large.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [{ content: "line 1", line_type: "context", old_lineno: 1, new_lineno: 1 }],
+          },
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 30,
+      };
+
+      const { container } = render(
+        <CommitFileDiff diff={diff} commitHash="abc123" filePath="large.ts" />
+      );
+
+      expect(container.querySelector(".collapsed-hunk")).toBeInTheDocument();
+      expect(screen.getByText("Load hunk")).toBeInTheDocument();
+    });
+
+    it("shows truncation summary bar with line counts", () => {
+      const diff: FileDiff = {
+        path: "large.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [
+              { content: "line 1", line_type: "context", old_lineno: 1, new_lineno: 1 },
+              { content: "line 2", line_type: "addition", old_lineno: null, new_lineno: 2 },
+              { content: "line 3", line_type: "context", old_lineno: 2, new_lineno: 3 },
+            ],
+          },
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 30,
+      };
+
+      const { container } = render(
+        <CommitFileDiff diff={diff} commitHash="abc123" filePath="large.ts" />
+      );
+
+      expect(container.querySelector(".truncation-bar")).toBeInTheDocument();
+      expect(screen.getByText(/showing 3 of 30 lines/)).toBeInTheDocument();
+      expect(screen.getByText("Load All")).toBeInTheDocument();
+    });
+
+    it("calls loadCommitDiffHunk when Load hunk is clicked", () => {
+      const diff: FileDiff = {
+        path: "large.ts",
+        hunks: [
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 30,
+      };
+
+      render(<CommitFileDiff diff={diff} commitHash="abc123" filePath="large.ts" />);
+
+      fireEvent.click(screen.getByText("Load hunk"));
+
+      expect(mockLoadCommitDiffHunk).toHaveBeenCalledWith("abc123", "large.ts", 0);
     });
   });
 });

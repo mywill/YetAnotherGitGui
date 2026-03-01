@@ -185,6 +185,7 @@ export const tauriMocks = `
                 old_lines: 3,
                 new_start: 1,
                 new_lines: 4,
+                is_loaded: true,
                 lines: [
                   { content: 'const x = 1;', line_type: 'context', old_lineno: 1, new_lineno: 1 },
                   { content: 'const old = true;', line_type: 'deletion', old_lineno: 2, new_lineno: null },
@@ -193,7 +194,36 @@ export const tauriMocks = `
                 ]
               }
             ],
-            is_binary: false
+            is_binary: false,
+            total_lines: 4
+          };
+
+        case 'get_diff_hunk':
+          return {
+            header: '@@ -1,3 +1,4 @@',
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [
+              { content: 'loaded line 1', line_type: 'context', old_lineno: 1, new_lineno: 1 },
+              { content: 'loaded line 2', line_type: 'addition', old_lineno: null, new_lineno: 2 }
+            ]
+          };
+
+        case 'get_commit_diff_hunk':
+          return {
+            header: '@@ -1,3 +1,5 @@',
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 5,
+            is_loaded: true,
+            lines: [
+              { content: 'loaded commit line 1', line_type: 'context', old_lineno: 1, new_lineno: 1 },
+              { content: 'loaded commit line 2', line_type: 'addition', old_lineno: null, new_lineno: 2 }
+            ]
           };
 
         case 'stage_file':
@@ -258,13 +288,15 @@ export const tauriMocks = `
                 old_lines: 2,
                 new_start: 1,
                 new_lines: 3,
+                is_loaded: true,
                 lines: [
                   { content: 'const x = 1;', line_type: 'context', old_lineno: 1, new_lineno: 1 },
                   { content: 'const stashed = true;', line_type: 'addition', old_lineno: null, new_lineno: 2 }
                 ]
               }
             ],
-            is_binary: false
+            is_binary: false,
+            total_lines: 2
           };
 
         case 'apply_stash':
@@ -326,6 +358,7 @@ export const tauriMocks = `
                 old_lines: 3,
                 new_start: 1,
                 new_lines: 5,
+                is_loaded: true,
                 lines: [
                   { content: 'const x = 1;', line_type: 'context', old_lineno: 1, new_lineno: 1 },
                   { content: 'const y = 2;', line_type: 'addition', old_lineno: null, new_lineno: 2 },
@@ -333,7 +366,8 @@ export const tauriMocks = `
                 ]
               }
             ],
-            is_binary: false
+            is_binary: false,
+            total_lines: 3
           };
 
         default:

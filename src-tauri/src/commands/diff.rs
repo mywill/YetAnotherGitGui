@@ -22,6 +22,24 @@ pub fn get_file_diff(
     git::get_file_diff(repo, &path, staged)
 }
 
+#[tauri::command]
+pub fn get_diff_hunk(
+    path: String,
+    staged: bool,
+    hunk_index: usize,
+    is_untracked: Option<bool>,
+    state: State<AppState>,
+) -> Result<git::DiffHunk, AppError> {
+    let repo_lock = state.repository.lock();
+    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+
+    if is_untracked.unwrap_or(false) {
+        return git::get_untracked_diff_hunk(repo, &path, hunk_index);
+    }
+
+    git::get_diff_hunk(repo, &path, staged, hunk_index)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

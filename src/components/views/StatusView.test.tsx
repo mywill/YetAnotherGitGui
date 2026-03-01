@@ -137,6 +137,7 @@ describe("StatusView", () => {
         path: "test.txt",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       },
       currentDiffStaged: false,
     });
@@ -152,6 +153,7 @@ describe("StatusView", () => {
         path: "staged.txt",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       },
       currentDiffStaged: true,
     });

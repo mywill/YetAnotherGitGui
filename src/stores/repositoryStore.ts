@@ -33,6 +33,7 @@ interface RepositoryState {
   currentDiff: FileDiff | null;
   currentDiffPath: string | null;
   currentDiffStaged: boolean;
+  currentDiffIsUntracked: boolean;
   diffLoading: boolean;
 
   // History view - selected commit details
@@ -72,6 +73,15 @@ interface RepositoryState {
   checkoutCommit: (hash: string) => Promise<void>;
   revertFile: (path: string) => Promise<void>;
   deleteFile: (path: string) => Promise<void>;
+
+  // Lazy hunk loading
+  loadDiffHunk: (
+    path: string,
+    staged: boolean,
+    hunkIndex: number,
+    isUntracked?: boolean
+  ) => Promise<void>;
+  loadCommitDiffHunk: (hash: string, filePath: string, hunkIndex: number) => Promise<void>;
 
   // History view actions
   loadCommitDetails: (hash: string) => Promise<void>;
@@ -119,6 +129,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   currentDiff: null,
   currentDiffPath: null,
   currentDiffStaged: false,
+  currentDiffIsUntracked: false,
   diffLoading: false,
 
   selectedCommitDetails: null,
@@ -217,6 +228,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       diffLoading: true,
       currentDiffPath: path,
       currentDiffStaged: staged,
+      currentDiffIsUntracked: isUntracked ?? false,
       selectedStashDetails: null,
       expandedStashFiles: new Set(),
       stashFileDiffs: new Map(),
@@ -226,6 +238,35 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       set({ currentDiff: diff, diffLoading: false });
     } catch (err) {
       set({ diffLoading: false });
+      useNotificationStore.getState().showError(String(err));
+    }
+  },
+
+  loadDiffHunk: async (path: string, staged: boolean, hunkIndex: number, isUntracked?: boolean) => {
+    try {
+      const loadedHunk = await git.getDiffHunk(path, staged, hunkIndex, isUntracked);
+      const { currentDiff } = get();
+      if (!currentDiff || currentDiff.path !== path) return;
+      const newHunks = [...currentDiff.hunks];
+      newHunks[hunkIndex] = loadedHunk;
+      set({ currentDiff: { ...currentDiff, hunks: newHunks } });
+    } catch (err) {
+      useNotificationStore.getState().showError(String(err));
+    }
+  },
+
+  loadCommitDiffHunk: async (hash: string, filePath: string, hunkIndex: number) => {
+    try {
+      const loadedHunk = await git.getCommitDiffHunk(hash, filePath, hunkIndex);
+      const { commitFileDiffs } = get();
+      const diff = commitFileDiffs.get(filePath);
+      if (!diff) return;
+      const newHunks = [...diff.hunks];
+      newHunks[hunkIndex] = loadedHunk;
+      const newDiffs = new Map(commitFileDiffs);
+      newDiffs.set(filePath, { ...diff, hunks: newHunks });
+      set({ commitFileDiffs: newDiffs });
+    } catch (err) {
       useNotificationStore.getState().showError(String(err));
     }
   },

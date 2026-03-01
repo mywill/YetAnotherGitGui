@@ -216,6 +216,7 @@ pub fn get_stash_file_diff(
         path: path.to_string(),
         hunks: Vec::new(),
         is_binary: false,
+        total_lines: 0,
     };
 
     let mut current_hunk: Option<DiffHunk> = None;
@@ -238,6 +239,7 @@ pub fn get_stash_file_diff(
                 new_start: hunk_info.new_start(),
                 new_lines: hunk_info.new_lines(),
                 lines: Vec::new(),
+                is_loaded: true,
             });
         }
 
@@ -249,6 +251,8 @@ pub fn get_stash_file_diff(
                 ' ' => LineType::Context,
                 _ => LineType::Header,
             };
+
+            file_diff.total_lines += 1;
 
             hunk.lines.push(DiffLine {
                 content,

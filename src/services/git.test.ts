@@ -158,6 +158,7 @@ describe("git service", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       };
       vi.mocked(invoke).mockResolvedValue(mockDiff);
 
@@ -273,6 +274,7 @@ describe("git service", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       };
       vi.mocked(invoke).mockResolvedValue(mockDiff);
 
@@ -291,6 +293,7 @@ describe("git service", () => {
         path: "new.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       };
       vi.mocked(invoke).mockResolvedValue(mockDiff);
 
@@ -473,6 +476,7 @@ describe("git service", () => {
         path: "test.ts",
         hunks: [],
         is_binary: false,
+        total_lines: 0,
       };
       vi.mocked(invoke).mockResolvedValue(mockDiff);
 
@@ -480,6 +484,55 @@ describe("git service", () => {
 
       expect(invoke).toHaveBeenCalledWith("get_stash_file_diff", { index: 0, filePath: "test.ts" });
       expect(result).toEqual(mockDiff);
+    });
+  });
+
+  describe("getDiffHunk", () => {
+    it("invokes get_diff_hunk command with correct args", async () => {
+      const mockHunk = {
+        header: "@@ -1,3 +1,4 @@",
+        old_start: 1,
+        old_lines: 3,
+        new_start: 1,
+        new_lines: 4,
+        is_loaded: true,
+        lines: [],
+      };
+      vi.mocked(invoke).mockResolvedValue(mockHunk);
+
+      const result = await git.getDiffHunk("test.ts", false, 0, true);
+
+      expect(invoke).toHaveBeenCalledWith("get_diff_hunk", {
+        path: "test.ts",
+        staged: false,
+        hunkIndex: 0,
+        isUntracked: true,
+      });
+      expect(result).toEqual(mockHunk);
+    });
+  });
+
+  describe("getCommitDiffHunk", () => {
+    it("invokes get_commit_diff_hunk command with correct args", async () => {
+      const mockHunk = {
+        header: "@@ -1,3 +1,5 @@",
+        old_start: 1,
+        old_lines: 3,
+        new_start: 1,
+        new_lines: 5,
+        is_loaded: true,
+        lines: [],
+      };
+      vi.mocked(invoke).mockResolvedValue(mockHunk);
+
+      const result = await git.getCommitDiffHunk("abc123", "test.ts", 2);
+
+      expect(invoke).toHaveBeenCalledWith("get_commit_diff_hunk", {
+        hash: "abc123",
+        filePath: "test.ts",
+        hunkIndex: 2,
+      });
+      expect(result).toEqual(mockHunk);
     });
   });
 });

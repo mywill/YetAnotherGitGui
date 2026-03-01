@@ -5,6 +5,7 @@ import type {
   CommitDetails,
   FileStatuses,
   FileDiff,
+  DiffHunk,
   BranchInfo,
   TagInfo,
   StashInfo,
@@ -154,4 +155,21 @@ export async function dropStash(index: number): Promise<void> {
 
 export async function getStashFileDiff(index: number, filePath: string): Promise<FileDiff> {
   return invoke("get_stash_file_diff", { index, filePath });
+}
+
+export async function getDiffHunk(
+  path: string,
+  staged: boolean,
+  hunkIndex: number,
+  isUntracked?: boolean
+): Promise<DiffHunk> {
+  return invoke("get_diff_hunk", { path, staged, hunkIndex, isUntracked });
+}
+
+export async function getCommitDiffHunk(
+  hash: string,
+  filePath: string,
+  hunkIndex: number
+): Promise<DiffHunk> {
+  return invoke("get_commit_diff_hunk", { hash, filePath, hunkIndex });
 }

@@ -11,6 +11,8 @@ interface CommitFileDiffProps {
 }
 
 export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffProps) {
+  const loadCommitDiffHunk = useRepositoryStore((s) => s.loadCommitDiffHunk);
+
   if (diff.is_binary) {
     return (
       <div className="commit-file-diff binary text-text-muted p-3 text-center">
@@ -28,19 +30,69 @@ export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffPro
   }
 
   const canRevert = !!commitHash && !!filePath;
+  const collapsedHunks = diff.hunks.reduce((acc, h, i) => {
+    if (!h.is_loaded) acc.push(i);
+    return acc;
+  }, [] as number[]);
+  const hasCollapsedHunks = collapsedHunks.length > 0;
+
+  const handleLoadAll = async () => {
+    if (!commitHash || !filePath) return;
+    for (const idx of collapsedHunks) {
+      await loadCommitDiffHunk(commitHash, filePath, idx);
+    }
+  };
+
+  const loadedLines = diff.hunks.reduce((sum, h) => sum + h.lines.length, 0);
 
   return (
     <div className="commit-file-diff font-mono text-xs leading-normal">
-      {diff.hunks.map((hunk, hunkIndex) => (
-        <CommitDiffHunk
-          key={hunkIndex}
-          hunk={hunk}
-          hunkIndex={hunkIndex}
-          commitHash={commitHash}
-          filePath={filePath}
-          canRevert={canRevert}
-        />
-      ))}
+      {hasCollapsedHunks && (
+        <div className="truncation-bar bg-bg-selected/30 text-text-secondary flex items-center gap-2 px-3 py-1.5 text-xs">
+          <span>
+            Large file — showing {loadedLines} of {diff.total_lines} lines ({collapsedHunks.length}{" "}
+            {collapsedHunks.length === 1 ? "hunk" : "hunks"} collapsed)
+          </span>
+          <button
+            className="load-all-btn text-primary hover:text-primary/80 ml-auto font-medium"
+            onClick={handleLoadAll}
+          >
+            Load All
+          </button>
+        </div>
+      )}
+      {diff.hunks.map((hunk, hunkIndex) =>
+        hunk.is_loaded ? (
+          <CommitDiffHunk
+            key={hunkIndex}
+            hunk={hunk}
+            hunkIndex={hunkIndex}
+            commitHash={commitHash}
+            filePath={filePath}
+            canRevert={canRevert}
+          />
+        ) : (
+          <div
+            key={hunkIndex}
+            className="collapsed-hunk border-border bg-bg-tertiary/50 flex items-center gap-3 border-b px-3 py-2"
+          >
+            <span className="hunk-info text-text-muted truncate font-mono text-xs">
+              {hunk.header.split("@@").slice(0, 2).join("@@") + "@@"}
+            </span>
+            <span className="text-text-muted text-xs">
+              ~{hunk.old_lines + hunk.new_lines} lines
+            </span>
+            <button
+              className="load-hunk-btn text-primary hover:text-primary/80 ml-auto text-xs font-medium"
+              onClick={() =>
+                commitHash && filePath && loadCommitDiffHunk(commitHash, filePath, hunkIndex)
+              }
+            >
+              Load hunk
+            </button>
+          </div>
+        )
+      )}
     </div>
   );
 }

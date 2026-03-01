@@ -79,6 +79,7 @@ export interface FileDiff {
   path: string;
   hunks: DiffHunk[];
   is_binary: boolean;
+  total_lines: number;
 }
 
 export interface DiffHunk {
@@ -88,6 +89,7 @@ export interface DiffHunk {
   new_start: number;
   new_lines: number;
   lines: DiffLine[];
+  is_loaded: boolean;
 }
 
 export interface DiffLine {

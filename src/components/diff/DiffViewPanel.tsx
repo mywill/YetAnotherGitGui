@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import type { FileDiff } from "../../types";
 import { DiffHunk } from "./DiffHunk";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -17,10 +18,39 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   const discardHunk = useRepositoryStore((s) => s.discardHunk);
   const discardLines = useRepositoryStore((s) => s.discardLines);
   const currentDiffPath = useRepositoryStore((s) => s.currentDiffPath);
+  const currentDiffIsUntracked = useRepositoryStore((s) => s.currentDiffIsUntracked);
+  const loadDiffHunk = useRepositoryStore((s) => s.loadDiffHunk);
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
   const selectedCount = selectedFilePaths.size;
+
+  const collapsedHunks = useMemo(
+    () =>
+      diff
+        ? diff.hunks.reduce((acc, h, i) => {
+            if (!h.is_loaded) acc.push(i);
+            return acc;
+          }, [] as number[])
+        : [],
+    [diff]
+  );
+  const hasCollapsedHunks = collapsedHunks.length > 0;
+
+  const handleLoadHunk = useCallback(
+    async (hunkIndex: number) => {
+      if (!currentDiffPath) return;
+      await loadDiffHunk(currentDiffPath, staged, hunkIndex, currentDiffIsUntracked || undefined);
+    },
+    [currentDiffPath, staged, currentDiffIsUntracked, loadDiffHunk]
+  );
+
+  const handleLoadAll = useCallback(async () => {
+    if (!currentDiffPath || !diff) return;
+    for (const idx of collapsedHunks) {
+      await loadDiffHunk(currentDiffPath, staged, idx, currentDiffIsUntracked || undefined);
+    }
+  }, [currentDiffPath, diff, collapsedHunks, staged, currentDiffIsUntracked, loadDiffHunk]);
 
   if (loading) {
     return (
@@ -118,6 +148,8 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
     }
   };
 
+  const loadedLines = diff.hunks.reduce((sum, h) => sum + h.lines.length, 0);
+
   return (
     <div className="diff-view-panel flex h-full flex-col overflow-hidden">
       <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
@@ -126,21 +158,55 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
           {staged ? "(staged)" : "(unstaged)"}
         </span>
       </div>
+      {hasCollapsedHunks && (
+        <div className="truncation-bar bg-bg-selected/30 text-text-secondary flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs">
+          <span>
+            Large file — showing {loadedLines} of {diff.total_lines} lines ({collapsedHunks.length}{" "}
+            {collapsedHunks.length === 1 ? "hunk" : "hunks"} collapsed)
+          </span>
+          <button
+            className="load-all-btn text-primary hover:text-primary/80 ml-auto font-medium"
+            onClick={handleLoadAll}
+          >
+            Load All
+          </button>
+        </div>
+      )}
       <div className="diff-content flex-1 overflow-y-auto font-mono text-xs leading-normal">
-        {diff.hunks.map((hunk, index) => (
-          <DiffHunk
-            key={index}
-            hunk={hunk}
-            onAction={() => handleHunkAction(index)}
-            onStageLines={(lineIndices) => handleStageLines(index, lineIndices)}
-            actionLabel={staged ? "Unstage hunk" : "Stage hunk"}
-            canSelectLines={!staged}
-            onDiscardHunk={!staged ? () => handleDiscardHunk(index) : undefined}
-            onDiscardLines={
-              !staged ? (lineIndices) => handleDiscardLines(index, lineIndices) : undefined
-            }
-          />
-        ))}
+        {diff.hunks.map((hunk, index) =>
+          hunk.is_loaded ? (
+            <DiffHunk
+              key={index}
+              hunk={hunk}
+              onAction={() => handleHunkAction(index)}
+              onStageLines={(lineIndices) => handleStageLines(index, lineIndices)}
+              actionLabel={staged ? "Unstage hunk" : "Stage hunk"}
+              canSelectLines={!staged}
+              onDiscardHunk={!staged ? () => handleDiscardHunk(index) : undefined}
+              onDiscardLines={
+                !staged ? (lineIndices) => handleDiscardLines(index, lineIndices) : undefined
+              }
+            />
+          ) : (
+            <div
+              key={index}
+              className="collapsed-hunk border-border bg-bg-tertiary/50 flex items-center gap-3 border-b px-3 py-2"
+            >
+              <span className="hunk-info text-text-muted truncate font-mono text-xs">
+                {hunk.header.split("@@").slice(0, 2).join("@@") + "@@"}
+              </span>
+              <span className="text-text-muted text-xs">
+                ~{hunk.old_lines + hunk.new_lines} lines
+              </span>
+              <button
+                className="load-hunk-btn text-primary hover:text-primary/80 ml-auto text-xs font-medium"
+                onClick={() => handleLoadHunk(index)}
+              >
+                Load hunk
+              </button>
+            </div>
+          )
+        )}
       </div>
     </div>
   );
