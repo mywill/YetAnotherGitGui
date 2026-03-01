@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.6.0...v1.6.1) (2026-03-01)
+
+
+### Bug Fixes
+
+* updated to better handle large files showing part of the file to avoid memory issues ([696da52](https://github.com/mywill/YetAnotherGitGui/commit/696da5247c1945490968fa258ac77d6ba68f97c3))
+
 # [1.6.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.5.1...v1.6.0) (2026-02-28)
 
 
