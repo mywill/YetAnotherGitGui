@@ -1,6 +1,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { YaggButton } from "../common/YaggButton";
 import { BranchItem } from "./BranchItem";
 import { TagItem } from "./TagItem";
 import { StashItem } from "./StashItem";
@@ -84,8 +85,9 @@ function CollapsibleSection({
 }: CollapsibleSectionProps) {
   return (
     <div className="collapsible-section border-border border-b">
-      <button
-        className="section-header text-text-secondary hover:bg-bg-hover hover:text-text-primary flex w-full items-center border-none bg-transparent px-3 py-2 text-xs font-semibold tracking-wide uppercase transition-colors duration-150"
+      <YaggButton
+        variant="menu-item"
+        className="section-header text-text-secondary hover:text-text-primary px-3 py-2 text-xs font-semibold tracking-wide uppercase"
         onClick={onToggle}
         aria-expanded={expanded}
       >
@@ -101,7 +103,7 @@ function CollapsibleSection({
         <span className="section-count bg-bg-tertiary text-2xs rounded-full px-1.5 py-px font-normal">
           {count}
         </span>
-      </button>
+      </YaggButton>
       {expanded && <div className="section-content pb-1">{children}</div>}
     </div>
   );

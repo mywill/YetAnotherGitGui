@@ -193,7 +193,7 @@ describe("CliInstall", () => {
       fireEvent.click(screen.getByText("Install CLI Tool"));
       fireEvent.click(screen.getByText("Install"));
 
-      expect(screen.getByText("Installing...")).toBeDisabled();
+      expect(screen.getByText("Installing...").closest("button")).toBeDisabled();
     });
   });
 
@@ -273,7 +273,7 @@ describe("CliInstall", () => {
       fireEvent.click(screen.getByText("Install"));
 
       await waitFor(() => {
-        const button = screen.getByText("Install CLI Tool");
+        const button = screen.getByText("Install CLI Tool").closest("button")!;
         expect(button).not.toBeDisabled();
       });
     });

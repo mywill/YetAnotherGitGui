@@ -11,6 +11,7 @@ import {
   type UpdateInfo,
 } from "../../services/system";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { YaggButton } from "./YaggButton";
 
 interface AboutDialogProps {
   onClose: () => void;
@@ -148,12 +149,13 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                     {updateStatus === "available" && updateInfo?.version && (
                       <span className="about-update-available flex flex-wrap items-center gap-2">
                         v{updateInfo.version} available{" "}
-                        <button
-                          className="about-update-btn bg-accent rounded border-none px-2 py-px text-xs text-white hover:opacity-90"
+                        <YaggButton
+                          variant="accent"
+                          className="about-update-btn px-2 py-px text-xs"
                           onClick={handleUpdate}
                         >
                           Update
-                        </button>
+                        </YaggButton>
                         <a
                           className="about-update-link text-accent text-xs"
                           href="#"
@@ -203,13 +205,14 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
           )}
         </div>
         <div className="about-dialog-actions border-border flex justify-end border-t p-3">
-          <button
-            className="dialog-btn confirm border-bg-selected bg-bg-selected focus:ring-bg-selected rounded text-xs text-white transition-all duration-150 hover:brightness-110 focus:ring-2 focus:ring-offset-2"
+          <YaggButton
+            variant="primary"
+            className="dialog-btn confirm focus:ring-bg-selected text-xs transition-all duration-150 hover:brightness-110 focus:ring-2 focus:ring-offset-2"
             onClick={onClose}
             ref={closeButtonRef}
           >
             Close
-          </button>
+          </YaggButton>
         </div>
       </div>
     </div>,

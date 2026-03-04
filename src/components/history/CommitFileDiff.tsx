@@ -3,6 +3,7 @@ import clsx from "clsx";
 import type { FileDiff } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { YaggButton } from "../common/YaggButton";
 
 interface CommitFileDiffProps {
   diff: FileDiff;
@@ -53,12 +54,9 @@ export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffPro
             Large file — showing {loadedLines} of {diff.total_lines} lines ({collapsedHunks.length}{" "}
             {collapsedHunks.length === 1 ? "hunk" : "hunks"} collapsed)
           </span>
-          <button
-            className="load-all-btn text-primary hover:text-primary/80 ml-auto font-medium"
-            onClick={handleLoadAll}
-          >
+          <YaggButton variant="text-link" className="load-all-btn ml-auto" onClick={handleLoadAll}>
             Load All
-          </button>
+          </YaggButton>
         </div>
       )}
       {diff.hunks.map((hunk, hunkIndex) =>
@@ -82,14 +80,15 @@ export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffPro
             <span className="text-text-muted text-xs">
               ~{hunk.old_lines + hunk.new_lines} lines
             </span>
-            <button
-              className="load-hunk-btn text-primary hover:text-primary/80 ml-auto text-xs font-medium"
+            <YaggButton
+              variant="text-link"
+              className="load-hunk-btn ml-auto text-xs"
               onClick={() =>
                 commitHash && filePath && loadCommitDiffHunk(commitHash, filePath, hunkIndex)
               }
             >
               Load hunk
-            </button>
+            </YaggButton>
           </div>
         )
       )}
@@ -228,26 +227,27 @@ function CommitDiffHunk({ hunk, hunkIndex, commitHash, filePath, canRevert }: Co
         {canRevert && (
           <div className="hunk-actions ml-auto flex shrink-0 gap-1">
             {hasSelection && (
-              <button
+              <YaggButton
                 className="hunk-action border-border bg-bg-tertiary text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded border px-2 py-px text-xs"
                 onClick={handleRevertSelected}
               >
                 Revert {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
-              </button>
+              </YaggButton>
             )}
-            <button
+            <YaggButton
               className="hunk-action border-border bg-bg-tertiary text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded border px-2 py-px text-xs"
               onClick={handleRevertHunk}
             >
               Revert hunk
-            </button>
+            </YaggButton>
             {hasSelection && (
-              <button
-                className="hunk-action secondary text-text-muted hover:bg-bg-hover rounded bg-transparent px-2 py-px text-xs"
+              <YaggButton
+                variant="outline"
+                className="hunk-action secondary text-text-muted hover:bg-bg-hover bg-transparent px-2 py-px text-xs"
                 onClick={clearSelection}
               >
                 Clear
-              </button>
+              </YaggButton>
             )}
           </div>
         )}

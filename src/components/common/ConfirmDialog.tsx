@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { YaggButton } from "./YaggButton";
 
 interface ConfirmDialogProps {
   title: string;
@@ -72,19 +73,21 @@ export function ConfirmDialog({
           )}
         </div>
         <div className="confirm-dialog-actions border-border flex justify-end gap-2 border-t p-3">
-          <button
-            className="dialog-btn cancel text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded bg-transparent text-xs transition-all duration-150"
+          <YaggButton
+            variant="outline"
+            className="dialog-btn cancel text-text-secondary hover:border-text-muted hover:bg-bg-hover text-xs transition-all duration-150"
             onClick={onCancel}
           >
             {cancelLabel}
-          </button>
-          <button
-            className="dialog-btn confirm border-bg-selected bg-bg-selected focus:ring-bg-selected rounded text-xs text-white transition-all duration-150 hover:brightness-110 focus:ring-2 focus:ring-offset-2"
+          </YaggButton>
+          <YaggButton
+            variant="primary"
+            className="dialog-btn confirm focus:ring-bg-selected text-xs transition-all duration-150 hover:brightness-110 focus:ring-2 focus:ring-offset-2"
             onClick={onConfirm}
             ref={confirmButtonRef}
           >
             {confirmLabel}
-          </button>
+          </YaggButton>
         </div>
       </div>
     </div>,

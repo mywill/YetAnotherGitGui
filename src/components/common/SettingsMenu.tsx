@@ -15,6 +15,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
+import { YaggButton } from "./YaggButton";
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -145,7 +146,8 @@ export function SettingsMenu() {
   return (
     <>
       <div className="settings-menu app-region-no-drag relative flex items-center" ref={menuRef}>
-        <button
+        <YaggButton
+          variant="icon"
           className="settings-menu-button"
           onClick={() => setIsOpen(!isOpen)}
           title="Settings"
@@ -165,7 +167,7 @@ export function SettingsMenu() {
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-        </button>
+        </YaggButton>
 
         {isOpen && (
           <div
@@ -173,8 +175,9 @@ export function SettingsMenu() {
             role="menu"
           >
             {isMac && !cliInstalled && (
-              <button
-                className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100"
+              <YaggButton
+                variant="menu-item"
+                className="settings-menu-item px-3 py-2 text-xs"
                 role="menuitem"
                 onClick={() => {
                   closeMenu();
@@ -182,11 +185,12 @@ export function SettingsMenu() {
                 }}
               >
                 Install CLI Tool
-              </button>
+              </YaggButton>
             )}
             {isMac && cliInstalled && (
-              <button
-                className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100"
+              <YaggButton
+                variant="menu-item"
+                className="settings-menu-item px-3 py-2 text-xs"
                 role="menuitem"
                 onClick={() => {
                   closeMenu();
@@ -194,22 +198,24 @@ export function SettingsMenu() {
                 }}
               >
                 Uninstall CLI Tool
-              </button>
+              </YaggButton>
             )}
             {isMac && (
               <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
             )}
-            <button
-              className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100 disabled:cursor-default disabled:opacity-50"
+            <YaggButton
+              variant="menu-item"
+              className="settings-menu-item px-3 py-2 text-xs"
               role="menuitem"
               disabled={updateChecking}
               onClick={handleCheckForUpdates}
             >
               {updateChecking ? "Checking..." : "Check for Updates"}
-            </button>
+            </YaggButton>
             <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
-            <button
-              className="settings-menu-item text-text-primary hover:bg-bg-hover block w-full border-none bg-transparent px-3 py-2 text-left text-xs transition-colors duration-100"
+            <YaggButton
+              variant="menu-item"
+              className="settings-menu-item px-3 py-2 text-xs"
               role="menuitem"
               onClick={() => {
                 closeMenu();
@@ -217,7 +223,7 @@ export function SettingsMenu() {
               }}
             >
               About
-            </button>
+            </YaggButton>
           </div>
         )}
       </div>

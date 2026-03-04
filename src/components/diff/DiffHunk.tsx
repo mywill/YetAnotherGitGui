@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import clsx from "clsx";
 import type { DiffHunk as DiffHunkType } from "../../types";
+import { YaggButton } from "../common/YaggButton";
 
 interface DiffHunkProps {
   hunk: DiffHunkType;
@@ -125,42 +126,43 @@ export function DiffHunk({
         <span className="hunk-info text-text-muted font-mono">{hunkInfo.trim()}</span>
         <div className="hunk-actions flex gap-1">
           {selectedLines.size > 0 && canSelectLines && (
-            <button
+            <YaggButton
               className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
               onClick={handleStageSelected}
             >
               Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
-            </button>
+            </YaggButton>
           )}
-          <button
+          <YaggButton
             className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
             onClick={onAction}
           >
             {actionLabel}
-          </button>
+          </YaggButton>
           {selectedLines.size > 0 && canSelectLines && onDiscardLines && (
-            <button
+            <YaggButton
               className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
               onClick={handleDiscardSelected}
             >
               Discard {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
-            </button>
+            </YaggButton>
           )}
           {onDiscardHunk && (
-            <button
+            <YaggButton
               className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
               onClick={onDiscardHunk}
             >
               Discard hunk
-            </button>
+            </YaggButton>
           )}
           {selectedLines.size > 0 && canSelectLines && (
-            <button
-              className="hunk-action secondary hover:bg-bg-hover rounded bg-transparent px-2 py-px text-xs"
+            <YaggButton
+              variant="outline"
+              className="hunk-action secondary hover:bg-bg-hover bg-transparent px-2 py-px text-xs"
               onClick={clearSelection}
             >
               Clear
-            </button>
+            </YaggButton>
           )}
         </div>
       </div>

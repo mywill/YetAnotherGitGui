@@ -4,6 +4,7 @@ import type { CommitFileChange } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { CommitFileDiff } from "./CommitFileDiff";
+import { YaggButton } from "../common/YaggButton";
 
 interface CommitFileItemProps {
   file: CommitFileChange;
@@ -103,13 +104,14 @@ export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
         <span className="file-path text-text-primary flex-1 truncate" title={displayPath}>
           {displayPath}
         </span>
-        <button
-          className="revert-file-btn border-border text-text-muted hover:bg-bg-hover hover:text-text-primary shrink-0 rounded border bg-transparent px-1.5 py-px text-xs opacity-0 transition-all duration-150 group-hover:opacity-100"
+        <YaggButton
+          variant="outline"
+          className="revert-file-btn text-text-muted hover:text-text-primary shrink-0 px-1.5 py-px text-xs opacity-0 transition-all duration-150 group-hover:opacity-100"
           onClick={handleRevertFile}
           title="Revert this file"
         >
           Revert
-        </button>
+        </YaggButton>
       </div>
       {isExpanded && (
         <div className="file-diff-container border-border bg-bg-primary overflow-hidden border-t">

@@ -5,6 +5,7 @@ import { CommitFileItem } from "./CommitFileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { YaggButton } from "../common/YaggButton";
 
 interface CommitDetailsPanelProps {
   details: CommitDetails | null;
@@ -103,12 +104,13 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
           <span className="file-count bg-bg-hover rounded-full px-2 py-px text-xs font-normal">
             {details.files_changed.length}
           </span>
-          <button
-            className="revert-commit-btn border-border text-text-secondary hover:bg-bg-hover hover:text-text-primary ml-auto rounded border bg-transparent px-2 py-0.5 text-xs font-normal"
+          <YaggButton
+            variant="outline"
+            className="revert-commit-btn ml-auto px-2 py-0.5 text-xs font-normal"
             onClick={handleRevertCommit}
           >
             Revert commit
-          </button>
+          </YaggButton>
         </div>
         <div className="files-list min-w-0 flex-1 overflow-y-auto">
           {details.files_changed.map((file) => (

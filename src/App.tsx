@@ -12,6 +12,7 @@ import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCliArgs } from "./hooks/useCliArgs";
+import { YaggButton } from "./components/common/YaggButton";
 import "./styles/index.css";
 
 export function App() {
@@ -119,14 +120,14 @@ export function App() {
           </div>
         )}
         <div className="header-right app-region-no-drag flex h-full shrink-0 items-center gap-2">
-          <button
+          <YaggButton
             className="h-6.5 px-2 leading-normal"
             onClick={refreshRepository}
             disabled={isLoading}
             title="Refresh (F5 or Ctrl+R)"
           >
             Refresh
-          </button>
+          </YaggButton>
           <SettingsMenu />
         </div>
       </header>

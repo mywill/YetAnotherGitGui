@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { YaggButton } from "../common/YaggButton";
 
 export function CommitPanel() {
   const [message, setMessage] = useState("");
@@ -44,13 +45,14 @@ export function CommitPanel() {
         spellCheck={true}
       />
       <div className="commit-actions flex items-center gap-2">
-        <button
-          className="commit-button primary bg-bg-selected border-bg-selected hover:bg-bg-selected-hover shrink-0"
+        <YaggButton
+          variant="primary"
+          className="commit-button shrink-0"
           onClick={handleCommit}
           disabled={!message.trim() || !hasStagedChanges || isCommitting}
         >
           {isCommitting ? "Committing..." : "Commit"}
-        </button>
+        </YaggButton>
         <span className="commit-hint text-text-muted text-xs">Ctrl+Enter to commit</span>
       </div>
     </div>

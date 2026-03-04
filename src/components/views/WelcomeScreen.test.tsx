@@ -57,7 +57,7 @@ describe("WelcomeScreen", () => {
   it("Open button is enabled when input has text", () => {
     render(<WelcomeScreen failedPath="/some/path" />);
     const openButton = screen.getByRole("button", { name: "Open" });
-    expect(openButton).toBeEnabled();
+    expect(openButton).not.toBeDisabled();
   });
 
   it("calls openRepository when Open is clicked", async () => {

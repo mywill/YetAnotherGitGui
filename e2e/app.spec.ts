@@ -62,7 +62,7 @@ test.describe("Yet Another Git Gui Application", () => {
     await expect(textarea).toBeVisible();
 
     // Check for commit button
-    const commitButton = page.locator("button.commit-button");
+    const commitButton = page.locator(".commit-button");
     await expect(commitButton).toBeVisible();
   });
 
@@ -85,7 +85,7 @@ test.describe("Yet Another Git Gui Application", () => {
     await switchToStatusView(page);
 
     // The commit button should be disabled initially (no message entered)
-    const commitButton = page.locator("button.commit-button");
+    const commitButton = page.locator(".commit-button");
     await expect(commitButton).toBeVisible({ timeout: 10000 });
     await expect(commitButton).toBeDisabled();
   });
@@ -221,7 +221,7 @@ test.describe("Accessibility", () => {
   });
 
   test("commit button has accessible name", async ({ page }) => {
-    const commitButton = page.locator("button.commit-button");
+    const commitButton = page.locator(".commit-button");
     await expect(commitButton).toBeVisible({ timeout: 10000 });
 
     // Button should have text content
@@ -680,7 +680,7 @@ test.describe("Commit Workflow", () => {
   test("commit button enables when message is entered and files are staged", async ({
     page,
   }) => {
-    const commitButton = page.locator("button.commit-button");
+    const commitButton = page.locator(".commit-button");
     const textarea = page.locator('textarea[placeholder="Commit message..."]');
 
     // Initially disabled
@@ -703,7 +703,7 @@ test.describe("Commit Workflow", () => {
     await expect(textarea).toHaveValue("Test commit message");
 
     // Click commit
-    const commitButton = page.locator("button.commit-button");
+    const commitButton = page.locator(".commit-button");
     await commitButton.click();
 
     // Textarea should be cleared after commit
@@ -1220,7 +1220,7 @@ test.describe("Commit Workflow - Diff Clearing", () => {
     // Enter commit message and commit
     const textarea = page.locator('textarea[placeholder="Commit message..."]');
     await textarea.fill("Test commit");
-    await page.locator("button.commit-button").click();
+    await page.locator(".commit-button").click();
 
     // Verify diff panel shows empty state
     await expect(

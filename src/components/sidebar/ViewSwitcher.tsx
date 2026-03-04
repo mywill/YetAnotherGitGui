@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { YaggButton } from "../common/YaggButton";
 
 export function ViewSwitcher() {
   const activeView = useSelectionStore((s) => s.activeView);
@@ -11,30 +12,32 @@ export function ViewSwitcher() {
       role="tablist"
       aria-label="View selection"
     >
-      <button
+      <YaggButton
+        variant="tab"
         role="tab"
         aria-selected={activeView === "history"}
         className={clsx(
-          "view-tab text-text-secondary hover:bg-bg-hover hover:text-text-primary flex flex-1 items-center justify-center gap-1 rounded border border-transparent bg-transparent p-2 transition-all duration-150",
+          "view-tab flex flex-1 gap-1 p-2",
           activeView === "history" && "active bg-bg-selected border-bg-selected text-text-primary"
         )}
         onClick={() => setActiveView("history")}
       >
         <HistoryIcon />
         <span>History</span>
-      </button>
-      <button
+      </YaggButton>
+      <YaggButton
+        variant="tab"
         role="tab"
         aria-selected={activeView === "status"}
         className={clsx(
-          "view-tab text-text-secondary hover:bg-bg-hover hover:text-text-primary flex flex-1 items-center justify-center gap-1 rounded border border-transparent bg-transparent p-2 transition-all duration-150",
+          "view-tab flex flex-1 gap-1 p-2",
           activeView === "status" && "active bg-bg-selected border-bg-selected text-text-primary"
         )}
         onClick={() => setActiveView("status")}
       >
         <StatusIcon />
         <span>Status</span>
-      </button>
+      </YaggButton>
     </div>
   );
 }

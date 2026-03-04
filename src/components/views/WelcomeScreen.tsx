@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { cleanErrorMessage } from "../../utils/errorMessages";
+import { YaggButton } from "../common/YaggButton";
 
 interface WelcomeScreenProps {
   failedPath: string | null;
@@ -60,14 +61,14 @@ export function WelcomeScreen({ failedPath }: WelcomeScreenProps) {
               }}
             />
             <div className="welcome-repo-buttons flex justify-end gap-2">
-              <button onClick={handleBrowse}>Browse...</button>
-              <button
-                className="primary bg-bg-selected border-bg-selected hover:bg-bg-selected-hover"
+              <YaggButton onClick={handleBrowse}>Browse...</YaggButton>
+              <YaggButton
+                variant="primary"
                 onClick={() => handleOpen(pathInput)}
                 disabled={!pathInput.trim()}
               >
                 Open
-              </button>
+              </YaggButton>
             </div>
           </div>
         </div>

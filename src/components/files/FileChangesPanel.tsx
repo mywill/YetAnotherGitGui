@@ -3,6 +3,7 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { YaggButton } from "../common/YaggButton";
 
 interface FileChangesPanelProps {
   statuses: FileStatuses | null;
@@ -171,27 +172,30 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
             {selectedFilePaths.size} file{selectedFilePaths.size !== 1 ? "s" : ""} selected
           </span>
           {hasSelectedUnstagedOrUntracked && (
-            <button
-              className="selection-action-btn bg-primary hover:bg-primary-hover rounded border-none px-2.5 py-1 text-xs text-white transition-colors duration-100"
+            <YaggButton
+              variant="selection"
+              className="selection-action-btn px-2.5 py-1 text-xs"
               onClick={handleStageSelected}
             >
               Stage Selected
-            </button>
+            </YaggButton>
           )}
           {hasSelectedStaged && (
-            <button
-              className="selection-action-btn bg-primary hover:bg-primary-hover rounded border-none px-2.5 py-1 text-xs text-white transition-colors duration-100"
+            <YaggButton
+              variant="selection"
+              className="selection-action-btn px-2.5 py-1 text-xs"
               onClick={handleUnstageSelected}
             >
               Unstage Selected
-            </button>
+            </YaggButton>
           )}
-          <button
-            className="selection-action-btn secondary border-border text-text-secondary hover:bg-bg-hover rounded border bg-transparent px-2.5 py-1 text-xs transition-colors duration-100"
+          <YaggButton
+            variant="outline"
+            className="selection-action-btn secondary px-2.5 py-1 text-xs"
             onClick={clearFileSelection}
           >
             Clear Selection
-          </button>
+          </YaggButton>
         </div>
       )}
 
@@ -212,8 +216,9 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
             {staged.length}
           </span>
           {staged.length > 0 && (
-            <button
-              className="section-action-btn bg-bg-secondary hover:bg-bg-hover ml-2 rounded px-2 py-px text-xs transition-colors duration-100"
+            <YaggButton
+              variant="ghost"
+              className="section-action-btn ml-2 px-2 py-px text-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 handleUnstageAll();
@@ -221,7 +226,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
               title="Unstage all changes"
             >
               Unstage All
-            </button>
+            </YaggButton>
           )}
         </div>
         {showStaged && (
@@ -273,8 +278,9 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
             {unstaged.length}
           </span>
           {unstaged.length > 0 && (
-            <button
-              className="section-action-btn bg-bg-secondary hover:bg-bg-hover ml-2 rounded px-2 py-px text-xs transition-colors duration-100"
+            <YaggButton
+              variant="ghost"
+              className="section-action-btn ml-2 px-2 py-px text-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 handleStageAll();
@@ -282,7 +288,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
               title="Stage all changes"
             >
               Stage All
-            </button>
+            </YaggButton>
           )}
         </div>
         {showUnstaged && (
@@ -340,8 +346,9 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
             {untracked.length}
           </span>
           {untracked.length > 0 && (
-            <button
-              className="section-action-btn bg-bg-secondary hover:bg-bg-hover ml-2 rounded px-2 py-px text-xs transition-colors duration-100"
+            <YaggButton
+              variant="ghost"
+              className="section-action-btn ml-2 px-2 py-px text-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 handleStageAllUntracked();
@@ -349,7 +356,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
               title="Stage all untracked files"
             >
               Stage All
-            </button>
+            </YaggButton>
           )}
         </div>
         {showUntracked && (

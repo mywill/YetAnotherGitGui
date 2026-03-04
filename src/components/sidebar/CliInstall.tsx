@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { installCli, checkCliInstalled } from "../../services/system";
 import { ConfirmDialog } from "../common/ConfirmDialog";
+import { YaggButton } from "../common/YaggButton";
 
 export function CliInstall() {
   const [isInstalled, setIsInstalled] = useState<boolean | null>(null);
@@ -37,14 +38,14 @@ export function CliInstall() {
 
   return (
     <div className="cli-install border-border border-t px-3 py-2">
-      <button
+      <YaggButton
         className="cli-install-button w-full px-3 py-1.5 text-xs"
         onClick={() => setShowConfirm(true)}
         disabled={installing}
         title="Install command-line tool to use 'yagg' from terminal"
       >
         {installing ? "Installing..." : "Install CLI Tool"}
-      </button>
+      </YaggButton>
       {message && (
         <div className="cli-install-message text-text-secondary mt-1.5 text-xs break-words">
           {message}

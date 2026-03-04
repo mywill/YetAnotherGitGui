@@ -3,6 +3,7 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
+import { YaggButton } from "../common/YaggButton";
 
 interface UntrackedPanelProps {
   statuses: FileStatuses | null;
@@ -73,30 +74,31 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
         <div className="section-actions mt-1 flex min-h-6 items-center gap-1">
           {hasSelectedUntracked && (
             <>
-              <button
-                className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
+              <YaggButton
+                className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover bg-transparent px-2 py-px text-xs"
                 onClick={handleStageSelected}
                 title="Stage selected files"
               >
                 Stage Selected
-              </button>
-              <button
-                className="section-action-btn secondary border-border text-text-secondary hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
+              </YaggButton>
+              <YaggButton
+                variant="outline"
+                className="section-action-btn secondary px-2 py-px text-xs"
                 onClick={handleClearSelection}
                 title="Clear selection"
               >
                 Clear
-              </button>
+              </YaggButton>
             </>
           )}
           {untracked.length > 0 && (
-            <button
-              className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover rounded border bg-transparent px-2 py-px text-xs transition-all duration-150"
+            <YaggButton
+              className="section-action-btn border-border text-text-secondary hover:border-text-muted hover:bg-bg-hover bg-transparent px-2 py-px text-xs"
               onClick={handleStageAllUntracked}
               title="Stage all untracked files"
             >
               Stage All
-            </button>
+            </YaggButton>
           )}
         </div>
       </div>

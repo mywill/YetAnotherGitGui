@@ -4,6 +4,7 @@ import { DiffHunk } from "./DiffHunk";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { YaggButton } from "../common/YaggButton";
 
 interface DiffViewPanelProps {
   diff: FileDiff | null;
@@ -164,12 +165,9 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
             Large file — showing {loadedLines} of {diff.total_lines} lines ({collapsedHunks.length}{" "}
             {collapsedHunks.length === 1 ? "hunk" : "hunks"} collapsed)
           </span>
-          <button
-            className="load-all-btn text-primary hover:text-primary/80 ml-auto font-medium"
-            onClick={handleLoadAll}
-          >
+          <YaggButton variant="text-link" className="load-all-btn ml-auto" onClick={handleLoadAll}>
             Load All
-          </button>
+          </YaggButton>
         </div>
       )}
       <div className="diff-content flex-1 overflow-y-auto font-mono text-xs leading-normal">
@@ -198,12 +196,13 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
               <span className="text-text-muted text-xs">
                 ~{hunk.old_lines + hunk.new_lines} lines
               </span>
-              <button
-                className="load-hunk-btn text-primary hover:text-primary/80 ml-auto text-xs font-medium"
+              <YaggButton
+                variant="text-link"
+                className="load-hunk-btn ml-auto text-xs"
                 onClick={() => handleLoadHunk(index)}
               >
                 Load hunk
-              </button>
+              </YaggButton>
             </div>
           )
         )}
