@@ -51,6 +51,9 @@
   /* Selection colors */
   --color-selection-border: #569cd6;
 
+  /* Tab colors */
+  --color-tab-active: #4fc3f7;
+
   /* Toast colors (WCAG AA compliant with white text) */
   --color-toast-success: #2e7d32;
   --color-toast-error: #c62828;

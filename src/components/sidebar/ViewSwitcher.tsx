@@ -17,8 +17,10 @@ export function ViewSwitcher() {
         role="tab"
         aria-selected={activeView === "history"}
         className={clsx(
-          "view-tab flex flex-1 gap-1 p-2",
-          activeView === "history" && "active bg-bg-selected border-bg-selected text-text-primary"
+          "view-tab flex flex-1 gap-1 border-b-2 p-2",
+          activeView === "history"
+            ? "active bg-bg-tertiary border-b-tab-active text-tab-active"
+            : "text-text-secondary border-b-transparent"
         )}
         onClick={() => setActiveView("history")}
       >
@@ -30,8 +32,10 @@ export function ViewSwitcher() {
         role="tab"
         aria-selected={activeView === "status"}
         className={clsx(
-          "view-tab flex flex-1 gap-1 p-2",
-          activeView === "status" && "active bg-bg-selected border-bg-selected text-text-primary"
+          "view-tab flex flex-1 gap-1 border-b-2 p-2",
+          activeView === "status"
+            ? "active bg-bg-tertiary border-b-tab-active text-tab-active"
+            : "text-text-secondary border-b-transparent"
         )}
         onClick={() => setActiveView("status")}
       >

@@ -46,7 +46,7 @@ const variantClasses: Record<YaggButtonVariant, string> = {
   "text-link":
     "bg-transparent border-none text-primary cursor-pointer hover:text-primary/80 font-medium",
   icon: "bg-bg-tertiary border border-border text-text-primary rounded cursor-pointer hover:bg-bg-hover p-1 transition-colors duration-150",
-  tab: "bg-transparent border border-transparent text-text-secondary rounded cursor-pointer hover:bg-bg-hover hover:text-text-primary transition-all duration-150",
+  tab: "bg-transparent border border-transparent text-text-secondary rounded-none cursor-pointer hover:bg-bg-hover hover:text-text-primary transition-all duration-150",
 };
 
 const sizeClasses: Record<YaggButtonSize, string> = {
