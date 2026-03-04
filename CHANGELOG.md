@@ -1,3 +1,11 @@
+## [1.6.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.6.1...v1.6.2) (2026-03-04)
+
+
+### Bug Fixes
+
+* fix for the button alignment on linux ([0f5a907](https://github.com/mywill/YetAnotherGitGui/commit/0f5a90786a3eb96a9059b401c109e190a8b54223))
+* updated the tabs for the main views to better identify the current view ([79e5ec0](https://github.com/mywill/YetAnotherGitGui/commit/79e5ec041ac0db03928bfdd33cbebf8d0d0f73b6))
+
 ## [1.6.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.6.0...v1.6.1) (2026-03-01)
 
 
