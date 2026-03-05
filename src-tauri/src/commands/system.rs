@@ -49,7 +49,10 @@ pub fn uninstall_cli() -> Result<String, AppError> {
             if stderr.contains("User canceled") {
                 Err(AppError::InvalidPath("Uninstall cancelled by user.".into()))
             } else {
-                Err(AppError::InvalidPath("Uninstall cancelled by user.".into()))
+                Err(AppError::InvalidPath(format!(
+                    "Failed to uninstall CLI: {}",
+                    stderr
+                )))
             }
         }
     }
@@ -60,6 +63,42 @@ pub fn uninstall_cli() -> Result<String, AppError> {
             "CLI uninstallation is only supported on macOS.".into(),
         ))
     }
+}
+
+/// Build the shell command that creates the CLI wrapper script.
+///
+/// Uses `printf '%s\n' ... > file` so the entire command stays on one line
+/// (required because AppleScript `do shell script "..."` cannot contain
+/// literal newlines). The app binary path is passed as a printf `%s`
+/// argument, which avoids format-specifier and nested-quote issues.
+///
+/// The caller must run [`escape_for_applescript`] on the returned string
+/// before embedding it in `do shell script "..."`.
+#[cfg(any(target_os = "macos", test))]
+fn build_install_command(resolved_path: &str, cli_path: &str) -> String {
+    // Escape single quotes for shell single-quoted strings: ' → '\''
+    let escaped_path = resolved_path.replace('\'', "'\\''");
+    let escaped_cli_path = cli_path.replace('\'', "'\\''");
+    // printf format string breakdown (shell-level quoting):
+    //   '#!/bin/bash\nexec '  – literal text with \n interpreted by printf
+    //   "'"                   – literal single quote (via double-quoting)
+    //   '%s'                  – printf substitution placeholder
+    //   "'"                   – literal single quote
+    //   ' "$@"\n'             – literal text ($@ is in single quotes → no expansion)
+    // Result written to file: #!/bin/bash\nexec '<path>' "$@"\n
+    format!(
+        "mkdir -p /usr/local/bin && printf '#!/bin/bash\\nexec '\"'\"'%s'\"'\"' \"$@\"\\n' '{escaped_path}' > '{escaped_cli_path}' && chmod +x '{escaped_cli_path}'"
+    )
+}
+
+/// Escape a string for embedding inside an AppleScript `"..."` string.
+///
+/// AppleScript interprets `\\`, `\"`, `\n`, `\t`, and `\r` inside
+/// double-quoted strings, so we must escape `\` first (to `\\`), then
+/// `"` (to `\"`).
+#[cfg(any(target_os = "macos", test))]
+fn escape_for_applescript(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 #[tauri::command]
@@ -79,15 +118,10 @@ pub fn install_cli() -> Result<String, AppError> {
 
         // Create a wrapper script instead of a symlink to avoid Tauri updater issues
         // The updater rejects symlinks on macOS, so we use a script that exec's the real binary
-        let wrapper_script = format!("#!/bin/bash\\nexec '{}' \\\"$@\\\"", resolved_str);
-        let shell_cmd = format!(
-            "printf '{}' > '{}' && chmod +x '{}'",
-            wrapper_script, cli_path, cli_path
-        );
-
+        let shell_cmd = build_install_command(&resolved_str, cli_path);
         let script = format!(
             r#"do shell script "{}" with administrator privileges"#,
-            shell_cmd
+            escape_for_applescript(&shell_cmd)
         );
 
         let output = Command::new("osascript")
@@ -211,6 +245,85 @@ mod tests {
             assert!(path.is_some());
             assert!(path.unwrap().contains("update.log"));
         }
+    }
+
+    #[test]
+    fn test_build_install_command_normal_path() {
+        let cmd = build_install_command("/usr/local/bin/myapp", "/usr/local/bin/yagg");
+        assert!(cmd.contains("mkdir -p /usr/local/bin"));
+        assert!(cmd.contains("printf '#!/bin/bash\\nexec '"));
+        assert!(cmd.contains("'/usr/local/bin/myapp'"));
+        assert!(cmd.contains("> '/usr/local/bin/yagg'"));
+        assert!(cmd.contains("chmod +x '/usr/local/bin/yagg'"));
+        // Must use %s to avoid format-specifier issues with path contents
+        assert!(cmd.contains("%s"));
+    }
+
+    #[test]
+    fn test_build_install_command_path_with_spaces() {
+        let cmd = build_install_command(
+            "/Applications/Yet Another Git Gui.app/Contents/MacOS/Yet Another Git Gui",
+            "/usr/local/bin/yagg",
+        );
+        // Path with spaces is passed as a printf argument in single quotes
+        assert!(cmd.contains(
+            "'/Applications/Yet Another Git Gui.app/Contents/MacOS/Yet Another Git Gui'"
+        ));
+    }
+
+    #[test]
+    fn test_build_install_command_path_with_single_quotes() {
+        let cmd = build_install_command("/Users/John's Mac/app", "/usr/local/bin/yagg");
+        // Single quotes in path are escaped with '\'' trick
+        assert!(cmd.contains("'/Users/John'\\''s Mac/app'"));
+    }
+
+    #[test]
+    fn test_build_install_command_creates_directory() {
+        let cmd = build_install_command("/some/path", "/usr/local/bin/yagg");
+        assert!(cmd.starts_with("mkdir -p /usr/local/bin"));
+    }
+
+    #[test]
+    fn test_build_install_command_correct_shebang() {
+        let cmd = build_install_command("/some/path", "/usr/local/bin/yagg");
+        assert!(cmd.contains("#!/bin/bash"));
+        assert!(cmd.contains("\"$@\""));
+    }
+
+    #[test]
+    fn test_build_install_command_no_literal_newlines() {
+        // The command must be a single line — AppleScript do shell script
+        // cannot contain literal newlines inside "..."
+        let cmd = build_install_command("/some/path", "/usr/local/bin/yagg");
+        assert!(
+            !cmd.contains('\n'),
+            "command must not contain literal newlines"
+        );
+        // But it should contain \n as an escape sequence for printf
+        assert!(cmd.contains("\\n"));
+    }
+
+    #[test]
+    fn test_escape_for_applescript() {
+        // Backslashes must be escaped first, then double quotes
+        assert_eq!(escape_for_applescript(r#"hello"world"#), r#"hello\"world"#);
+        assert_eq!(escape_for_applescript("back\\slash"), "back\\\\slash");
+        assert_eq!(escape_for_applescript("a\\b\"c"), "a\\\\b\\\"c");
+    }
+
+    #[test]
+    fn test_applescript_roundtrip_preserves_printf_newlines() {
+        // After AppleScript unescaping, the shell must still see \n for printf
+        let cmd = build_install_command("/some/path", "/usr/local/bin/yagg");
+        let escaped = escape_for_applescript(&cmd);
+        // The escaped string should have \\n (which AppleScript unescapes to \n)
+        assert!(
+            escaped.contains("\\\\n"),
+            "AppleScript-escaped command should contain \\\\n so the shell sees \\n"
+        );
+        // And \" for double quotes (which AppleScript unescapes to ")
+        assert!(escaped.contains("\\\"$@\\\""));
     }
 
     #[test]
