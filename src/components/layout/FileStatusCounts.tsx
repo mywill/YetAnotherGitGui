@@ -8,28 +8,51 @@ export function FileStatusCounts() {
   const stagedCount = fileStatuses?.staged.length ?? 0;
   const unstagedCount = fileStatuses?.unstaged.length ?? 0;
   const untrackedCount = fileStatuses?.untracked.length ?? 0;
+  const total = stagedCount + unstagedCount + untrackedCount;
 
   const handleClick = () => {
     setActiveView("status");
   };
 
+  const stagedPct = total > 0 ? (stagedCount / total) * 100 : 0;
+  const unstagedPct = total > 0 ? (unstagedCount / total) * 100 : 0;
+  const untrackedPct = total > 0 ? (untrackedCount / total) * 100 : 0;
+
   return (
     <div
-      className="file-status-counts app-region-no-drag flex cursor-pointer items-center gap-2"
+      className="file-status-counts app-region-no-drag flex cursor-pointer flex-col gap-0.5"
       onClick={handleClick}
     >
-      <span className="status-badge staged bg-bg-hover text-text-primary hover:bg-bg-selected inline-grid h-6 grid-flow-col items-center gap-1 rounded-full px-2.5 text-xs leading-normal whitespace-nowrap transition-colors duration-150">
-        <span className="status-dot bg-status-added size-1.5 rounded-full" />
-        <span>{stagedCount} Staged</span>
-      </span>
-      <span className="status-badge unstaged bg-bg-hover text-text-primary hover:bg-bg-selected inline-grid h-6 grid-flow-col items-center gap-1 rounded-full px-2.5 text-xs leading-normal whitespace-nowrap transition-colors duration-150">
-        <span className="status-dot bg-status-modified size-1.5 rounded-full" />
-        <span>{unstagedCount} Unstaged</span>
-      </span>
-      <span className="status-badge untracked bg-bg-hover text-text-primary hover:bg-bg-selected inline-grid h-6 grid-flow-col items-center gap-1 rounded-full px-2.5 text-xs leading-normal whitespace-nowrap transition-colors duration-150">
-        <span className="status-dot bg-bg-selected size-1.5 rounded-full" />
-        <span>{untrackedCount} Untracked</span>
-      </span>
+      {/* Proportional color bar */}
+      <div className="status-bar bg-bg-hover flex h-1.5 w-full overflow-hidden rounded-full">
+        <div
+          className="bg-status-added transition-all duration-200"
+          style={{ width: `${stagedPct}%` }}
+        />
+        <div
+          className="bg-status-modified transition-all duration-200"
+          style={{ width: `${unstagedPct}%` }}
+        />
+        <div
+          className="bg-text-muted transition-all duration-200"
+          style={{ width: `${untrackedPct}%` }}
+        />
+      </div>
+      {/* Labels */}
+      <div className="status-labels text-text-primary flex items-center gap-3 text-xs whitespace-nowrap">
+        <span className="flex items-center gap-1">
+          <span className="bg-status-added size-1.5 rounded-full" />
+          <span>Staged {stagedCount}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="bg-status-modified size-1.5 rounded-full" />
+          <span>Unstaged {unstagedCount}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="bg-text-muted size-1.5 rounded-full" />
+          <span>Untracked {untrackedCount}</span>
+        </span>
+      </div>
     </div>
   );
 }
