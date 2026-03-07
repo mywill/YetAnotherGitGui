@@ -7,6 +7,7 @@ import { WelcomeScreen } from "./components/views/WelcomeScreen";
 import { ConfirmDialog } from "./components/common/ConfirmDialog";
 import { SettingsMenu } from "./components/common/SettingsMenu";
 import { NotificationToast } from "./components/common/NotificationToast";
+import { RepoStateBanner } from "./components/common/RepoStateBanner";
 import { FileStatusCounts } from "./components/layout/FileStatusCounts";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
@@ -131,6 +132,8 @@ export function App() {
           <SettingsMenu />
         </div>
       </header>
+
+      <RepoStateBanner />
 
       <main className="app-main flex-1 overflow-hidden">
         <AppLayout sidebar={<Sidebar />}>

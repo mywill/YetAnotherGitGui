@@ -58,6 +58,11 @@
   --color-toast-success: #2e7d32;
   --color-toast-error: #c62828;
 
+  /* Warning colors */
+  --color-warning: #f59e0b;
+  --color-warning-bg: #78350f;
+  --color-warning-text: #fef3c7;
+
   /* Functional colors */
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;

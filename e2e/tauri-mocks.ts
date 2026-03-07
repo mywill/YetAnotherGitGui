@@ -61,7 +61,8 @@ export const tauriMocks = `
             current_branch: 'main',
             is_detached: false,
             remotes: ['origin'],
-            head_hash: 'abc123def456789'
+            head_hash: 'abc123def456789',
+            repo_state: window.__MOCK_REPO_STATE__ || 'clean'
           };
 
         case 'get_repository_info':
@@ -70,7 +71,8 @@ export const tauriMocks = `
             current_branch: 'main',
             is_detached: false,
             remotes: ['origin'],
-            head_hash: 'abc123def456789'
+            head_hash: 'abc123def456789',
+            repo_state: window.__MOCK_REPO_STATE__ || 'clean'
           };
 
         case 'get_all_commit_graph':

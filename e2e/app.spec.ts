@@ -1592,3 +1592,73 @@ test.describe("Empty State Centering", () => {
     }
   });
 });
+
+test.describe("Repo State Banner", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(`window.__MOCK_REPO_STATE__ = 'merge';`);
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("shows banner when repo is in merge state", async ({ page }) => {
+    const banner = page.locator(".repo-state-banner");
+    await expect(banner).toBeVisible({ timeout: 10000 });
+    await expect(banner).toContainText("Merge in progress");
+    await expect(banner).toContainText("git merge --abort");
+  });
+
+  test("banner has accessible role and aria-live", async ({ page }) => {
+    const banner = page.locator('[role="status"]');
+    await expect(banner).toBeVisible({ timeout: 10000 });
+    await expect(banner).toHaveAttribute("aria-live", "polite");
+  });
+
+  test("sidebar shows state label when repo is in merge state", async ({
+    page,
+  }) => {
+    const stateLabel = page.locator(".repo-state-label");
+    await expect(stateLabel).toBeVisible({ timeout: 10000 });
+    await expect(stateLabel).toContainText("MERGING");
+  });
+});
+
+test.describe("Repo State Banner - Clean State", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("does not show banner when repo is clean", async ({ page }) => {
+    await expect(page.locator(".app")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".repo-state-banner")).not.toBeVisible();
+  });
+});
+
+test.describe("Repo State Banner - Accessibility", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(`window.__MOCK_REPO_STATE__ = 'merge';`);
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("repo state banner passes WCAG color contrast checks", async ({
+    page,
+  }) => {
+    await expect(page.locator(".repo-state-banner")).toBeVisible({
+      timeout: 10000,
+    });
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .include(".repo-state-banner")
+      .withTags(["wcag2aa"])
+      .analyze();
+
+    const contrastViolations = accessibilityScanResults.violations.filter(
+      (v) => v.id === "color-contrast",
+    );
+    expect(contrastViolations).toEqual([]);
+  });
+});

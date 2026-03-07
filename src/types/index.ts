@@ -4,6 +4,7 @@ export interface RepositoryInfo {
   is_detached: boolean;
   remotes: string[];
   head_hash: string | null;
+  repo_state: string;
 }
 
 export interface CommitInfo {

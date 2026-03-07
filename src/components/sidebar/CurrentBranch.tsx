@@ -11,12 +11,27 @@ export function CurrentBranch() {
     ? "HEAD detached"
     : repositoryInfo.current_branch || "No branch";
 
+  const repoState = repositoryInfo.repo_state;
+  const STATE_LABELS: Record<string, string> = {
+    merge: "MERGING",
+    rebase: "REBASING",
+    "cherry-pick": "CHERRY\u2011PICKING",
+    revert: "REVERTING",
+    bisect: "BISECTING",
+  };
+  const stateLabel = repoState && repoState !== "clean" ? (STATE_LABELS[repoState] ?? null) : null;
+
   return (
     <div className="current-branch border-border bg-bg-tertiary text-text-primary flex items-center gap-2 border-b px-3 py-2">
       <BranchIcon />
       <span className="branch-name truncate font-medium" title={branchName}>
         {branchName}
       </span>
+      {stateLabel && (
+        <span className="repo-state-label text-warning bg-warning-bg text-2xs rounded px-1.5 py-0.5 font-bold">
+          {stateLabel}
+        </span>
+      )}
     </div>
   );
 }
