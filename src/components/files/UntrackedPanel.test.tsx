@@ -237,6 +237,43 @@ describe("UntrackedPanel", () => {
     });
   });
 
+  describe("keyboard navigation", () => {
+    it("renders a listbox for untracked files", () => {
+      render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
+
+      expect(screen.getByRole("listbox", { name: "Untracked files" })).toBeInTheDocument();
+    });
+
+    it("stages file on Enter key", () => {
+      render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
+
+      const listbox = screen.getByRole("listbox", { name: "Untracked files" });
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(mockStageFile).toHaveBeenCalledWith("new-file.ts");
+    });
+
+    it("deletes file on Delete key", () => {
+      render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
+
+      const listbox = screen.getByRole("listbox", { name: "Untracked files" });
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+      fireEvent.keyDown(listbox, { key: "Delete" });
+
+      expect(mockDeleteFile).toHaveBeenCalledWith("new-file.ts");
+    });
+
+    it("loads diff on arrow navigation", () => {
+      render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
+
+      const listbox = screen.getByRole("listbox", { name: "Untracked files" });
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+
+      expect(mockLoadFileDiff).toHaveBeenCalledWith("new-file.ts", false, true);
+    });
+  });
+
   describe("selection actions in header", () => {
     it("shows Stage Selected button when files are selected", () => {
       mockSelectedFilePaths.add(makeSelectionKey("new-file.ts", false));

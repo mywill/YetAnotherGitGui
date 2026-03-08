@@ -8,14 +8,14 @@
   --color-bg-primary: #1e1e1e;
   --color-bg-secondary: #252526;
   --color-bg-tertiary: #2d2d2d;
-  --color-bg-hover: #3c3c3c;
-  --color-bg-selected: #094771;
-  --color-bg-selected-hover: #0d5a94;
+  --color-bg-hover: #383838;
+  --color-bg-selected: #063350;
+  --color-bg-selected-hover: #073a62;
 
   /* Text colors */
   --color-text-primary: #cccccc;
-  --color-text-secondary: #9d9d9d;
-  --color-text-muted: #919191;
+  --color-text-secondary: #c0c0c0;
+  --color-text-muted: #bababa;
 
   /* Border colors */
   --color-border: #3c3c3c;

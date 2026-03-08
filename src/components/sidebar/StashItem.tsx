@@ -124,7 +124,7 @@ export function StashItem({ stash }: StashItemProps) {
     <>
       <div
         className={clsx(
-          "stash-item text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
+          "stash-item group text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
           isSelected && "is-selected bg-bg-selected hover:bg-bg-selected-hover"
         )}
         onClick={handleClick}
@@ -134,7 +134,12 @@ export function StashItem({ stash }: StashItemProps) {
       >
         <StashIcon />
         <span className="stash-item-name text-text-primary shrink-0 font-mono">{stashName}</span>
-        <span className="stash-item-message text-text-secondary text-2xs flex-1 truncate">
+        <span
+          className={clsx(
+            "stash-item-message text-2xs flex-1 truncate",
+            isSelected ? "text-text-primary" : "text-text-secondary group-hover:text-text-primary"
+          )}
+        >
           {getShortMessage()}
         </span>
       </div>

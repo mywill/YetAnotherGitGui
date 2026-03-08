@@ -4,6 +4,7 @@ import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
 import { YaggButton } from "../common/YaggButton";
+import { KeyboardList } from "../common/KeyboardList";
 
 interface UntrackedPanelProps {
   statuses: FileStatuses | null;
@@ -108,20 +109,29 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
             No untracked files
           </div>
         ) : (
-          untracked.map((file) => (
-            <FileItem
-              key={file.path}
-              file={file}
-              isStaged={false}
-              isUntracked
-              isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
-              onToggleStage={() => stageFile(file.path)}
-              onSelect={() => loadFileDiff(file.path, false, true)}
-              onSelectWithModifiers={handleSelectWithModifiers}
-              onDoubleClick={() => stageFile(file.path)}
-              extraMenuItems={[{ label: "Delete file", onClick: () => deleteFile(file.path) }]}
-            />
-          ))
+          <KeyboardList
+            aria-label="Untracked files"
+            onActiveChange={(i) => loadFileDiff(untracked[i].path, false, true)}
+            onActivate={(i) => stageFile(untracked[i].path)}
+            onSecondaryActivate={(i) => stageFile(untracked[i].path)}
+            onDelete={(i) => deleteFile(untracked[i].path)}
+          >
+            {untracked.map((file, i) => (
+              <KeyboardList.Item key={file.path} index={i}>
+                <FileItem
+                  file={file}
+                  isStaged={false}
+                  isUntracked
+                  isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
+                  onToggleStage={() => stageFile(file.path)}
+                  onSelect={() => loadFileDiff(file.path, false, true)}
+                  onSelectWithModifiers={handleSelectWithModifiers}
+                  onDoubleClick={() => stageFile(file.path)}
+                  extraMenuItems={[{ label: "Delete file", onClick: () => deleteFile(file.path) }]}
+                />
+              </KeyboardList.Item>
+            ))}
+          </KeyboardList>
         )}
       </div>
     </div>

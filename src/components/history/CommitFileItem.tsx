@@ -106,7 +106,7 @@ export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
         </span>
         <YaggButton
           variant="outline"
-          className="revert-file-btn text-text-muted hover:text-text-primary shrink-0 px-1.5 py-px text-xs opacity-0 transition-all duration-150 group-hover:opacity-100"
+          className="revert-file-btn text-text-primary shrink-0 px-1.5 py-px text-xs opacity-0 transition-all duration-150 group-hover:opacity-100"
           onClick={handleRevertFile}
           title="Revert this file"
         >
