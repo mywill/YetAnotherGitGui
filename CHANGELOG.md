@@ -1,3 +1,15 @@
+# [1.7.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.6.3...v1.7.0) (2026-03-08)
+
+
+### Bug Fixes
+
+* added merge state awarness to tell the user when they are in the middle of a merge. ([38ba72e](https://github.com/mywill/YetAnotherGitGui/commit/38ba72ebebb70293563bd8bb1f9e26369cd15295))
+
+
+### Features
+
+* Added in basic keyboard Navigation to make things a bit easier to use.  Can now use delete to unstage or delete files in status and space or enter to stage or unstage files and navigate with arrow keys. ([c92c5c9](https://github.com/mywill/YetAnotherGitGui/commit/c92c5c9f54c611824a7cd9681045c95bc8c861c7))
+
 ## [1.6.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.6.2...v1.6.3) (2026-03-05)
 
 
