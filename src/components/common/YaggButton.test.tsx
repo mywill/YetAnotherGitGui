@@ -31,9 +31,10 @@ describe("YaggButton", () => {
       expect(btn).toBeDisabled();
     });
 
-    it("applies opacity-50 class", () => {
+    it("applies opacity-60 class", () => {
       render(<YaggButton disabled>Click</YaggButton>);
-      expect(screen.getByRole("button").className).toContain("opacity-50");
+      const btn = screen.getByRole("button");
+      expect(btn.className).toContain("opacity-60");
     });
   });
 

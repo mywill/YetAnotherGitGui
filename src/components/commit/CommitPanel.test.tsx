@@ -216,6 +216,35 @@ describe("CommitPanel", () => {
     });
   });
 
+  it("removes disabled commit button from tab order with tabIndex=-1", () => {
+    setupStore({
+      fileStatuses: { staged: [], unstaged: [], untracked: [] },
+    });
+
+    render(<CommitPanel />);
+
+    const button = screen.getByRole("button", { name: /commit/i });
+    expect(button).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("keeps enabled commit button in tab order with tabIndex=0", () => {
+    setupStore({
+      fileStatuses: {
+        staged: [{ path: "test.txt", status: "modified", is_staged: true }],
+        unstaged: [],
+        untracked: [],
+      },
+    });
+
+    render(<CommitPanel />);
+
+    const textarea = screen.getByPlaceholderText("Commit message...");
+    fireEvent.change(textarea, { target: { value: "Test commit" } });
+
+    const button = screen.getByRole("button", { name: /commit/i });
+    expect(button).toHaveAttribute("tabindex", "0");
+  });
+
   it("trims whitespace from commit message", async () => {
     mockCreateCommit.mockResolvedValue(undefined);
     setupStore({

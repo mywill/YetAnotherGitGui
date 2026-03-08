@@ -82,7 +82,7 @@ export const YaggButton = forwardRef<HTMLButtonElement, YaggButtonProps>(functio
         "inline-flex items-center justify-center select-none",
         variantClasses[variant],
         !skipSizeVariants.has(variant) && sizeClasses[size],
-        disabled && "cursor-not-allowed opacity-50",
+        disabled && "cursor-not-allowed opacity-60",
         className
       )}
       {...rest}

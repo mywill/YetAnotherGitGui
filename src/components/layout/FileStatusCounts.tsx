@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 
@@ -14,14 +15,25 @@ export function FileStatusCounts() {
     setActiveView("status");
   };
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   const stagedPct = total > 0 ? (stagedCount / total) * 100 : 0;
   const unstagedPct = total > 0 ? (unstagedCount / total) * 100 : 0;
   const untrackedPct = total > 0 ? (untrackedCount / total) * 100 : 0;
 
   return (
     <div
-      className="file-status-counts app-region-no-drag flex cursor-pointer flex-col gap-0.5"
+      className="file-status-counts app-region-no-drag flex cursor-pointer flex-col gap-0.5 rounded px-2 py-1"
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`View file status: ${stagedCount} staged, ${unstagedCount} unstaged, ${untrackedCount} untracked`}
     >
       {/* Proportional color bar */}
       <div className="status-bar bg-bg-hover flex h-1.5 w-full overflow-hidden rounded-full">

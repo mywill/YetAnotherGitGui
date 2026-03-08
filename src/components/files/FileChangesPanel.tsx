@@ -4,6 +4,7 @@ import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { YaggButton } from "../common/YaggButton";
+import { KeyboardList } from "../common/KeyboardList";
 
 interface FileChangesPanelProps {
   statuses: FileStatuses | null;
@@ -204,14 +205,16 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
         className="file-section flex shrink-0 flex-col overflow-hidden"
         style={{ height: showStaged ? stagedHeight : "auto" }}
       >
-        <div
-          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+        <button
+          type="button"
+          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
           onClick={() => setShowStaged(!showStaged)}
+          aria-expanded={showStaged}
         >
           <span className="toggle-icon text-text-secondary text-2xs w-4">
             {showStaged ? "▼" : "▶"}
           </span>
-          <span className="section-title flex-1 text-xs font-medium">Staged</span>
+          <span className="section-title flex-1 text-left text-xs font-medium">Staged</span>
           <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
             {staged.length}
           </span>
@@ -228,7 +231,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
               Unstage All
             </YaggButton>
           )}
-        </div>
+        </button>
         {showStaged && (
           <div className="section-content flex flex-1 flex-col overflow-y-auto">
             {staged.length === 0 ? (
@@ -236,19 +239,26 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                 No staged changes
               </div>
             ) : (
-              staged.map((file) => (
-                <FileItem
-                  key={file.path}
-                  file={file}
-                  isStaged={true}
-                  isSelected={selectedFilePaths.has(file.path)}
-                  onToggleStage={() => unstageFile(file.path)}
-                  onSelect={() => loadFileDiff(file.path, true)}
-                  onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
-                  onDoubleClick={() => unstageFile(file.path)}
-                  extraMenuItems={[{ label: "Unstage", onClick: () => unstageFile(file.path) }]}
-                />
-              ))
+              <KeyboardList
+                aria-label="Staged files"
+                onActivate={(i) => loadFileDiff(staged[i].path, true)}
+                onSecondaryActivate={(i) => unstageFile(staged[i].path)}
+              >
+                {staged.map((file, i) => (
+                  <KeyboardList.Item key={file.path} index={i}>
+                    <FileItem
+                      file={file}
+                      isStaged={true}
+                      isSelected={selectedFilePaths.has(file.path)}
+                      onToggleStage={() => unstageFile(file.path)}
+                      onSelect={() => loadFileDiff(file.path, true)}
+                      onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
+                      onDoubleClick={() => unstageFile(file.path)}
+                      extraMenuItems={[{ label: "Unstage", onClick: () => unstageFile(file.path) }]}
+                    />
+                  </KeyboardList.Item>
+                ))}
+              </KeyboardList>
             )}
           </div>
         )}
@@ -266,14 +276,17 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
         className="file-section flex shrink-0 flex-col overflow-hidden"
         style={{ height: showUnstaged ? unstagedHeight : "auto" }}
       >
-        <div
-          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+        <button
+          type="button"
+          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
           onClick={() => setShowUnstaged(!showUnstaged)}
+          aria-expanded={showUnstaged}
         >
           <span className="toggle-icon text-text-secondary text-2xs w-4">
             {showUnstaged ? "▼" : "▶"}
           </span>
-          <span className="section-title flex-1 text-xs font-medium">Unstaged</span>
+          <span className="section-title flex-1 text-left text-xs font-medium">Unstaged</span>
+          <span className="text-text-secondary text-xs">(Del to discard)</span>
           <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
             {unstaged.length}
           </span>
@@ -290,7 +303,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
               Stage All
             </YaggButton>
           )}
-        </div>
+        </button>
         {showUnstaged && (
           <div className="section-content flex flex-1 flex-col overflow-y-auto">
             {unstaged.length === 0 ? (
@@ -298,22 +311,30 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                 No unstaged changes
               </div>
             ) : (
-              unstaged.map((file) => (
-                <FileItem
-                  key={file.path}
-                  file={file}
-                  isStaged={false}
-                  isSelected={selectedFilePaths.has(file.path)}
-                  onToggleStage={() => stageFile(file.path)}
-                  onSelect={() => loadFileDiff(file.path, false)}
-                  onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
-                  onDoubleClick={() => stageFile(file.path)}
-                  extraMenuItems={[
-                    { label: "Discard changes", onClick: () => revertFile(file.path) },
-                    { label: "Delete file", onClick: () => deleteFile(file.path) },
-                  ]}
-                />
-              ))
+              <KeyboardList
+                aria-label="Unstaged files"
+                onActivate={(i) => loadFileDiff(unstaged[i].path, false)}
+                onSecondaryActivate={(i) => stageFile(unstaged[i].path)}
+                onDelete={(i) => revertFile(unstaged[i].path)}
+              >
+                {unstaged.map((file, i) => (
+                  <KeyboardList.Item key={file.path} index={i}>
+                    <FileItem
+                      file={file}
+                      isStaged={false}
+                      isSelected={selectedFilePaths.has(file.path)}
+                      onToggleStage={() => stageFile(file.path)}
+                      onSelect={() => loadFileDiff(file.path, false)}
+                      onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
+                      onDoubleClick={() => stageFile(file.path)}
+                      extraMenuItems={[
+                        { label: "Discard changes", onClick: () => revertFile(file.path) },
+                        { label: "Delete file", onClick: () => deleteFile(file.path) },
+                      ]}
+                    />
+                  </KeyboardList.Item>
+                ))}
+              </KeyboardList>
             )}
           </div>
         )}
@@ -334,14 +355,17 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           flex: showUntracked ? "none" : undefined,
         }}
       >
-        <div
-          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+        <button
+          type="button"
+          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
           onClick={() => setShowUntracked(!showUntracked)}
+          aria-expanded={showUntracked}
         >
           <span className="toggle-icon text-text-secondary text-2xs w-4">
             {showUntracked ? "▼" : "▶"}
           </span>
-          <span className="section-title flex-1 text-xs font-medium">Untracked</span>
+          <span className="section-title flex-1 text-left text-xs font-medium">Untracked</span>
+          <span className="text-text-secondary text-xs">(Del to delete)</span>
           <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
             {untracked.length}
           </span>
@@ -358,7 +382,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
               Stage All
             </YaggButton>
           )}
-        </div>
+        </button>
         {showUntracked && (
           <div className="section-content flex flex-1 flex-col overflow-y-auto">
             {untracked.length === 0 ? (
@@ -366,20 +390,30 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                 No untracked files
               </div>
             ) : (
-              untracked.map((file) => (
-                <FileItem
-                  key={file.path}
-                  file={file}
-                  isStaged={false}
-                  isUntracked
-                  isSelected={selectedFilePaths.has(file.path)}
-                  onToggleStage={() => stageFile(file.path)}
-                  onSelect={() => loadFileDiff(file.path, false)}
-                  onSelectWithModifiers={handleSelectWithModifiers(allUntrackedPaths, false)}
-                  onDoubleClick={() => stageFile(file.path)}
-                  extraMenuItems={[{ label: "Delete file", onClick: () => deleteFile(file.path) }]}
-                />
-              ))
+              <KeyboardList
+                aria-label="Untracked files"
+                onActivate={(i) => loadFileDiff(untracked[i].path, false)}
+                onSecondaryActivate={(i) => stageFile(untracked[i].path)}
+                onDelete={(i) => deleteFile(untracked[i].path)}
+              >
+                {untracked.map((file, i) => (
+                  <KeyboardList.Item key={file.path} index={i}>
+                    <FileItem
+                      file={file}
+                      isStaged={false}
+                      isUntracked
+                      isSelected={selectedFilePaths.has(file.path)}
+                      onToggleStage={() => stageFile(file.path)}
+                      onSelect={() => loadFileDiff(file.path, false)}
+                      onSelectWithModifiers={handleSelectWithModifiers(allUntrackedPaths, false)}
+                      onDoubleClick={() => stageFile(file.path)}
+                      extraMenuItems={[
+                        { label: "Delete file", onClick: () => deleteFile(file.path) },
+                      ]}
+                    />
+                  </KeyboardList.Item>
+                ))}
+              </KeyboardList>
             )}
           </div>
         )}

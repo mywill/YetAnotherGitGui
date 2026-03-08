@@ -87,6 +87,8 @@ export function CommitRow({
   return (
     <>
       <div
+        role="option"
+        aria-selected={isSelected}
         className={clsx(
           "commit-row commit-graph-grid hover:bg-bg-hover cursor-pointer items-center px-2 text-xs transition-colors duration-100 select-none",
           isSelected && "selected",

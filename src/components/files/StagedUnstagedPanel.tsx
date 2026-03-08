@@ -4,6 +4,7 @@ import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
 import { YaggButton } from "../common/YaggButton";
+import { KeyboardList } from "../common/KeyboardList";
 
 interface StagedUnstagedPanelProps {
   statuses: FileStatuses | null;
@@ -146,19 +147,27 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
               No staged changes
             </div>
           ) : (
-            staged.map((file) => (
-              <FileItem
-                key={file.path}
-                file={file}
-                isStaged={true}
-                isSelected={selectedFilePaths.has(makeSelectionKey(file.path, true))}
-                onToggleStage={() => unstageFile(file.path)}
-                onSelect={() => loadFileDiff(file.path, true)}
-                onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
-                onDoubleClick={() => unstageFile(file.path)}
-                extraMenuItems={[{ label: "Unstage", onClick: () => unstageFile(file.path) }]}
-              />
-            ))
+            <KeyboardList
+              aria-label="Staged files"
+              onActiveChange={(i) => loadFileDiff(staged[i].path, true)}
+              onActivate={(i) => unstageFile(staged[i].path)}
+              onSecondaryActivate={(i) => unstageFile(staged[i].path)}
+            >
+              {staged.map((file, i) => (
+                <KeyboardList.Item key={file.path} index={i}>
+                  <FileItem
+                    file={file}
+                    isStaged={true}
+                    isSelected={selectedFilePaths.has(makeSelectionKey(file.path, true))}
+                    onToggleStage={() => unstageFile(file.path)}
+                    onSelect={() => loadFileDiff(file.path, true)}
+                    onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
+                    onDoubleClick={() => unstageFile(file.path)}
+                    extraMenuItems={[{ label: "Unstage", onClick: () => unstageFile(file.path) }]}
+                  />
+                </KeyboardList.Item>
+              ))}
+            </KeyboardList>
           )}
         </div>
       </div>
@@ -168,6 +177,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
         <div className="section-header border-border bg-bg-tertiary text-text-secondary flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
           <div className="section-header-title flex w-full items-center gap-2">
             <span className="section-title font-medium">Unstaged</span>
+            <span className="text-text-secondary ml-1 text-xs">(Del to discard)</span>
             <span className="section-count bg-bg-hover ml-auto rounded-full px-1.5 py-px text-xs">
               {unstaged.length}
             </span>
@@ -209,22 +219,31 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
               No unstaged changes
             </div>
           ) : (
-            unstaged.map((file) => (
-              <FileItem
-                key={file.path}
-                file={file}
-                isStaged={false}
-                isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
-                onToggleStage={() => stageFile(file.path)}
-                onSelect={() => loadFileDiff(file.path, false)}
-                onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
-                onDoubleClick={() => stageFile(file.path)}
-                extraMenuItems={[
-                  { label: "Discard changes", onClick: () => revertFile(file.path) },
-                  { label: "Delete file", onClick: () => deleteFile(file.path) },
-                ]}
-              />
-            ))
+            <KeyboardList
+              aria-label="Unstaged files"
+              onActiveChange={(i) => loadFileDiff(unstaged[i].path, false)}
+              onActivate={(i) => stageFile(unstaged[i].path)}
+              onSecondaryActivate={(i) => stageFile(unstaged[i].path)}
+              onDelete={(i) => revertFile(unstaged[i].path)}
+            >
+              {unstaged.map((file, i) => (
+                <KeyboardList.Item key={file.path} index={i}>
+                  <FileItem
+                    file={file}
+                    isStaged={false}
+                    isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
+                    onToggleStage={() => stageFile(file.path)}
+                    onSelect={() => loadFileDiff(file.path, false)}
+                    onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
+                    onDoubleClick={() => stageFile(file.path)}
+                    extraMenuItems={[
+                      { label: "Discard changes", onClick: () => revertFile(file.path) },
+                      { label: "Delete file", onClick: () => deleteFile(file.path) },
+                    ]}
+                  />
+                </KeyboardList.Item>
+              ))}
+            </KeyboardList>
           )}
         </div>
       </div>

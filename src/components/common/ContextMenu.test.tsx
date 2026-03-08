@@ -229,4 +229,98 @@ describe("ContextMenu", () => {
       expect(submenu).toBeInTheDocument();
     });
   });
+
+  describe("Keyboard navigation", () => {
+    it("has role=menu on the container", () => {
+      renderContextMenu();
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    it("has role=menuitem on each item", () => {
+      renderContextMenu();
+      const menuitems = screen.getAllByRole("menuitem");
+      expect(menuitems).toHaveLength(2);
+    });
+
+    it("auto-focuses the first enabled item on mount", () => {
+      renderContextMenu();
+      const menuitems = screen.getAllByRole("menuitem");
+      expect(menuitems[0]).toHaveFocus();
+    });
+
+    it("ArrowDown moves focus to next item", () => {
+      renderContextMenu();
+      const menu = screen.getByRole("menu");
+      const menuitems = screen.getAllByRole("menuitem");
+
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+
+      expect(menuitems[1]).toHaveFocus();
+    });
+
+    it("ArrowUp moves focus to previous item (wrapping)", () => {
+      renderContextMenu();
+      const menu = screen.getByRole("menu");
+      const menuitems = screen.getAllByRole("menuitem");
+
+      fireEvent.keyDown(menu, { key: "ArrowUp" });
+
+      expect(menuitems[1]).toHaveFocus();
+    });
+
+    it("Home moves focus to first item", () => {
+      renderContextMenu();
+      const menu = screen.getByRole("menu");
+      const menuitems = screen.getAllByRole("menuitem");
+
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      fireEvent.keyDown(menu, { key: "Home" });
+
+      expect(menuitems[0]).toHaveFocus();
+    });
+
+    it("End moves focus to last item", () => {
+      renderContextMenu();
+      const menu = screen.getByRole("menu");
+      const menuitems = screen.getAllByRole("menuitem");
+
+      fireEvent.keyDown(menu, { key: "End" });
+
+      expect(menuitems[1]).toHaveFocus();
+    });
+
+    it("Enter activates focused item", () => {
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
+      renderContextMenu({
+        items: [
+          { label: "A", onClick: handler1 },
+          { label: "B", onClick: handler2 },
+        ],
+      });
+      const menu = screen.getByRole("menu");
+
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+      fireEvent.keyDown(menu, { key: "Enter" });
+
+      expect(handler2).toHaveBeenCalledTimes(1);
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("skips disabled items during navigation", () => {
+      renderContextMenu({
+        items: [
+          { label: "A", onClick: vi.fn() },
+          { label: "B", onClick: vi.fn(), disabled: true },
+          { label: "C", onClick: vi.fn() },
+        ],
+      });
+      const menu = screen.getByRole("menu");
+
+      fireEvent.keyDown(menu, { key: "ArrowDown" });
+
+      // Should skip disabled B and go to C
+      expect(screen.getByText("C").closest("[role='menuitem']")).toHaveFocus();
+    });
+  });
 });

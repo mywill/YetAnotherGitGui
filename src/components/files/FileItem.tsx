@@ -63,13 +63,9 @@ export function FileItem({
     [file.path, onSelect, onSelectWithModifiers]
   );
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    onToggleStage();
-  };
-
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    onToggleStage();
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -133,14 +129,30 @@ export function FileItem({
         data-testid="file-item"
         title={file.path}
       >
-        <input
-          type="checkbox"
-          className="stage-checkbox accent-addition size-4 shrink-0 cursor-pointer"
-          checked={isStaged}
-          onChange={handleCheckboxChange}
+        <span
+          className={clsx(
+            "stage-checkbox flex size-4 shrink-0 cursor-pointer items-center justify-center rounded border",
+            isStaged
+              ? "border-addition bg-addition/20 text-addition"
+              : "border-border bg-bg-tertiary text-transparent"
+          )}
           onClick={handleCheckboxClick}
+          role="presentation"
           title={isStaged ? "Unstage file" : "Stage file"}
-        />
+        >
+          {isStaged && (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <path
+                d="M8.5 2.5L4 7.5L1.5 5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </span>
         <span
           className={clsx(
             "status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold",

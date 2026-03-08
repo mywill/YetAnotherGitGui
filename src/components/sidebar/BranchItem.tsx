@@ -135,6 +135,7 @@ export function BranchItem({ branch }: BranchItemProps) {
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         title={branch.name}
+        aria-current={branch.is_head ? "true" : undefined}
       >
         <BranchIcon isRemote={branch.is_remote} />
         <span className="branch-item-name flex-1 truncate">{displayName}</span>

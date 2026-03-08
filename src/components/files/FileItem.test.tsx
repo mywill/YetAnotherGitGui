@@ -107,24 +107,26 @@ describe("FileItem", () => {
     expect(screen.getByText("new")).toBeInTheDocument();
   });
 
-  it("shows checkbox as checked when file is staged", () => {
+  it("shows checkmark when file is staged", () => {
     renderFileItem({ isStaged: true });
 
-    const checkbox = screen.getByRole("checkbox");
-    expect(checkbox).toBeChecked();
+    const checkbox = document.querySelector(".stage-checkbox");
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox?.querySelector("svg")).toBeInTheDocument();
   });
 
-  it("shows checkbox as unchecked when file is not staged", () => {
+  it("shows empty checkbox when file is not staged", () => {
     renderFileItem({ isStaged: false });
 
-    const checkbox = screen.getByRole("checkbox");
-    expect(checkbox).not.toBeChecked();
+    const checkbox = document.querySelector(".stage-checkbox");
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox?.querySelector("svg")).toBeNull();
   });
 
   it("calls onToggleStage when checkbox is clicked", () => {
     renderFileItem();
 
-    const checkbox = screen.getByRole("checkbox");
+    const checkbox = document.querySelector(".stage-checkbox")!;
     fireEvent.click(checkbox);
 
     expect(mockOnToggleStage).toHaveBeenCalledTimes(1);
@@ -142,7 +144,7 @@ describe("FileItem", () => {
   it("does not call onSelect when checkbox is clicked", () => {
     renderFileItem();
 
-    const checkbox = screen.getByRole("checkbox");
+    const checkbox = document.querySelector(".stage-checkbox")!;
     fireEvent.click(checkbox);
 
     expect(mockOnSelect).not.toHaveBeenCalled();
@@ -222,14 +224,14 @@ describe("FileItem", () => {
   it("has correct title on checkbox for unstaged file", () => {
     renderFileItem({ isStaged: false });
 
-    const checkbox = screen.getByRole("checkbox");
+    const checkbox = document.querySelector(".stage-checkbox");
     expect(checkbox).toHaveAttribute("title", "Stage file");
   });
 
   it("has correct title on checkbox for staged file", () => {
     renderFileItem({ isStaged: true });
 
-    const checkbox = screen.getByRole("checkbox");
+    const checkbox = document.querySelector(".stage-checkbox");
     expect(checkbox).toHaveAttribute("title", "Unstage file");
   });
 

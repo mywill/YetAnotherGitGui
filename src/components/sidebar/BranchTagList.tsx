@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import clsx from "clsx";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSelectionStore } from "../../stores/selectionStore";
+import { useDialogStore } from "../../stores/dialogStore";
 import { YaggButton } from "../common/YaggButton";
+import { KeyboardList } from "../common/KeyboardList";
 import { BranchItem } from "./BranchItem";
 import { TagItem } from "./TagItem";
 import { StashItem } from "./StashItem";
@@ -10,6 +13,13 @@ export function BranchTagList() {
   const branches = useRepositoryStore((s) => s.branches);
   const tags = useRepositoryStore((s) => s.tags);
   const stashes = useRepositoryStore((s) => s.stashes);
+  const checkoutBranch = useRepositoryStore((s) => s.checkoutBranch);
+  const checkoutCommit = useRepositoryStore((s) => s.checkoutCommit);
+  const loadStashDetails = useRepositoryStore((s) => s.loadStashDetails);
+  const applyStash = useRepositoryStore((s) => s.applyStash);
+  const selectAndScrollToCommit = useSelectionStore((s) => s.selectAndScrollToCommit);
+  const setActiveView = useSelectionStore((s) => s.setActiveView);
+  const showConfirm = useDialogStore((s) => s.showConfirm);
 
   const [localExpanded, setLocalExpanded] = useState(true);
   const [remoteExpanded, setRemoteExpanded] = useState(true);
@@ -19,6 +29,129 @@ export function BranchTagList() {
   const localBranches = branches.filter((b) => !b.is_remote);
   const remoteBranches = branches.filter((b) => b.is_remote);
 
+  const handleBranchActivate = useCallback(
+    (branchList: typeof branches) => async (index: number) => {
+      const branch = branchList[index];
+      if (!branch) return;
+      if (branch.target_hash) {
+        selectAndScrollToCommit(branch.target_hash);
+      }
+      // Also offer checkout (skip if already HEAD)
+      if (branch.is_head) return;
+      if (branch.is_remote) {
+        await showConfirm({
+          title: "Remote Branch",
+          message: `To checkout remote branch "${branch.name}", create a local tracking branch first.`,
+          confirmLabel: "OK",
+          cancelLabel: "Cancel",
+        });
+        return;
+      }
+      const confirmed = await showConfirm({
+        title: "Switch Branch",
+        message: `Switch to branch "${branch.name}"?`,
+        confirmLabel: "Switch",
+        cancelLabel: "Cancel",
+      });
+      if (confirmed) {
+        checkoutBranch(branch.name);
+      }
+    },
+    [selectAndScrollToCommit, checkoutBranch, showConfirm]
+  );
+
+  const handleBranchSecondaryActivate = useCallback(
+    (branchList: typeof branches) => async (index: number) => {
+      const branch = branchList[index];
+      if (!branch || branch.is_head) return;
+      if (branch.is_remote) {
+        await showConfirm({
+          title: "Remote Branch",
+          message: `To checkout remote branch "${branch.name}", create a local tracking branch first.`,
+          confirmLabel: "OK",
+          cancelLabel: "Cancel",
+        });
+        return;
+      }
+      const confirmed = await showConfirm({
+        title: "Switch Branch",
+        message: `Switch to branch "${branch.name}"?`,
+        confirmLabel: "Switch",
+        cancelLabel: "Cancel",
+      });
+      if (confirmed) {
+        checkoutBranch(branch.name);
+      }
+    },
+    [checkoutBranch, showConfirm]
+  );
+
+  const handleTagActivate = useCallback(
+    async (index: number) => {
+      const tag = tags[index];
+      if (!tag) return;
+      if (tag.target_hash) {
+        selectAndScrollToCommit(tag.target_hash);
+      }
+      const confirmed = await showConfirm({
+        title: "Checkout Tag",
+        message: `Checkout tag "${tag.name}"? This will put you in detached HEAD state.`,
+        confirmLabel: "Checkout",
+        cancelLabel: "Cancel",
+      });
+      if (confirmed) {
+        checkoutCommit(tag.target_hash);
+      }
+    },
+    [tags, selectAndScrollToCommit, checkoutCommit, showConfirm]
+  );
+
+  const handleTagSecondaryActivate = useCallback(
+    async (index: number) => {
+      const tag = tags[index];
+      if (!tag) return;
+      const confirmed = await showConfirm({
+        title: "Checkout Tag",
+        message: `Checkout tag "${tag.name}"? This will put you in detached HEAD state.`,
+        confirmLabel: "Checkout",
+        cancelLabel: "Cancel",
+      });
+      if (confirmed) {
+        checkoutCommit(tag.target_hash);
+      }
+    },
+    [tags, checkoutCommit, showConfirm]
+  );
+
+  const handleStashActivate = useCallback(
+    (index: number) => {
+      const stash = stashes[index];
+      if (stash) {
+        loadStashDetails(stash.index);
+        setActiveView("status");
+      }
+    },
+    [stashes, loadStashDetails, setActiveView]
+  );
+
+  const handleStashSecondaryActivate = useCallback(
+    async (index: number) => {
+      const stash = stashes[index];
+      if (!stash) return;
+      const stashName = `stash@{${stash.index}}`;
+      const confirmed = await showConfirm({
+        title: "Apply Stash",
+        message: `Apply "${stashName}"? This will restore the stashed changes to your working directory.`,
+        confirmLabel: "Apply",
+        cancelLabel: "Cancel",
+      });
+      if (confirmed) {
+        applyStash(stash.index);
+      }
+    },
+    [stashes, applyStash, showConfirm]
+  );
+
   return (
     <div className="branch-tag-list flex flex-col">
       <CollapsibleSection
@@ -27,9 +160,17 @@ export function BranchTagList() {
         expanded={localExpanded}
         onToggle={() => setLocalExpanded(!localExpanded)}
       >
-        {localBranches.map((branch) => (
-          <BranchItem key={branch.name} branch={branch} />
-        ))}
+        <KeyboardList
+          aria-label="Local Branches"
+          onActivate={handleBranchActivate(localBranches)}
+          onSecondaryActivate={handleBranchSecondaryActivate(localBranches)}
+        >
+          {localBranches.map((branch, i) => (
+            <KeyboardList.Item key={branch.name} index={i}>
+              <BranchItem branch={branch} />
+            </KeyboardList.Item>
+          ))}
+        </KeyboardList>
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -38,9 +179,17 @@ export function BranchTagList() {
         expanded={remoteExpanded}
         onToggle={() => setRemoteExpanded(!remoteExpanded)}
       >
-        {remoteBranches.map((branch) => (
-          <BranchItem key={branch.name} branch={branch} />
-        ))}
+        <KeyboardList
+          aria-label="Remote Branches"
+          onActivate={handleBranchActivate(remoteBranches)}
+          onSecondaryActivate={handleBranchSecondaryActivate(remoteBranches)}
+        >
+          {remoteBranches.map((branch, i) => (
+            <KeyboardList.Item key={branch.name} index={i}>
+              <BranchItem branch={branch} />
+            </KeyboardList.Item>
+          ))}
+        </KeyboardList>
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -49,9 +198,17 @@ export function BranchTagList() {
         expanded={tagsExpanded}
         onToggle={() => setTagsExpanded(!tagsExpanded)}
       >
-        {tags.map((tag) => (
-          <TagItem key={tag.name} tag={tag} />
-        ))}
+        <KeyboardList
+          aria-label="Tags"
+          onActivate={handleTagActivate}
+          onSecondaryActivate={handleTagSecondaryActivate}
+        >
+          {tags.map((tag, i) => (
+            <KeyboardList.Item key={tag.name} index={i}>
+              <TagItem tag={tag} />
+            </KeyboardList.Item>
+          ))}
+        </KeyboardList>
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -60,9 +217,17 @@ export function BranchTagList() {
         expanded={stashesExpanded}
         onToggle={() => setStashesExpanded(!stashesExpanded)}
       >
-        {stashes.map((stash) => (
-          <StashItem key={stash.index} stash={stash} />
-        ))}
+        <KeyboardList
+          aria-label="Stashes"
+          onActivate={handleStashActivate}
+          onSecondaryActivate={handleStashSecondaryActivate}
+        >
+          {stashes.map((stash, i) => (
+            <KeyboardList.Item key={stash.index} index={i}>
+              <StashItem stash={stash} />
+            </KeyboardList.Item>
+          ))}
+        </KeyboardList>
       </CollapsibleSection>
     </div>
   );

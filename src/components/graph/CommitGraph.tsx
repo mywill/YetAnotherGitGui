@@ -3,6 +3,7 @@ import { List, type ListImperativeAPI, type RowComponentProps } from "react-wind
 import type { GraphCommit } from "../../types";
 import { CommitRow } from "./CommitRow";
 import { ColumnResizer } from "./ColumnResizer";
+import { KeyboardListVirtualized } from "../common/KeyboardListVirtualized";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
@@ -166,20 +167,29 @@ export function CommitGraph({ commits }: CommitGraphProps) {
         <ColumnResizer position={dateResizerPos} onResize={handleAuthorResize} />
       </div>
 
-      <List
+      <KeyboardListVirtualized
+        aria-label="Commit history"
+        itemCount={commits.length}
         listRef={listRef}
-        rowCount={commits.length}
-        rowHeight={ROW_HEIGHT}
-        rowComponent={CommitRowRenderer}
-        rowProps={{
-          commits,
-          selectedCommitHash,
-          headHash: headHash ?? null,
-          handleSelect,
-          handleDoubleClick,
-        }}
-        style={{ flex: 1 }}
-      />
+        onActivate={(i) => handleSelect(commits[i].hash)}
+        onSecondaryActivate={(i) => handleDoubleClick(commits[i].hash)}
+        className="flex-1"
+      >
+        <List
+          listRef={listRef}
+          rowCount={commits.length}
+          rowHeight={ROW_HEIGHT}
+          rowComponent={CommitRowRenderer}
+          rowProps={{
+            commits,
+            selectedCommitHash,
+            headHash: headHash ?? null,
+            handleSelect,
+            handleDoubleClick,
+          }}
+          style={{ flex: 1 }}
+        />
+      </KeyboardListVirtualized>
     </div>
   );
 }

@@ -50,6 +50,7 @@ export function CommitPanel() {
           className="commit-button shrink-0"
           onClick={handleCommit}
           disabled={!message.trim() || !hasStagedChanges || isCommitting}
+          tabIndex={!message.trim() || !hasStagedChanges || isCommitting ? -1 : 0}
         >
           {isCommitting ? "Committing..." : "Commit"}
         </YaggButton>

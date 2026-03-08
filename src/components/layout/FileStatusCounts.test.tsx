@@ -101,4 +101,39 @@ describe("FileStatusCounts", () => {
     render(<FileStatusCounts />);
     expect(document.querySelector(".status-labels")).toBeInTheDocument();
   });
+
+  it("is keyboard accessible with role=button and tabIndex=0", () => {
+    render(<FileStatusCounts />);
+    const button = screen.getByRole("button");
+    expect(button).toHaveAttribute("tabindex", "0");
+  });
+
+  it("has aria-label describing file status counts", () => {
+    render(<FileStatusCounts />);
+    const button = screen.getByRole("button");
+    expect(button).toHaveAttribute(
+      "aria-label",
+      "View file status: 1 staged, 2 unstaged, 1 untracked"
+    );
+  });
+
+  it("activates on Enter key", () => {
+    const setActiveView = vi.fn();
+    useSelectionStore.setState({ setActiveView });
+    render(<FileStatusCounts />);
+
+    const button = screen.getByRole("button");
+    fireEvent.keyDown(button, { key: "Enter" });
+    expect(setActiveView).toHaveBeenCalledWith("status");
+  });
+
+  it("activates on Space key", () => {
+    const setActiveView = vi.fn();
+    useSelectionStore.setState({ setActiveView });
+    render(<FileStatusCounts />);
+
+    const button = screen.getByRole("button");
+    fireEvent.keyDown(button, { key: " " });
+    expect(setActiveView).toHaveBeenCalledWith("status");
+  });
 });
