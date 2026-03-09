@@ -197,6 +197,25 @@
   color: var(--color-text-primary);
 }
 
+/* ─── Grouped selection borders for diff lines ─── */
+/* Left border on first cell, right border on last cell — all selected rows */
+.diff-line.selected > :first-child {
+  border-left: 2px solid var(--color-primary);
+}
+.diff-line.selected > :last-child {
+  border-right: 2px solid var(--color-primary);
+}
+
+/* Top border on all cells in the first selected row */
+.diff-line.selected.selected-first > * {
+  border-top: 2px solid var(--color-primary);
+}
+
+/* Bottom border on all cells in the last selected row */
+.diff-line.selected.selected-last > * {
+  border-bottom: 2px solid var(--color-primary);
+}
+
 /* ─── Keyframes ─── */
 @keyframes spin {
   to {

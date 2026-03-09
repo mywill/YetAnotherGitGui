@@ -196,6 +196,51 @@ describe("DiffHunk", () => {
     });
   });
 
+  describe("grouped selection border classes", () => {
+    it("applies selected-first and selected-last on a single selected line", () => {
+      const { container } = render(<DiffHunk {...defaultProps} />);
+
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!);
+
+      expect(additionLine).toHaveClass("selected");
+      expect(additionLine).toHaveClass("selected-first");
+      expect(additionLine).toHaveClass("selected-last");
+    });
+
+    it("applies correct positional classes on consecutive selected lines", () => {
+      const { container } = render(<DiffHunk {...defaultProps} />);
+
+      // Select deletion line first
+      const deletionLine = container.querySelector(".line-deletion");
+      fireEvent.mouseDown(deletionLine!);
+
+      // Shift-click addition to select range (deletion + addition are consecutive visible lines)
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!, { shiftKey: true });
+
+      // Deletion is first in the group
+      expect(deletionLine).toHaveClass("selected");
+      expect(deletionLine).toHaveClass("selected-first");
+      expect(deletionLine).not.toHaveClass("selected-last");
+
+      // Addition is last in the group
+      expect(additionLine).toHaveClass("selected");
+      expect(additionLine).not.toHaveClass("selected-first");
+      expect(additionLine).toHaveClass("selected-last");
+    });
+
+    it("does not apply outline classes on selected lines", () => {
+      const { container } = render(<DiffHunk {...defaultProps} />);
+
+      const additionLine = container.querySelector(".line-addition");
+      fireEvent.mouseDown(additionLine!);
+
+      expect(additionLine).not.toHaveClass("outline");
+      expect(additionLine).not.toHaveClass("outline-primary");
+    });
+  });
+
   describe("canSelectLines=false", () => {
     it("does not allow selection when canSelectLines is false", () => {
       const { container } = render(<DiffHunk {...defaultProps} canSelectLines={false} />);

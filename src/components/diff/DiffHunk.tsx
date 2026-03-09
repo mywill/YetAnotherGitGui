@@ -167,10 +167,17 @@ export function DiffHunk({
         </div>
       </div>
       <div className="hunk-lines bg-bg-primary table w-full min-w-max">
-        {visibleLines.map((line) => {
+        {visibleLines.map((line, visibleIdx) => {
           const isSelectable =
             canSelectLines && (line.line_type === "addition" || line.line_type === "deletion");
           const isSelected = selectedLines.has(line.originalIndex);
+
+          const prevVisible = visibleLines[visibleIdx - 1];
+          const nextVisible = visibleLines[visibleIdx + 1];
+          const isFirst =
+            isSelected && (!prevVisible || !selectedLines.has(prevVisible.originalIndex));
+          const isLast =
+            isSelected && (!nextVisible || !selectedLines.has(nextVisible.originalIndex));
 
           return (
             <div
@@ -182,7 +189,9 @@ export function DiffHunk({
                 line.line_type === "deletion" && "bg-deletion/15",
                 line.line_type === "context" && "bg-transparent",
                 isSelectable && "selectable cursor-pointer hover:brightness-110",
-                isSelected && "selected outline-primary outline outline-2 -outline-offset-2",
+                isSelected && "selected",
+                isSelected && isFirst && "selected-first",
+                isSelected && isLast && "selected-last",
                 isSelected && line.line_type === "addition" && "bg-addition/25",
                 isSelected && line.line_type === "deletion" && "bg-deletion/25"
               )}
