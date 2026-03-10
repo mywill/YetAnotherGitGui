@@ -116,7 +116,7 @@ export function KeyboardListVirtualized({
         {...(onDelete ? { "aria-keyshortcuts": "Delete" } : {})}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={className}
+        className={`flex min-h-0 flex-col${className ? ` ${className}` : ""}`}
         style={{ outline: "none" }}
         onFocus={() => {
           if (focusedIndex < 0 && itemCount > 0) {
