@@ -5,6 +5,7 @@ import { HistoryView } from "./components/views/HistoryView";
 import { StatusView } from "./components/views/StatusView";
 import { WelcomeScreen } from "./components/views/WelcomeScreen";
 import { ConfirmDialog } from "./components/common/ConfirmDialog";
+import { CommandPalette } from "./components/common/CommandPalette";
 import { SettingsMenu } from "./components/common/SettingsMenu";
 import { NotificationToast } from "./components/common/NotificationToast";
 import { RepoStateBanner } from "./components/common/RepoStateBanner";
@@ -12,6 +13,7 @@ import { FileStatusCounts } from "./components/layout/FileStatusCounts";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
+import { useCommandPaletteStore } from "./stores/commandPaletteStore";
 import { useCliArgs } from "./hooks/useCliArgs";
 import { YaggButton } from "./components/common/YaggButton";
 import "./styles/index.css";
@@ -26,6 +28,8 @@ export function App() {
   const loadBranchesAndTags = useRepositoryStore((s) => s.loadBranchesAndTags);
 
   const activeView = useSelectionStore((s) => s.activeView);
+
+  const openCommandPalette = useCommandPaletteStore((s) => s.open);
 
   const dialogIsOpen = useDialogStore((s) => s.isOpen);
   const dialogTitle = useDialogStore((s) => s.title);
@@ -62,6 +66,21 @@ export function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isLoading, repositoryInfo, refreshRepository]);
+
+  // Keyboard shortcut for command palette (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        if (repositoryInfo) {
+          openCommandPalette();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [repositoryInfo, openCommandPalette]);
 
   if (cliLoading || isLoading) {
     return (
@@ -123,6 +142,13 @@ export function App() {
         <div className="header-right app-region-no-drag flex h-full shrink-0 items-center gap-2">
           <YaggButton
             className="h-6.5 px-2 leading-normal"
+            onClick={openCommandPalette}
+            title="Search (Ctrl+K)"
+          >
+            Search
+          </YaggButton>
+          <YaggButton
+            className="h-6.5 px-2 leading-normal"
             onClick={refreshRepository}
             disabled={isLoading}
             title="Refresh (F5 or Ctrl+R)"
@@ -142,6 +168,8 @@ export function App() {
       </main>
 
       <NotificationToast />
+
+      <CommandPalette />
 
       {dialogIsOpen && (
         <ConfirmDialog
