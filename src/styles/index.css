@@ -198,6 +198,12 @@
   color: var(--color-text-primary);
 }
 
+/* ─── Keyboard focus ring for virtualized list rows (commit graph) ─── */
+/* Use box-shadow instead of outline so it isn't clipped by overflow:hidden */
+[role="listbox"]:focus-within .commit-row.is-keyboard-focused {
+  box-shadow: inset 0 0 0 2px var(--color-bg-selected) !important;
+}
+
 /* ─── Grouped selection borders for diff lines ─── */
 /* Left border on first cell, right border on last cell — all selected rows */
 .diff-line.selected > :first-child {

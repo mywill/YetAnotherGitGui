@@ -1,6 +1,9 @@
+import { useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import type { StashDetails } from "../../types";
 import { StashFileItem } from "./StashFileItem";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { KeyboardList } from "../common/KeyboardList";
 
 interface StashDetailsPanelProps {
   details: StashDetails | null;
@@ -8,6 +11,22 @@ interface StashDetailsPanelProps {
 }
 
 export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) {
+  const toggleStashFileExpanded = useRepositoryStore((s) => s.toggleStashFileExpanded);
+  const loadStashFileDiff = useRepositoryStore((s) => s.loadStashFileDiff);
+
+  const handleActivate = useCallback(
+    (index: number) => {
+      if (!details) return;
+      const file = details.files_changed[index];
+      const { expandedStashFiles, stashFileDiffs } = useRepositoryStore.getState();
+      toggleStashFileExpanded(file.path);
+      if (!expandedStashFiles.has(file.path) && !stashFileDiffs.has(file.path)) {
+        loadStashFileDiff(details.index, file.path);
+      }
+    },
+    [details, toggleStashFileExpanded, loadStashFileDiff]
+  );
+
   if (loading) {
     return (
       <div className="stash-details-panel loading text-text-muted flex h-full flex-col items-center justify-center gap-3">
@@ -95,11 +114,18 @@ export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) 
             {details.files_changed.length}
           </span>
         </div>
-        <div className="files-list min-w-0 flex-1 overflow-y-auto">
-          {details.files_changed.map((file) => (
-            <StashFileItem key={file.path} file={file} stashIndex={details.index} />
+        <KeyboardList
+          aria-label="Files changed"
+          onActivate={handleActivate}
+          onSecondaryActivate={handleActivate}
+          className="files-list min-w-0 flex-1 overflow-y-auto"
+        >
+          {details.files_changed.map((file, i) => (
+            <KeyboardList.Item key={file.path} index={i}>
+              <StashFileItem file={file} stashIndex={details.index} />
+            </KeyboardList.Item>
           ))}
-        </div>
+        </KeyboardList>
       </div>
     </div>
   );

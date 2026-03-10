@@ -16,6 +16,7 @@ interface KeyboardListVirtualizedProps {
   onActivate?: (index: number) => void;
   onSecondaryActivate?: (index: number) => void;
   onDelete?: (index: number) => void;
+  onFocusChange?: (index: number) => void;
   children: ReactNode;
   className?: string;
 }
@@ -39,6 +40,7 @@ export function KeyboardListVirtualized({
   onActivate,
   onSecondaryActivate,
   onDelete,
+  onFocusChange,
   children,
   className,
 }: KeyboardListVirtualizedProps) {
@@ -47,11 +49,12 @@ export function KeyboardListVirtualized({
   const scrollTo = useCallback(
     (index: number) => {
       setFocusedIndex(index);
+      onFocusChange?.(index);
       if (listRef.current) {
         listRef.current.scrollToRow({ index, align: "center" });
       }
     },
-    [listRef]
+    [listRef, onFocusChange]
   );
 
   const handleKeyDown = useCallback(
@@ -116,11 +119,16 @@ export function KeyboardListVirtualized({
         {...(onDelete ? { "aria-keyshortcuts": "Delete" } : {})}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={`flex min-h-0 flex-col${className ? ` ${className}` : ""}`}
-        style={{ outline: "none" }}
+        className={className}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+        }}
         onFocus={() => {
           if (focusedIndex < 0 && itemCount > 0) {
             setFocusedIndex(0);
+            onFocusChange?.(0);
           }
         }}
       >

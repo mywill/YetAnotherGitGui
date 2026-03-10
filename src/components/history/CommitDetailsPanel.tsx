@@ -6,6 +6,7 @@ import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { YaggButton } from "../common/YaggButton";
+import { KeyboardList } from "../common/KeyboardList";
 
 interface CommitDetailsPanelProps {
   details: CommitDetails | null;
@@ -14,8 +15,23 @@ interface CommitDetailsPanelProps {
 
 export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps) {
   const revertCommit = useRepositoryStore((s) => s.revertCommit);
+  const toggleCommitFileExpanded = useRepositoryStore((s) => s.toggleCommitFileExpanded);
+  const loadCommitFileDiff = useRepositoryStore((s) => s.loadCommitFileDiff);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
+
+  const handleActivate = useCallback(
+    (index: number) => {
+      if (!details) return;
+      const file = details.files_changed[index];
+      const { expandedCommitFiles, commitFileDiffs } = useRepositoryStore.getState();
+      toggleCommitFileExpanded(file.path);
+      if (!expandedCommitFiles.has(file.path) && !commitFileDiffs.has(file.path)) {
+        loadCommitFileDiff(details.hash, file.path);
+      }
+    },
+    [details, toggleCommitFileExpanded, loadCommitFileDiff]
+  );
 
   const handleRevertCommit = useCallback(async () => {
     if (!details) return;
@@ -112,11 +128,18 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
             Revert commit
           </YaggButton>
         </div>
-        <div className="files-list min-w-0 flex-1 overflow-y-auto">
-          {details.files_changed.map((file) => (
-            <CommitFileItem key={file.path} file={file} commitHash={details.hash} />
+        <KeyboardList
+          aria-label="Files changed"
+          onActivate={handleActivate}
+          onSecondaryActivate={handleActivate}
+          className="files-list min-w-0 flex-1 overflow-y-auto"
+        >
+          {details.files_changed.map((file, i) => (
+            <KeyboardList.Item key={file.path} index={i}>
+              <CommitFileItem file={file} commitHash={details.hash} />
+            </KeyboardList.Item>
           ))}
-        </div>
+        </KeyboardList>
       </div>
     </div>
   );

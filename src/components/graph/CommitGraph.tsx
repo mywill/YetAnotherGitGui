@@ -31,6 +31,7 @@ function CommitRowRenderer({
   const commit = commits[index];
   return (
     <CommitRow
+      index={index}
       style={style}
       commit={commit}
       isSelected={commit.hash === selectedCommitHash}
@@ -171,7 +172,8 @@ export function CommitGraph({ commits }: CommitGraphProps) {
         aria-label="Commit history"
         itemCount={commits.length}
         listRef={listRef}
-        onActivate={(i) => handleSelect(commits[i].hash)}
+        onFocusChange={(i) => handleSelect(commits[i].hash)}
+        onActivate={(i) => handleDoubleClick(commits[i].hash)}
         onSecondaryActivate={(i) => handleDoubleClick(commits[i].hash)}
         className="flex-1"
       >

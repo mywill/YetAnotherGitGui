@@ -9,8 +9,10 @@ import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useVirtualizedFocus } from "../common/KeyboardListVirtualized";
 
 interface CommitRowProps {
+  index: number;
   style: CSSProperties;
   commit: GraphCommit;
   isSelected: boolean;
@@ -38,6 +40,7 @@ const REF_BADGE_STYLES: Record<string, { bg: string; color: string; border: stri
 };
 
 export function CommitRow({
+  index,
   style,
   commit,
   isSelected,
@@ -49,6 +52,8 @@ export function CommitRow({
   const revertCommit = useRepositoryStore((s) => s.revertCommit);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
+  const { focusedIndex } = useVirtualizedFocus();
+  const isKeyboardFocused = focusedIndex === index;
 
   const handleContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();
@@ -92,7 +97,8 @@ export function CommitRow({
         className={clsx(
           "commit-row commit-graph-grid hover:bg-bg-hover cursor-pointer items-center px-2 text-xs transition-colors duration-100 select-none",
           isSelected && "selected",
-          isHead && "is-head"
+          isHead && "is-head",
+          isKeyboardFocused && "is-keyboard-focused"
         )}
         style={{
           ...style,

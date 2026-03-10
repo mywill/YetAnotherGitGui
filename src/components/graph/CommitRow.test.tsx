@@ -55,6 +55,11 @@ vi.mock("../../services/clipboard", () => ({
   copyToClipboard: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock useVirtualizedFocus
+vi.mock("../common/KeyboardListVirtualized", () => ({
+  useVirtualizedFocus: () => ({ focusedIndex: -1 }),
+}));
+
 describe("CommitRow", () => {
   const mockOnSelect = vi.fn();
   const mockOnDoubleClick = vi.fn();
@@ -78,6 +83,7 @@ describe("CommitRow", () => {
   });
 
   const defaultProps = {
+    index: 0,
     style: { top: 0, position: "absolute" as const },
     commit: createMockCommit(),
     isSelected: false,
