@@ -1,3 +1,18 @@
+# [1.8.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.7.0...v1.8.0) (2026-03-11)
+
+
+### Bug Fixes
+
+*  Updated the line hunk staging to better highligh multiple lines ([f1cc736](https://github.com/mywill/YetAnotherGitGui/commit/f1cc73660bf089939b73cb525dc0a7ec197d7657))
+* fixed scroll in the graph view ([d63ac82](https://github.com/mywill/YetAnotherGitGui/commit/d63ac824eb21bc6e3544b7e95fbd939749cc5ceb))
+* Updated colors for better WCAG compliance making them easier to read for everyone. ([38dd07c](https://github.com/mywill/YetAnotherGitGui/commit/38dd07c2679e56d29d4ca219850cba4a93af32a5))
+* Updated the history graph to properly work with keyboard navigation ([d7a809c](https://github.com/mywill/YetAnotherGitGui/commit/d7a809c21c58fa203c2f4341aa7e5fa2cd4bb6aa))
+
+
+### Features
+
+* Added a search feature accesible via control k or the search button.  Allows users to search across multiple fields ([7a199d6](https://github.com/mywill/YetAnotherGitGui/commit/7a199d68cddb3aa9cc865a714fb45b30b1f0f589))
+
 # [1.7.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.6.3...v1.7.0) (2026-03-08)
 
 
