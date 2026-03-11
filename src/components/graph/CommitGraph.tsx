@@ -147,13 +147,13 @@ export function CommitGraph({ commits }: CommitGraphProps) {
 
   return (
     <div
-      className="commit-graph relative flex h-full flex-col overflow-hidden"
+      className="commit-graph relative flex h-full flex-col overflow-hidden pr-0.5"
       ref={containerRef}
       style={containerStyle}
     >
       <div
         className="commit-graph-header commit-graph-grid border-border bg-bg-tertiary text-text-secondary shrink-0 items-center border-b px-2 text-xs"
-        style={{ display: "grid", height: "28px", columnGap: "24px" }}
+        style={{ display: "grid", height: "28px", columnGap: "24px", scrollbarGutter: "stable" }}
       >
         <div className="header-cell truncate">Graph</div>
         <div className="header-cell truncate">Message</div>
@@ -189,7 +189,7 @@ export function CommitGraph({ commits }: CommitGraphProps) {
             handleSelect,
             handleDoubleClick,
           }}
-          style={{ flex: 1 }}
+          style={{ flex: 1, scrollbarGutter: "stable" }}
         />
       </KeyboardListVirtualized>
     </div>

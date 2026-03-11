@@ -120,7 +120,7 @@ export function FileItem({
           "file-item hover:bg-bg-hover flex shrink-0 cursor-pointer items-center gap-2 px-3 py-1 text-xs transition-colors duration-100",
           isStaged && "staged bg-success/8 hover:bg-success/15",
           isSelected &&
-            "selected bg-bg-selected outline-primary hover:bg-bg-selected-hover outline outline-1 -outline-offset-1",
+            "selected bg-bg-selected outline-focus-outline hover:bg-bg-selected-hover outline outline-1 -outline-offset-1",
           isStaged && isSelected && "bg-primary/20 hover:bg-primary/30"
         )}
         onClick={handleClick}

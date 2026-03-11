@@ -268,7 +268,7 @@ function CommitDiffHunk({ hunk, hunkIndex, commitHash, filePath, canRevert }: Co
                 line.line_type === "deletion" && "bg-deletion/15",
                 line.line_type === "context" && "bg-transparent",
                 isSelectable && "selectable cursor-pointer hover:brightness-110",
-                isSelected && "selected outline-bg-selected outline outline-1 -outline-offset-1",
+                isSelected && "selected outline-focus-outline outline outline-1 -outline-offset-1",
                 hasSelection && isSelectable && !isSelected && "opacity-60"
               )}
               onMouseDown={(e) => handleMouseDown(line.originalIndex, line.line_type, e)}
