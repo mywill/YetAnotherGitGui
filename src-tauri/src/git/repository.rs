@@ -74,19 +74,8 @@ pub fn get_repo_info(repo: &Repository) -> Result<RepositoryInfo, AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
     use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        // Configure user for commits
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
 
     fn create_initial_commit(repo: &Repository) -> git2::Oid {
         let sig = repo.signature().unwrap();

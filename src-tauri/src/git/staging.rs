@@ -1,8 +1,49 @@
-use git2::{Oid, Repository, RevertOptions, Status, StatusOptions};
+use git2::{Index, Oid, Repository, RevertOptions, Status, StatusOptions};
 use serde::Serialize;
 use std::path::Path;
 
 use crate::error::AppError;
+
+fn create_index_entry(path: &str, mode: u32, file_size: u32, id: git2::Oid) -> git2::IndexEntry {
+    git2::IndexEntry {
+        ctime: git2::IndexTime::new(0, 0),
+        mtime: git2::IndexTime::new(0, 0),
+        dev: 0,
+        ino: 0,
+        mode,
+        uid: 0,
+        gid: 0,
+        file_size,
+        id,
+        flags: 0,
+        flags_extended: 0,
+        path: path.as_bytes().to_vec(),
+    }
+}
+
+fn get_file_content_from_index_or_head(
+    repo: &Repository,
+    index: &Index,
+    path: &str,
+) -> Result<String, AppError> {
+    if let Some(entry) = index.get_path(Path::new(path), 0) {
+        let blob = repo.find_blob(entry.id)?;
+        Ok(String::from_utf8_lossy(blob.content()).to_string())
+    } else if let Ok(head) = repo.head() {
+        if let Ok(tree) = head.peel_to_tree() {
+            if let Ok(entry) = tree.get_path(Path::new(path)) {
+                let blob = repo.find_blob(entry.id())?;
+                Ok(String::from_utf8_lossy(blob.content()).to_string())
+            } else {
+                Ok(String::new())
+            }
+        } else {
+            Ok(String::new())
+        }
+    } else {
+        Ok(String::new())
+    }
+}
 
 #[derive(Debug, Serialize, Clone)]
 pub struct FileStatus {
@@ -128,20 +169,7 @@ pub fn unstage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
         // File exists in HEAD, restore it to index
         let entry_oid = entry.id();
         index.add_frombuffer(
-            &git2::IndexEntry {
-                ctime: git2::IndexTime::new(0, 0),
-                mtime: git2::IndexTime::new(0, 0),
-                dev: 0,
-                ino: 0,
-                mode: entry.filemode() as u32,
-                uid: 0,
-                gid: 0,
-                file_size: 0,
-                id: entry_oid,
-                flags: 0,
-                flags_extended: 0,
-                path: path.as_bytes().to_vec(),
-            },
+            &create_index_entry(path, entry.filemode() as u32, 0, entry_oid),
             repo.find_blob(entry_oid)?.content(),
         )?;
     } else {
@@ -167,24 +195,7 @@ pub fn stage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<()
     // Read current index content
     let mut index = repo.index()?;
 
-    // Get current index content or HEAD content
-    let index_content = if let Some(entry) = index.get_path(Path::new(path), 0) {
-        let blob = repo.find_blob(entry.id)?;
-        String::from_utf8_lossy(blob.content()).to_string()
-    } else if let Ok(head) = repo.head() {
-        if let Ok(tree) = head.peel_to_tree() {
-            if let Ok(entry) = tree.get_path(Path::new(path)) {
-                let blob = repo.find_blob(entry.id())?;
-                String::from_utf8_lossy(blob.content()).to_string()
-            } else {
-                String::new()
-            }
-        } else {
-            String::new()
-        }
-    } else {
-        String::new()
-    };
+    let index_content = get_file_content_from_index_or_head(repo, &index, path)?;
 
     // Apply just this hunk to the index content
     let hunk = &diff.hunks[hunk_index];
@@ -193,24 +204,8 @@ pub fn stage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<()
     // Write the new content to index
     let oid = repo.blob(new_content.as_bytes())?;
 
-    // Regular file mode
-    let mode = 0o100644;
-
     index.add_frombuffer(
-        &git2::IndexEntry {
-            ctime: git2::IndexTime::new(0, 0),
-            mtime: git2::IndexTime::new(0, 0),
-            dev: 0,
-            ino: 0,
-            mode,
-            uid: 0,
-            gid: 0,
-            file_size: new_content.len() as u32,
-            id: oid,
-            flags: 0,
-            flags_extended: 0,
-            path: path.as_bytes().to_vec(),
-        },
+        &create_index_entry(path, 0o100644, new_content.len() as u32, oid),
         new_content.as_bytes(),
     )?;
 
@@ -246,20 +241,7 @@ pub fn unstage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<
     let oid = repo.blob(new_content.as_bytes())?;
 
     index.add_frombuffer(
-        &git2::IndexEntry {
-            ctime: git2::IndexTime::new(0, 0),
-            mtime: git2::IndexTime::new(0, 0),
-            dev: 0,
-            ino: 0,
-            mode: index_entry.mode,
-            uid: 0,
-            gid: 0,
-            file_size: new_content.len() as u32,
-            id: oid,
-            flags: 0,
-            flags_extended: 0,
-            path: path.as_bytes().to_vec(),
-        },
+        &create_index_entry(path, index_entry.mode, new_content.len() as u32, oid),
         new_content.as_bytes(),
     )?;
 
@@ -427,24 +409,7 @@ pub fn stage_lines(
     // Read current index content
     let mut index = repo.index()?;
 
-    // Get current index content or HEAD content
-    let index_content = if let Some(entry) = index.get_path(Path::new(path), 0) {
-        let blob = repo.find_blob(entry.id)?;
-        String::from_utf8_lossy(blob.content()).to_string()
-    } else if let Ok(head) = repo.head() {
-        if let Ok(tree) = head.peel_to_tree() {
-            if let Ok(entry) = tree.get_path(Path::new(path)) {
-                let blob = repo.find_blob(entry.id())?;
-                String::from_utf8_lossy(blob.content()).to_string()
-            } else {
-                String::new()
-            }
-        } else {
-            String::new()
-        }
-    } else {
-        String::new()
-    };
+    let index_content = get_file_content_from_index_or_head(repo, &index, path)?;
 
     // Apply only selected lines from the hunk
     let hunk = &diff.hunks[hunk_index];
@@ -453,24 +418,8 @@ pub fn stage_lines(
     // Write the new content to index
     let oid = repo.blob(new_content.as_bytes())?;
 
-    // Regular file mode
-    let mode = 0o100644;
-
     index.add_frombuffer(
-        &git2::IndexEntry {
-            ctime: git2::IndexTime::new(0, 0),
-            mtime: git2::IndexTime::new(0, 0),
-            dev: 0,
-            ino: 0,
-            mode,
-            uid: 0,
-            gid: 0,
-            file_size: new_content.len() as u32,
-            id: oid,
-            flags: 0,
-            flags_extended: 0,
-            path: path.as_bytes().to_vec(),
-        },
+        &create_index_entry(path, 0o100644, new_content.len() as u32, oid),
         new_content.as_bytes(),
     )?;
 
@@ -696,37 +645,9 @@ fn workdir_status_to_type(status: Status) -> FileStatusType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
     use std::fs;
     use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        // Configure user for commits
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
-
-    fn create_initial_commit(repo: &Repository, temp_dir: &TempDir) -> git2::Oid {
-        // Create a file and commit it
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "initial content").unwrap();
-
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new("initial.txt")).unwrap();
-        index.write().unwrap();
-
-        let sig = repo.signature().unwrap();
-        let tree_id = index.write_tree().unwrap();
-        let tree = repo.find_tree(tree_id).unwrap();
-
-        repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
-            .unwrap()
-    }
 
     #[test]
     fn test_get_file_statuses_empty_repo() {

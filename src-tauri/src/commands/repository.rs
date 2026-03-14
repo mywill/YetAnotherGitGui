@@ -40,30 +40,18 @@ pub fn open_repository(
 
 #[tauri::command]
 pub fn get_repository_info(state: State<AppState>) -> Result<git::RepositoryInfo, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
-    git::get_repo_info(repo)
+    git::get_repo_info(&repo)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::state::AppState;
+    use crate::test_utils::*;
     use git2::Repository;
     use parking_lot::Mutex;
-    use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
 
     #[test]
     fn test_get_current_dir() {

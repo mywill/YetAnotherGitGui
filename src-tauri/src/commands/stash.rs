@@ -6,10 +6,9 @@ use crate::state::AppState;
 
 #[tauri::command]
 pub fn list_stashes(state: State<AppState>) -> Result<Vec<git::StashInfo>, AppError> {
-    let mut repo_lock = state.repository.lock();
-    let repo = repo_lock.as_mut().ok_or(AppError::NoRepository)?;
+    let mut repo = state.get_repo_mut()?;
 
-    git::list_stashes(repo)
+    git::list_stashes(&mut repo)
 }
 
 #[tauri::command]
@@ -17,26 +16,23 @@ pub fn get_stash_details(
     index: usize,
     state: State<AppState>,
 ) -> Result<git::StashDetails, AppError> {
-    let mut repo_lock = state.repository.lock();
-    let repo = repo_lock.as_mut().ok_or(AppError::NoRepository)?;
+    let mut repo = state.get_repo_mut()?;
 
-    git::get_stash_details(repo, index)
+    git::get_stash_details(&mut repo, index)
 }
 
 #[tauri::command]
 pub fn apply_stash(index: usize, state: State<AppState>) -> Result<(), AppError> {
-    let mut repo_lock = state.repository.lock();
-    let repo = repo_lock.as_mut().ok_or(AppError::NoRepository)?;
+    let mut repo = state.get_repo_mut()?;
 
-    git::apply_stash(repo, index)
+    git::apply_stash(&mut repo, index)
 }
 
 #[tauri::command]
 pub fn drop_stash(index: usize, state: State<AppState>) -> Result<(), AppError> {
-    let mut repo_lock = state.repository.lock();
-    let repo = repo_lock.as_mut().ok_or(AppError::NoRepository)?;
+    let mut repo = state.get_repo_mut()?;
 
-    git::drop_stash(repo, index)
+    git::drop_stash(&mut repo, index)
 }
 
 #[tauri::command]
@@ -45,48 +41,20 @@ pub fn get_stash_file_diff(
     file_path: String,
     state: State<AppState>,
 ) -> Result<git::FileDiff, AppError> {
-    let mut repo_lock = state.repository.lock();
-    let repo = repo_lock.as_mut().ok_or(AppError::NoRepository)?;
+    let mut repo = state.get_repo_mut()?;
 
-    git::get_stash_file_diff(repo, index, &file_path)
+    git::get_stash_file_diff(&mut repo, index, &file_path)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::state::AppState;
+    use crate::test_utils::*;
     use git2::Repository;
     use parking_lot::Mutex;
     use std::fs;
-    use std::path::Path;
     use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
-
-    fn create_initial_commit(repo: &Repository, temp_dir: &TempDir) -> git2::Oid {
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "initial content").unwrap();
-
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new("initial.txt")).unwrap();
-        index.write().unwrap();
-
-        let sig = repo.signature().unwrap();
-        let tree_id = index.write_tree().unwrap();
-        let tree = repo.find_tree(tree_id).unwrap();
-
-        repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
-            .unwrap()
-    }
 
     fn create_stash(repo: &mut Repository, temp_dir: &TempDir) {
         // Modify a file

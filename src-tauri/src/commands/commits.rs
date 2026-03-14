@@ -10,11 +10,10 @@ pub fn get_commit_graph(
     limit: usize,
     state: State<AppState>,
 ) -> Result<Vec<git::GraphCommit>, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
-    let commits = git::get_commits(repo, skip, limit)?;
-    let refs = git::collect_refs(repo)?;
+    let commits = git::get_commits(&repo, skip, limit)?;
+    let refs = git::collect_refs(&repo)?;
     let graph = git::build_commit_graph(commits, refs);
 
     Ok(graph)
@@ -22,11 +21,10 @@ pub fn get_commit_graph(
 
 #[tauri::command]
 pub fn get_all_commit_graph(state: State<AppState>) -> Result<Vec<git::GraphCommit>, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
-    let commits = git::get_all_commits(repo)?;
-    let refs = git::collect_refs(repo)?;
+    let commits = git::get_all_commits(&repo)?;
+    let refs = git::collect_refs(&repo)?;
     let graph = git::build_commit_graph(commits, refs);
 
     Ok(graph)
@@ -37,10 +35,9 @@ pub fn get_commit_details(
     hash: String,
     state: State<AppState>,
 ) -> Result<git::CommitDetails, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
-    git::get_commit_details(repo, &hash)
+    git::get_commit_details(&repo, &hash)
 }
 
 #[tauri::command]
@@ -49,10 +46,9 @@ pub fn get_commit_file_diff(
     file_path: String,
     state: State<AppState>,
 ) -> Result<git::FileDiff, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
-    git::get_commit_file_diff(repo, &hash, &file_path)
+    git::get_commit_file_diff(&repo, &hash, &file_path)
 }
 
 #[tauri::command]
@@ -62,48 +58,20 @@ pub fn get_commit_diff_hunk(
     hunk_index: usize,
     state: State<AppState>,
 ) -> Result<git::DiffHunk, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
-    git::get_commit_diff_hunk(repo, &hash, &file_path, hunk_index)
+    git::get_commit_diff_hunk(&repo, &hash, &file_path, hunk_index)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::state::AppState;
+    use crate::test_utils::*;
     use git2::Repository;
     use parking_lot::Mutex;
     use std::fs;
     use std::path::Path;
-    use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
-
-    fn create_initial_commit(repo: &Repository, temp_dir: &TempDir) -> git2::Oid {
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "initial content").unwrap();
-
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new("initial.txt")).unwrap();
-        index.write().unwrap();
-
-        let sig = repo.signature().unwrap();
-        let tree_id = index.write_tree().unwrap();
-        let tree = repo.find_tree(tree_id).unwrap();
-
-        repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
-            .unwrap()
-    }
 
     #[test]
     fn test_get_commit_graph_logic() {

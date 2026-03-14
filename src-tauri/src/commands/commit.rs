@@ -6,8 +6,7 @@ use crate::state::AppState;
 
 #[tauri::command]
 pub fn create_commit(message: String, state: State<AppState>) -> Result<String, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
     // Get the signature from git config
     let signature = repo
@@ -45,22 +44,11 @@ pub fn create_commit(message: String, state: State<AppState>) -> Result<String, 
 mod tests {
     use super::*;
     use crate::state::AppState;
+    use crate::test_utils::*;
     use git2::Repository;
     use parking_lot::Mutex;
     use std::fs;
     use std::path::Path;
-    use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
 
     #[test]
     fn test_create_commit_logic() {

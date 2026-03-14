@@ -59,6 +59,102 @@ pub enum LineType {
     Header,
 }
 
+struct DiffPrintCollector {
+    file_diff: FileDiff,
+    current_hunk: Option<DiffHunk>,
+    current_hunk_header: Option<String>,
+    bytes_collected: usize,
+    budget_exceeded: bool,
+    max_diff_bytes: usize,
+}
+
+impl DiffPrintCollector {
+    fn new(path: &str, max_diff_bytes: usize) -> Self {
+        Self {
+            file_diff: FileDiff {
+                path: path.to_string(),
+                hunks: Vec::new(),
+                is_binary: false,
+                total_lines: 0,
+            },
+            current_hunk: None,
+            current_hunk_header: None,
+            bytes_collected: 0,
+            budget_exceeded: false,
+            max_diff_bytes,
+        }
+    }
+
+    fn handle_line(
+        &mut self,
+        delta: git2::DiffDelta<'_>,
+        hunk: Option<git2::DiffHunk<'_>>,
+        line: git2::DiffLine<'_>,
+    ) -> bool {
+        if delta.flags().contains(git2::DiffFlags::BINARY) {
+            self.file_diff.is_binary = true;
+            return true;
+        }
+
+        if let Some(hunk_info) = hunk {
+            let header = String::from_utf8_lossy(hunk_info.header()).to_string();
+            let is_new_hunk = self.current_hunk_header.as_ref() != Some(&header);
+
+            if is_new_hunk {
+                if let Some(h) = self.current_hunk.take() {
+                    self.file_diff.hunks.push(h);
+                }
+
+                self.current_hunk = Some(DiffHunk {
+                    header: header.clone(),
+                    old_start: hunk_info.old_start(),
+                    old_lines: hunk_info.old_lines(),
+                    new_start: hunk_info.new_start(),
+                    new_lines: hunk_info.new_lines(),
+                    lines: Vec::new(),
+                    is_loaded: !self.budget_exceeded,
+                });
+                self.current_hunk_header = Some(header);
+            }
+        }
+
+        if let Some(ref mut hunk) = self.current_hunk {
+            let content = String::from_utf8_lossy(line.content()).to_string();
+            let line_type = match line.origin() {
+                '+' => LineType::Addition,
+                '-' => LineType::Deletion,
+                ' ' => LineType::Context,
+                _ => LineType::Header,
+            };
+
+            self.file_diff.total_lines += 1;
+
+            if hunk.is_loaded {
+                self.bytes_collected += content.len();
+                hunk.lines.push(DiffLine {
+                    content,
+                    line_type,
+                    old_lineno: line.old_lineno(),
+                    new_lineno: line.new_lineno(),
+                });
+
+                if self.bytes_collected > self.max_diff_bytes {
+                    self.budget_exceeded = true;
+                }
+            }
+        }
+
+        true
+    }
+
+    fn finish(mut self) -> FileDiff {
+        if let Some(h) = self.current_hunk.take() {
+            self.file_diff.hunks.push(h);
+        }
+        self.file_diff
+    }
+}
+
 pub fn get_file_diff(repo: &Repository, path: &str, staged: bool) -> Result<FileDiff, AppError> {
     get_file_diff_with_config(repo, path, staged, &DiffConfig::default())
 }
@@ -84,102 +180,12 @@ pub fn get_file_diff_with_config(
         repo.diff_index_to_workdir(None, Some(&mut diff_opts))?
     };
 
-    let mut file_diff = FileDiff {
-        path: path.to_string(),
-        hunks: Vec::new(),
-        is_binary: false,
-        total_lines: 0,
-    };
-
-    let mut current_hunk: Option<DiffHunk> = None;
-    let mut current_hunk_header: Option<String> = None;
-    let mut bytes_collected: usize = 0;
-    let mut budget_exceeded = false;
-
-    diff.print(git2::DiffFormat::Patch, |delta, hunk, line| {
-        // Check if binary
-        if delta.flags().contains(git2::DiffFlags::BINARY) {
-            file_diff.is_binary = true;
-            return true;
-        }
-
-        if let Some(hunk_info) = hunk {
-            let header = String::from_utf8_lossy(hunk_info.header()).to_string();
-
-            // Only create a new hunk if we're seeing a different hunk header
-            let is_new_hunk = current_hunk_header.as_ref() != Some(&header);
-
-            if is_new_hunk {
-                // Save previous hunk if exists
-                if let Some(h) = current_hunk.take() {
-                    // If budget was exceeded during this hunk, it was already partially loaded
-                    // but we mark the *next* hunks as unloaded
-                    file_diff.hunks.push(h);
-                }
-
-                if budget_exceeded {
-                    // Metadata-only hunk
-                    current_hunk = Some(DiffHunk {
-                        header: header.clone(),
-                        old_start: hunk_info.old_start(),
-                        old_lines: hunk_info.old_lines(),
-                        new_start: hunk_info.new_start(),
-                        new_lines: hunk_info.new_lines(),
-                        lines: Vec::new(),
-                        is_loaded: false,
-                    });
-                } else {
-                    // Start new hunk with lines
-                    current_hunk = Some(DiffHunk {
-                        header: header.clone(),
-                        old_start: hunk_info.old_start(),
-                        old_lines: hunk_info.old_lines(),
-                        new_start: hunk_info.new_start(),
-                        new_lines: hunk_info.new_lines(),
-                        lines: Vec::new(),
-                        is_loaded: true,
-                    });
-                }
-                current_hunk_header = Some(header);
-            }
-        }
-
-        if let Some(ref mut hunk) = current_hunk {
-            let content = String::from_utf8_lossy(line.content()).to_string();
-            let line_type = match line.origin() {
-                '+' => LineType::Addition,
-                '-' => LineType::Deletion,
-                ' ' => LineType::Context,
-                _ => LineType::Header,
-            };
-
-            // Always count total lines
-            file_diff.total_lines += 1;
-
-            if hunk.is_loaded {
-                bytes_collected += content.len();
-                hunk.lines.push(DiffLine {
-                    content,
-                    line_type,
-                    old_lineno: line.old_lineno(),
-                    new_lineno: line.new_lineno(),
-                });
-
-                if bytes_collected > config.max_diff_bytes {
-                    budget_exceeded = true;
-                }
-            }
-        }
-
-        true
+    let mut collector = DiffPrintCollector::new(path, config.max_diff_bytes);
+    diff.print(git2::DiffFormat::Patch, |d, h, l| {
+        collector.handle_line(d, h, l)
     })?;
 
-    // Don't forget the last hunk
-    if let Some(h) = current_hunk {
-        file_diff.hunks.push(h);
-    }
-
-    Ok(file_diff)
+    Ok(collector.finish())
 }
 
 /// Get diff for an untracked file by reading its content directly
@@ -345,94 +351,12 @@ pub fn get_commit_file_diff_with_config(
 
     let diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&tree), Some(&mut diff_opts))?;
 
-    let mut file_diff = FileDiff {
-        path: path.to_string(),
-        hunks: Vec::new(),
-        is_binary: false,
-        total_lines: 0,
-    };
-
-    let mut current_hunk: Option<DiffHunk> = None;
-    let mut current_hunk_header: Option<String> = None;
-    let mut bytes_collected: usize = 0;
-    let mut budget_exceeded = false;
-
-    diff.print(git2::DiffFormat::Patch, |delta, hunk, line| {
-        if delta.flags().contains(git2::DiffFlags::BINARY) {
-            file_diff.is_binary = true;
-            return true;
-        }
-
-        if let Some(hunk_info) = hunk {
-            let header = String::from_utf8_lossy(hunk_info.header()).to_string();
-
-            // Only create a new hunk if we're seeing a different hunk header
-            let is_new_hunk = current_hunk_header.as_ref() != Some(&header);
-
-            if is_new_hunk {
-                if let Some(h) = current_hunk.take() {
-                    file_diff.hunks.push(h);
-                }
-
-                if budget_exceeded {
-                    current_hunk = Some(DiffHunk {
-                        header: header.clone(),
-                        old_start: hunk_info.old_start(),
-                        old_lines: hunk_info.old_lines(),
-                        new_start: hunk_info.new_start(),
-                        new_lines: hunk_info.new_lines(),
-                        lines: Vec::new(),
-                        is_loaded: false,
-                    });
-                } else {
-                    current_hunk = Some(DiffHunk {
-                        header: header.clone(),
-                        old_start: hunk_info.old_start(),
-                        old_lines: hunk_info.old_lines(),
-                        new_start: hunk_info.new_start(),
-                        new_lines: hunk_info.new_lines(),
-                        lines: Vec::new(),
-                        is_loaded: true,
-                    });
-                }
-                current_hunk_header = Some(header);
-            }
-        }
-
-        if let Some(ref mut hunk) = current_hunk {
-            let content = String::from_utf8_lossy(line.content()).to_string();
-            let line_type = match line.origin() {
-                '+' => LineType::Addition,
-                '-' => LineType::Deletion,
-                ' ' => LineType::Context,
-                _ => LineType::Header,
-            };
-
-            file_diff.total_lines += 1;
-
-            if hunk.is_loaded {
-                bytes_collected += content.len();
-                hunk.lines.push(DiffLine {
-                    content,
-                    line_type,
-                    old_lineno: line.old_lineno(),
-                    new_lineno: line.new_lineno(),
-                });
-
-                if bytes_collected > config.max_diff_bytes {
-                    budget_exceeded = true;
-                }
-            }
-        }
-
-        true
+    let mut collector = DiffPrintCollector::new(path, config.max_diff_bytes);
+    diff.print(git2::DiffFormat::Patch, |d, h, l| {
+        collector.handle_line(d, h, l)
     })?;
 
-    if let Some(h) = current_hunk {
-        file_diff.hunks.push(h);
-    }
-
-    Ok(file_diff)
+    Ok(collector.finish())
 }
 
 /// Load a single hunk's full line content (no budget limit).
@@ -498,45 +422,8 @@ pub fn get_commit_diff_hunk(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::*;
     use std::path::Path;
-    use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        // Configure user for commits
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
-
-    fn create_commit_with_file(
-        repo: &Repository,
-        temp_dir: &TempDir,
-        filename: &str,
-        content: &str,
-        message: &str,
-    ) -> git2::Oid {
-        let file_path = temp_dir.path().join(filename);
-        fs::write(&file_path, content).unwrap();
-
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new(filename)).unwrap();
-        index.write().unwrap();
-
-        let sig = repo.signature().unwrap();
-        let tree_id = index.write_tree().unwrap();
-        let tree = repo.find_tree(tree_id).unwrap();
-
-        let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
-        let parents: Vec<&git2::Commit> = parent.iter().collect();
-
-        repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)
-            .unwrap()
-    }
 
     #[test]
     fn test_get_file_diff_unstaged_modification() {

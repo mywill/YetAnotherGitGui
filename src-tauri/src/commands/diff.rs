@@ -11,15 +11,14 @@ pub fn get_file_diff(
     is_untracked: Option<bool>,
     state: State<AppState>,
 ) -> Result<git::FileDiff, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
     // For untracked files, read the file directly
     if is_untracked.unwrap_or(false) {
-        return git::get_untracked_file_diff(repo, &path);
+        return git::get_untracked_file_diff(&repo, &path);
     }
 
-    git::get_file_diff(repo, &path, staged)
+    git::get_file_diff(&repo, &path, staged)
 }
 
 #[tauri::command]
@@ -30,52 +29,24 @@ pub fn get_diff_hunk(
     is_untracked: Option<bool>,
     state: State<AppState>,
 ) -> Result<git::DiffHunk, AppError> {
-    let repo_lock = state.repository.lock();
-    let repo = repo_lock.as_ref().ok_or(AppError::NoRepository)?;
+    let repo = state.get_repo()?;
 
     if is_untracked.unwrap_or(false) {
-        return git::get_untracked_diff_hunk(repo, &path, hunk_index);
+        return git::get_untracked_diff_hunk(&repo, &path, hunk_index);
     }
 
-    git::get_diff_hunk(repo, &path, staged, hunk_index)
+    git::get_diff_hunk(&repo, &path, staged, hunk_index)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::state::AppState;
+    use crate::test_utils::*;
     use git2::Repository;
     use parking_lot::Mutex;
     use std::fs;
     use std::path::Path;
-    use tempfile::TempDir;
-
-    fn create_test_repo() -> (TempDir, Repository) {
-        let temp_dir = TempDir::new().unwrap();
-        let repo = Repository::init(temp_dir.path()).unwrap();
-
-        let mut config = repo.config().unwrap();
-        config.set_str("user.name", "Test User").unwrap();
-        config.set_str("user.email", "test@example.com").unwrap();
-
-        (temp_dir, repo)
-    }
-
-    fn create_initial_commit(repo: &Repository, temp_dir: &TempDir) -> git2::Oid {
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "initial content").unwrap();
-
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new("initial.txt")).unwrap();
-        index.write().unwrap();
-
-        let sig = repo.signature().unwrap();
-        let tree_id = index.write_tree().unwrap();
-        let tree = repo.find_tree(tree_id).unwrap();
-
-        repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
-            .unwrap()
-    }
 
     #[test]
     fn test_get_file_diff_unstaged() {

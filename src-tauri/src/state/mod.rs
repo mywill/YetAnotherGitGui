@@ -1,5 +1,7 @@
 use git2::Repository;
-use parking_lot::Mutex;
+use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
+
+use crate::error::AppError;
 
 pub struct AppState {
     pub repository: Mutex<Option<Repository>>,
@@ -10,6 +12,16 @@ impl AppState {
         Self {
             repository: Mutex::new(None),
         }
+    }
+
+    pub fn get_repo(&self) -> Result<MappedMutexGuard<'_, Repository>, AppError> {
+        MutexGuard::try_map(self.repository.lock(), |opt| opt.as_mut())
+            .map_err(|_| AppError::NoRepository)
+    }
+
+    pub fn get_repo_mut(&self) -> Result<MappedMutexGuard<'_, Repository>, AppError> {
+        MutexGuard::try_map(self.repository.lock(), |opt| opt.as_mut())
+            .map_err(|_| AppError::NoRepository)
     }
 }
 
