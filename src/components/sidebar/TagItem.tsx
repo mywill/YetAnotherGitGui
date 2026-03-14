@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import type { TagInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface TagItemProps {
   tag: TagInfo;
@@ -15,7 +16,7 @@ export function TagItem({ tag }: TagItemProps) {
   const deleteTag = useRepositoryStore((s) => s.deleteTag);
   const selectAndScrollToCommit = useSelectionStore((s) => s.selectAndScrollToCommit);
   const showConfirm = useDialogStore((s) => s.showConfirm);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(() => {
     if (tag.target_hash) {
@@ -35,14 +36,8 @@ export function TagItem({ tag }: TagItemProps) {
     }
   }, [tag, checkoutCommit, showConfirm]);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
-
   const handleCheckout = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     const confirmed = await showConfirm({
       title: "Checkout Tag",
       message: `Checkout tag "${tag.name}"? This will put you in detached HEAD state.`,
@@ -52,10 +47,10 @@ export function TagItem({ tag }: TagItemProps) {
     if (confirmed) {
       checkoutCommit(tag.target_hash);
     }
-  }, [tag, checkoutCommit, showConfirm]);
+  }, [tag, checkoutCommit, closeContextMenu, showConfirm]);
 
   const handleDelete = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     const confirmed = await showConfirm({
       title: "Delete Tag",
       message: `Delete tag "${tag.name}"?`,
@@ -65,12 +60,12 @@ export function TagItem({ tag }: TagItemProps) {
     if (confirmed) {
       deleteTag(tag.name);
     }
-  }, [tag, deleteTag, showConfirm]);
+  }, [tag, closeContextMenu, deleteTag, showConfirm]);
 
   const handleCopyName = useCallback(() => {
-    setContextMenu(null);
+    closeContextMenu();
     copyToClipboard(tag.name);
-  }, [tag.name]);
+  }, [tag.name, closeContextMenu]);
 
   const contextMenuItems = [
     {
@@ -109,7 +104,7 @@ export function TagItem({ tag }: TagItemProps) {
           x={contextMenu.x}
           y={contextMenu.y}
           items={contextMenuItems}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
         />
       )}
     </>

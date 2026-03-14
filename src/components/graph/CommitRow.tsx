@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import type { CSSProperties, MouseEvent } from "react";
+import { useCallback } from "react";
+import type { CSSProperties } from "react";
 import clsx from "clsx";
 import { formatDistanceToNow } from "date-fns";
 import type { GraphCommit } from "../../types";
@@ -10,6 +10,7 @@ import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { useVirtualizedFocus } from "../common/KeyboardListVirtualized";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface CommitRowProps {
   index: number;
@@ -48,30 +49,25 @@ export function CommitRow({
   onSelect,
   onDoubleClick,
 }: CommitRowProps) {
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
   const revertCommit = useRepositoryStore((s) => s.revertCommit);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
   const { focusedIndex } = useVirtualizedFocus();
   const isKeyboardFocused = focusedIndex === index;
 
-  const handleContextMenu = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
-
   const handleCopyHash = useCallback(async () => {
     await copyToClipboard(commit.hash);
-    setContextMenu(null);
-  }, [commit.hash]);
+    closeContextMenu();
+  }, [commit.hash, closeContextMenu]);
 
   const handleCheckout = useCallback(() => {
-    setContextMenu(null);
+    closeContextMenu();
     onDoubleClick();
-  }, [onDoubleClick]);
+  }, [closeContextMenu, onDoubleClick]);
 
   const handleRevert = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     const shortHash = commit.hash.slice(0, 7);
     const shortMessage =
       commit.message.length > 60 ? commit.message.slice(0, 60) + "..." : commit.message;
@@ -84,7 +80,7 @@ export function CommitRow({
       await revertCommit(commit.hash);
       setActiveView("status");
     }
-  }, [commit.hash, commit.message, revertCommit, setActiveView, showConfirm]);
+  }, [commit.hash, commit.message, closeContextMenu, revertCommit, setActiveView, showConfirm]);
 
   const date = new Date(commit.timestamp * 1000);
   const timeAgo = formatDistanceToNow(date, { addSuffix: true });
@@ -181,7 +177,7 @@ export function CommitRow({
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
           items={[
             { label: "Copy commit hash", onClick: handleCopyHash },
             { label: "Checkout commit", onClick: handleCheckout },

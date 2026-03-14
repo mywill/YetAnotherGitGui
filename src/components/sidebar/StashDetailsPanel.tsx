@@ -4,6 +4,8 @@ import type { StashDetails } from "../../types";
 import { StashFileItem } from "./StashFileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { KeyboardList } from "../common/KeyboardList";
+import { DetailsPanelLoading, DetailsPanelEmpty } from "../common/DetailsPanelStates";
+import { cleanStashMessage } from "../../utils/stashMessage";
 
 interface StashDetailsPanelProps {
   details: StashDetails | null;
@@ -28,19 +30,12 @@ export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) 
   );
 
   if (loading) {
-    return (
-      <div className="stash-details-panel loading text-text-muted flex h-full flex-col items-center justify-center gap-3">
-        <div className="loading-spinner" />
-        <span>Loading stash details...</span>
-      </div>
-    );
+    return <DetailsPanelLoading className="stash-details-panel" label="Loading stash details..." />;
   }
 
   if (!details) {
     return (
-      <div className="stash-details-panel empty text-text-muted flex h-full flex-col items-center justify-center">
-        <p>Select a stash to view details</p>
-      </div>
+      <DetailsPanelEmpty className="stash-details-panel" label="Select a stash to view details" />
     );
   }
 
@@ -48,28 +43,7 @@ export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) 
   const timeAgo = formatDistanceToNow(date, { addSuffix: true });
   const stashName = `stash@{${details.index}}`;
 
-  // Parse a cleaner message
-  const getCleanMessage = () => {
-    const msg = details.message;
-    if (msg.startsWith("WIP on ")) {
-      const colonIndex = msg.indexOf(": ");
-      if (colonIndex !== -1) {
-        const afterColon = msg.substring(colonIndex + 2);
-        const spaceIndex = afterColon.indexOf(" ");
-        if (spaceIndex !== -1) {
-          return afterColon.substring(spaceIndex + 1);
-        }
-        return afterColon;
-      }
-    }
-    if (msg.startsWith("On ")) {
-      const colonIndex = msg.indexOf(": ");
-      if (colonIndex !== -1) {
-        return msg.substring(colonIndex + 2);
-      }
-    }
-    return msg;
-  };
+  const cleanMessage = cleanStashMessage(details.message);
 
   return (
     <div className="stash-details-panel flex h-full flex-col overflow-hidden">
@@ -82,7 +56,7 @@ export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) 
         </div>
 
         <div className="stash-message-full text-text-primary mb-3 leading-normal break-words whitespace-pre-wrap">
-          {getCleanMessage()}
+          {cleanMessage}
         </div>
 
         <div className="stash-meta flex flex-col gap-1">

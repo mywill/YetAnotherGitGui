@@ -7,6 +7,7 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { YaggButton } from "../common/YaggButton";
 import { KeyboardList } from "../common/KeyboardList";
+import { DetailsPanelLoading, DetailsPanelEmpty } from "../common/DetailsPanelStates";
 
 interface CommitDetailsPanelProps {
   details: CommitDetails | null;
@@ -49,18 +50,13 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
 
   if (loading) {
     return (
-      <div className="commit-details-panel loading text-text-muted flex h-full flex-col items-center justify-center gap-3">
-        <div className="loading-spinner" />
-        <span>Loading commit details...</span>
-      </div>
+      <DetailsPanelLoading className="commit-details-panel" label="Loading commit details..." />
     );
   }
 
   if (!details) {
     return (
-      <div className="commit-details-panel empty text-text-muted flex h-full flex-col items-center justify-center">
-        <p>Select a commit to view details</p>
-      </div>
+      <DetailsPanelEmpty className="commit-details-panel" label="Select a commit to view details" />
     );
   }
 

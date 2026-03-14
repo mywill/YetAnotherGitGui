@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import clsx from "clsx";
 import type { BranchInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -6,6 +6,7 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface BranchItemProps {
   branch: BranchInfo;
@@ -16,7 +17,7 @@ export function BranchItem({ branch }: BranchItemProps) {
   const deleteBranch = useRepositoryStore((s) => s.deleteBranch);
   const selectAndScrollToCommit = useSelectionStore((s) => s.selectAndScrollToCommit);
   const showConfirm = useDialogStore((s) => s.showConfirm);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(() => {
     if (branch.target_hash) {
@@ -50,14 +51,8 @@ export function BranchItem({ branch }: BranchItemProps) {
     }
   }, [branch, checkoutBranch, showConfirm]);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
-
   const handleCheckout = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     if (branch.is_remote) {
       await showConfirm({
         title: "Remote Branch",
@@ -79,10 +74,10 @@ export function BranchItem({ branch }: BranchItemProps) {
     if (confirmed) {
       checkoutBranch(branch.name);
     }
-  }, [branch, checkoutBranch, showConfirm]);
+  }, [branch, checkoutBranch, closeContextMenu, showConfirm]);
 
   const handleDelete = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     const message = branch.is_remote
       ? `Delete branch "${branch.name}" from origin?`
       : `Delete branch "${branch.name}"?`;
@@ -96,12 +91,12 @@ export function BranchItem({ branch }: BranchItemProps) {
     if (confirmed) {
       deleteBranch(branch.name, branch.is_remote);
     }
-  }, [branch, deleteBranch, showConfirm]);
+  }, [branch, closeContextMenu, deleteBranch, showConfirm]);
 
   const handleCopyName = useCallback(() => {
-    setContextMenu(null);
+    closeContextMenu();
     copyToClipboard(branch.name);
-  }, [branch.name]);
+  }, [branch.name, closeContextMenu]);
 
   // Display name: for remote branches, show only the part after origin/
   const displayName = branch.is_remote ? branch.name.replace(/^[^/]+\//, "") : branch.name;
@@ -150,7 +145,7 @@ export function BranchItem({ branch }: BranchItemProps) {
           x={contextMenu.x}
           y={contextMenu.y}
           items={contextMenuItems}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
         />
       )}
     </>

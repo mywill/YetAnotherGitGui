@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import clsx from "clsx";
 import type { FileStatus, FileStatusType } from "../../types";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface FileItemProps {
   file: FileStatus;
@@ -48,7 +49,7 @@ export function FileItem({
   extraMenuItems,
 }: FileItemProps) {
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -72,12 +73,6 @@ export function FileItem({
     e.stopPropagation();
     onDoubleClick?.();
   };
-
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
 
   const fileName = file.path.split("/").pop() || file.path;
   const dirPath = file.path.includes("/") ? file.path.substring(0, file.path.lastIndexOf("/")) : "";
@@ -176,7 +171,7 @@ export function FileItem({
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
           items={menuItems}
         />
       )}

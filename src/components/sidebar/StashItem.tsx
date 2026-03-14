@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import clsx from "clsx";
 import type { StashInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -6,6 +6,8 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
+import { useContextMenu } from "../../hooks/useContextMenu";
+import { cleanStashMessage } from "../../utils/stashMessage";
 
 interface StashItemProps {
   stash: StashInfo;
@@ -18,35 +20,14 @@ export function StashItem({ stash }: StashItemProps) {
   const selectedStashDetails = useRepositoryStore((s) => s.selectedStashDetails);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const isSelected = selectedStashDetails?.index === stash.index;
 
   const stashName = `stash@{${stash.index}}`;
 
-  // Get shortened message (first line, without "WIP on branch:" prefix)
   const getShortMessage = () => {
-    let msg = stash.message;
-    // Remove common prefixes
-    if (msg.startsWith("WIP on ")) {
-      const colonIndex = msg.indexOf(": ");
-      if (colonIndex !== -1) {
-        // Skip past the commit hash (next space after colon)
-        const afterColon = msg.substring(colonIndex + 2);
-        const spaceIndex = afterColon.indexOf(" ");
-        if (spaceIndex !== -1) {
-          msg = afterColon.substring(spaceIndex + 1);
-        } else {
-          msg = afterColon;
-        }
-      }
-    } else if (msg.startsWith("On ")) {
-      const colonIndex = msg.indexOf(": ");
-      if (colonIndex !== -1) {
-        msg = msg.substring(colonIndex + 2);
-      }
-    }
-    // Get first line only
+    const msg = cleanStashMessage(stash.message);
     const firstLine = msg.split("\n")[0];
     return firstLine.length > 40 ? firstLine.substring(0, 40) + "..." : firstLine;
   };
@@ -68,19 +49,13 @@ export function StashItem({ stash }: StashItemProps) {
     }
   }, [stash.index, stashName, applyStash, showConfirm]);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
-
   const handleCopyName = useCallback(() => {
-    setContextMenu(null);
+    closeContextMenu();
     copyToClipboard(stashName);
-  }, [stashName]);
+  }, [stashName, closeContextMenu]);
 
   const handleApply = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     const confirmed = await showConfirm({
       title: "Apply Stash",
       message: `Apply "${stashName}"? This will restore the stashed changes to your working directory.`,
@@ -90,10 +65,10 @@ export function StashItem({ stash }: StashItemProps) {
     if (confirmed) {
       applyStash(stash.index);
     }
-  }, [stash.index, stashName, applyStash, showConfirm]);
+  }, [stash.index, stashName, applyStash, closeContextMenu, showConfirm]);
 
   const handleDelete = useCallback(async () => {
-    setContextMenu(null);
+    closeContextMenu();
     const confirmed = await showConfirm({
       title: "Delete Stash",
       message: `Delete "${stashName}"? This cannot be undone.`,
@@ -103,7 +78,7 @@ export function StashItem({ stash }: StashItemProps) {
     if (confirmed) {
       dropStash(stash.index);
     }
-  }, [stash.index, stashName, dropStash, showConfirm]);
+  }, [stash.index, stashName, closeContextMenu, dropStash, showConfirm]);
 
   const contextMenuItems = [
     {
@@ -148,7 +123,7 @@ export function StashItem({ stash }: StashItemProps) {
           x={contextMenu.x}
           y={contextMenu.y}
           items={contextMenuItems}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
         />
       )}
     </>
