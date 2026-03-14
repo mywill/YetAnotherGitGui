@@ -57,6 +57,7 @@ describe("UntrackedPanel", () => {
   const mockDeleteFile = vi.fn();
 
   const mockToggleFileSelection = vi.fn();
+  const mockSelectSingleFile = vi.fn();
   const mockClearFileSelection = vi.fn();
   const mockSelectedFilePaths = new Set<string>();
 
@@ -85,6 +86,7 @@ describe("UntrackedPanel", () => {
     const state = {
       selectedFilePaths: mockSelectedFilePaths,
       toggleFileSelection: mockToggleFileSelection,
+      selectSingleFile: mockSelectSingleFile,
       clearFileSelection: mockClearFileSelection,
     };
 

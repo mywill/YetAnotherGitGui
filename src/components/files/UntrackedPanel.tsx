@@ -19,6 +19,7 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
 
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
+  const selectSingleFile = useSelectionStore((s) => s.selectSingleFile);
   const clearFileSelection = useSelectionStore((s) => s.clearFileSelection);
 
   const untracked = useMemo(() => statuses?.untracked ?? [], [statuses?.untracked]);
@@ -111,7 +112,14 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
         ) : (
           <KeyboardList
             aria-label="Untracked files"
-            onActiveChange={(i) => loadFileDiff(untracked[i].path, false, true)}
+            onActiveChange={(i, isShift) => {
+              if (isShift) {
+                toggleFileSelection(untracked[i].path, false, false, true, allUntrackedPaths);
+              } else {
+                selectSingleFile(untracked[i].path, false);
+              }
+              loadFileDiff(untracked[i].path, false, true);
+            }}
             onActivate={(i) => stageFile(untracked[i].path)}
             onSecondaryActivate={(i) => stageFile(untracked[i].path)}
             onDelete={(i) => deleteFile(untracked[i].path)}

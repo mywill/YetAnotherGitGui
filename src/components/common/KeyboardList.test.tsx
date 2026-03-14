@@ -300,7 +300,17 @@ describe("KeyboardList", () => {
       listbox.focus();
       fireEvent.keyDown(listbox, { key: "ArrowDown" });
 
-      expect(mockActiveChange).toHaveBeenCalledWith(1);
+      expect(mockActiveChange).toHaveBeenCalledWith(1, false);
+    });
+
+    it("fires onActiveChange on ArrowDown with shift", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+
+      listbox.focus();
+      fireEvent.keyDown(listbox, { key: "ArrowDown", shiftKey: true });
+
+      expect(mockActiveChange).toHaveBeenCalledWith(1, true);
     });
 
     it("fires onActiveChange on ArrowUp", () => {
@@ -310,7 +320,17 @@ describe("KeyboardList", () => {
       listbox.focus();
       fireEvent.keyDown(listbox, { key: "ArrowUp" });
 
-      expect(mockActiveChange).toHaveBeenCalledWith(2);
+      expect(mockActiveChange).toHaveBeenCalledWith(2, false);
+    });
+
+    it("fires onActiveChange on ArrowUp with shift", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+
+      listbox.focus();
+      fireEvent.keyDown(listbox, { key: "ArrowUp", shiftKey: true });
+
+      expect(mockActiveChange).toHaveBeenCalledWith(2, true);
     });
 
     it("fires onActiveChange on Home", () => {
@@ -322,7 +342,7 @@ describe("KeyboardList", () => {
       mockActiveChange.mockClear();
       fireEvent.keyDown(listbox, { key: "Home" });
 
-      expect(mockActiveChange).toHaveBeenCalledWith(0);
+      expect(mockActiveChange).toHaveBeenCalledWith(0, false);
     });
 
     it("fires onActiveChange on End", () => {
@@ -332,16 +352,22 @@ describe("KeyboardList", () => {
       listbox.focus();
       fireEvent.keyDown(listbox, { key: "End" });
 
-      expect(mockActiveChange).toHaveBeenCalledWith(2);
+      expect(mockActiveChange).toHaveBeenCalledWith(2, false);
     });
 
-    it("fires onActiveChange on click", () => {
+    it("click does not directly fire onActiveChange", () => {
       renderList(3, { onActiveChange: mockActiveChange });
-      const options = screen.getAllByRole("option");
+      const listbox = screen.getByRole("listbox");
 
+      // First focus the list so onFocus fires
+      listbox.focus();
+      mockActiveChange.mockClear();
+
+      // Now click — should not fire onActiveChange (mouse clicks go through FileItem.onSelectWithModifiers)
+      const options = screen.getAllByRole("option");
       fireEvent.click(options[2]);
 
-      expect(mockActiveChange).toHaveBeenCalledWith(2);
+      expect(mockActiveChange).not.toHaveBeenCalled();
     });
 
     it("does not fire onActiveChange when not provided", () => {
@@ -359,7 +385,7 @@ describe("KeyboardList", () => {
 
       listbox.focus();
 
-      expect(mockActiveChange).toHaveBeenCalledWith(0);
+      expect(mockActiveChange).toHaveBeenCalledWith(0, false);
     });
 
     it("clamps activeIndex when items are removed", () => {
@@ -438,7 +464,7 @@ describe("KeyboardList", () => {
         </KeyboardList>
       );
 
-      expect(mockActiveChange).toHaveBeenCalledWith(0);
+      expect(mockActiveChange).toHaveBeenCalledWith(0, false);
     });
 
     it("fires onActiveChange with clamped index when items are removed", () => {
@@ -478,7 +504,7 @@ describe("KeyboardList", () => {
         </KeyboardList>
       );
 
-      expect(mockActiveChange).toHaveBeenCalledWith(1);
+      expect(mockActiveChange).toHaveBeenCalledWith(1, false);
     });
   });
 });

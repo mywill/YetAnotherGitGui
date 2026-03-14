@@ -22,6 +22,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
 
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
+  const selectSingleFile = useSelectionStore((s) => s.selectSingleFile);
   const clearFileSelection = useSelectionStore((s) => s.clearFileSelection);
 
   const staged = useMemo(() => statuses?.staged ?? [], [statuses?.staged]);
@@ -149,7 +150,14 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
           ) : (
             <KeyboardList
               aria-label="Staged files"
-              onActiveChange={(i) => loadFileDiff(staged[i].path, true)}
+              onActiveChange={(i, isShift) => {
+                if (isShift) {
+                  toggleFileSelection(staged[i].path, true, false, true, allStagedPaths);
+                } else {
+                  selectSingleFile(staged[i].path, true);
+                }
+                loadFileDiff(staged[i].path, true);
+              }}
               onActivate={(i) => unstageFile(staged[i].path)}
               onSecondaryActivate={(i) => unstageFile(staged[i].path)}
             >
@@ -221,7 +229,14 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
           ) : (
             <KeyboardList
               aria-label="Unstaged files"
-              onActiveChange={(i) => loadFileDiff(unstaged[i].path, false)}
+              onActiveChange={(i, isShift) => {
+                if (isShift) {
+                  toggleFileSelection(unstaged[i].path, false, false, true, allUnstagedPaths);
+                } else {
+                  selectSingleFile(unstaged[i].path, false);
+                }
+                loadFileDiff(unstaged[i].path, false);
+              }}
               onActivate={(i) => stageFile(unstaged[i].path)}
               onSecondaryActivate={(i) => stageFile(unstaged[i].path)}
               onDelete={(i) => revertFile(unstaged[i].path)}

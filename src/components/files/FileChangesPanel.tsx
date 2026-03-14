@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import { useSelectionStore } from "../../stores/selectionStore";
+import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
 import { YaggButton } from "../common/YaggButton";
 import { KeyboardList } from "../common/KeyboardList";
 
@@ -39,6 +39,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
+  const selectSingleFile = useSelectionStore((s) => s.selectSingleFile);
   const clearFileSelection = useSelectionStore((s) => s.clearFileSelection);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -89,15 +90,15 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
   const allUntrackedPaths = useMemo(() => untracked.map((f) => f.path), [untracked]);
 
   const selectedStagedPaths = useMemo(
-    () => allStagedPaths.filter((p) => selectedFilePaths.has(p)),
+    () => allStagedPaths.filter((p) => selectedFilePaths.has(makeSelectionKey(p, true))),
     [allStagedPaths, selectedFilePaths]
   );
   const selectedUnstagedPaths = useMemo(
-    () => allUnstagedPaths.filter((p) => selectedFilePaths.has(p)),
+    () => allUnstagedPaths.filter((p) => selectedFilePaths.has(makeSelectionKey(p, false))),
     [allUnstagedPaths, selectedFilePaths]
   );
   const selectedUntrackedPaths = useMemo(
-    () => allUntrackedPaths.filter((p) => selectedFilePaths.has(p)),
+    () => allUntrackedPaths.filter((p) => selectedFilePaths.has(makeSelectionKey(p, false))),
     [allUntrackedPaths, selectedFilePaths]
   );
 
@@ -243,13 +244,21 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                 aria-label="Staged files"
                 onActivate={(i) => loadFileDiff(staged[i].path, true)}
                 onSecondaryActivate={(i) => unstageFile(staged[i].path)}
+                onActiveChange={(i, isShift) => {
+                  if (isShift) {
+                    toggleFileSelection(staged[i].path, true, false, true, allStagedPaths);
+                  } else {
+                    selectSingleFile(staged[i].path, true);
+                  }
+                  loadFileDiff(staged[i].path, true);
+                }}
               >
                 {staged.map((file, i) => (
                   <KeyboardList.Item key={file.path} index={i}>
                     <FileItem
                       file={file}
                       isStaged={true}
-                      isSelected={selectedFilePaths.has(file.path)}
+                      isSelected={selectedFilePaths.has(makeSelectionKey(file.path, true))}
                       onToggleStage={() => unstageFile(file.path)}
                       onSelect={() => loadFileDiff(file.path, true)}
                       onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
@@ -316,13 +325,21 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                 onActivate={(i) => loadFileDiff(unstaged[i].path, false)}
                 onSecondaryActivate={(i) => stageFile(unstaged[i].path)}
                 onDelete={(i) => revertFile(unstaged[i].path)}
+                onActiveChange={(i, isShift) => {
+                  if (isShift) {
+                    toggleFileSelection(unstaged[i].path, false, false, true, allUnstagedPaths);
+                  } else {
+                    selectSingleFile(unstaged[i].path, false);
+                  }
+                  loadFileDiff(unstaged[i].path, false);
+                }}
               >
                 {unstaged.map((file, i) => (
                   <KeyboardList.Item key={file.path} index={i}>
                     <FileItem
                       file={file}
                       isStaged={false}
-                      isSelected={selectedFilePaths.has(file.path)}
+                      isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
                       onToggleStage={() => stageFile(file.path)}
                       onSelect={() => loadFileDiff(file.path, false)}
                       onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
@@ -395,6 +412,14 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                 onActivate={(i) => loadFileDiff(untracked[i].path, false)}
                 onSecondaryActivate={(i) => stageFile(untracked[i].path)}
                 onDelete={(i) => deleteFile(untracked[i].path)}
+                onActiveChange={(i, isShift) => {
+                  if (isShift) {
+                    toggleFileSelection(untracked[i].path, false, false, true, allUntrackedPaths);
+                  } else {
+                    selectSingleFile(untracked[i].path, false);
+                  }
+                  loadFileDiff(untracked[i].path, false);
+                }}
               >
                 {untracked.map((file, i) => (
                   <KeyboardList.Item key={file.path} index={i}>
@@ -402,7 +427,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
                       file={file}
                       isStaged={false}
                       isUntracked
-                      isSelected={selectedFilePaths.has(file.path)}
+                      isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
                       onToggleStage={() => stageFile(file.path)}
                       onSelect={() => loadFileDiff(file.path, false)}
                       onSelectWithModifiers={handleSelectWithModifiers(allUntrackedPaths, false)}

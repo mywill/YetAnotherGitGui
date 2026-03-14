@@ -60,6 +60,7 @@ describe("StagedUnstagedPanel", () => {
   const mockDeleteFile = vi.fn();
 
   const mockToggleFileSelection = vi.fn();
+  const mockSelectSingleFile = vi.fn();
   const mockClearFileSelection = vi.fn();
   const mockSelectedFilePaths = new Set<string>();
 
@@ -91,6 +92,7 @@ describe("StagedUnstagedPanel", () => {
     const state = {
       selectedFilePaths: mockSelectedFilePaths,
       toggleFileSelection: mockToggleFileSelection,
+      selectSingleFile: mockSelectSingleFile,
       clearFileSelection: mockClearFileSelection,
     };
 

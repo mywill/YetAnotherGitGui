@@ -13,6 +13,7 @@ vi.mock("../../stores/repositoryStore", () => ({
 // Mock the selection store
 vi.mock("../../stores/selectionStore", () => ({
   useSelectionStore: vi.fn(),
+  makeSelectionKey: (path: string, staged: boolean) => `${staged ? "staged" : "unstaged"}:${path}`,
 }));
 
 describe("FileChangesPanel", () => {
@@ -25,6 +26,7 @@ describe("FileChangesPanel", () => {
   const mockDeleteFile = vi.fn();
 
   const mockToggleFileSelection = vi.fn();
+  const mockSelectSingleFile = vi.fn();
   const mockClearFileSelection = vi.fn();
   const mockSelectedFilePaths = new Set<string>();
 
@@ -56,6 +58,7 @@ describe("FileChangesPanel", () => {
     const state = {
       selectedFilePaths: mockSelectedFilePaths,
       toggleFileSelection: mockToggleFileSelection,
+      selectSingleFile: mockSelectSingleFile,
       clearFileSelection: mockClearFileSelection,
     };
 

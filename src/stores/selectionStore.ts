@@ -43,6 +43,7 @@ interface SelectionState {
     isShift: boolean,
     allFilePaths: string[]
   ) => void;
+  selectSingleFile: (path: string, staged: boolean) => void;
   clearFileSelection: () => void;
   isFileSelected: (path: string, staged: boolean) => boolean;
 }
@@ -96,6 +97,16 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
       newSelection.add(key);
     }
 
+    set({
+      selectedFilePaths: newSelection,
+      lastSelectedFilePath: path,
+      lastSelectedFileStaged: staged,
+    });
+  },
+
+  selectSingleFile: (path, staged) => {
+    const newSelection = new Set<string>();
+    newSelection.add(makeSelectionKey(path, staged));
     set({
       selectedFilePaths: newSelection,
       lastSelectedFilePath: path,

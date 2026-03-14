@@ -185,6 +185,38 @@ describe("selectionStore", () => {
       });
     });
 
+    describe("selectSingleFile", () => {
+      it("selects a single file and clears previous selection", () => {
+        const { toggleFileSelection, selectSingleFile } = useSelectionStore.getState();
+
+        // First select multiple files
+        toggleFileSelection("file1.ts", isStaged, false, false, allFiles);
+        toggleFileSelection("file2.ts", isStaged, true, false, allFiles);
+
+        // Now use selectSingleFile
+        selectSingleFile("file3.ts", isStaged);
+
+        const state = useSelectionStore.getState();
+        expect(state.selectedFilePaths.size).toBe(1);
+        expect(state.selectedFilePaths.has(makeSelectionKey("file3.ts", isStaged))).toBe(true);
+        expect(state.lastSelectedFilePath).toBe("file3.ts");
+        expect(state.lastSelectedFileStaged).toBe(isStaged);
+      });
+
+      it("sets lastSelectedFilePath for shift-range anchoring", () => {
+        const { selectSingleFile, toggleFileSelection } = useSelectionStore.getState();
+
+        selectSingleFile("file1.ts", isStaged);
+        toggleFileSelection("file3.ts", isStaged, false, true, allFiles);
+
+        const state = useSelectionStore.getState();
+        expect(state.selectedFilePaths.size).toBe(3);
+        expect(state.selectedFilePaths.has(makeSelectionKey("file1.ts", isStaged))).toBe(true);
+        expect(state.selectedFilePaths.has(makeSelectionKey("file2.ts", isStaged))).toBe(true);
+        expect(state.selectedFilePaths.has(makeSelectionKey("file3.ts", isStaged))).toBe(true);
+      });
+    });
+
     describe("clearFileSelection", () => {
       it("clears all selected files", () => {
         const { toggleFileSelection, clearFileSelection } = useSelectionStore.getState();
