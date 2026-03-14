@@ -170,6 +170,9 @@ pnpm tauri dev
 # Build for production
 pnpm tauri build
 
+# Run all checks (lint, type check, tests)
+pnpm check
+
 # Run Rust tests
 cd src-tauri && cargo test
 
@@ -186,30 +189,36 @@ npx tsc --noEmit
   - `selectionStore.ts` - UI selection state (view mode, selected commit/file)
   - `dialogStore.ts` - Confirmation dialog state
   - `notificationStore.ts` - Stacking notification toasts (errors auto-dismiss 10s, success 3s)
-- **Tauri IPC**: All git operations go through `src/services/git.ts` which invokes Rust commands
+  - `commandPaletteStore.ts` - Command palette open/close state and search query
+- **Tauri IPC**: `src/services/` contains Tauri IPC wrappers:
+  - `git.ts` - All git operations (invokes Rust commands)
+  - `clipboard.ts` - Clipboard read/write via Tauri plugin
+  - `system.ts` - System commands (CLI install, app info, updates)
 - **Components**: `src/components/` organized by feature:
   - `graph/` - Commit graph visualization
   - `files/` - File list and staging panels
   - `diff/` - Diff viewer with hunk/line selection
   - `commit/` - Commit message input
   - `layout/` - Main layout components
-  - `sidebar/` - View switcher, branch/tag lists, current branch display
-  - `common/` - Shared UI components (dialogs, context menus)
+  - `sidebar/` - View switcher, branch/tag lists, stash list, current branch display
+  - `common/` - Shared UI components (dialogs, context menus, command palette)
   - `history/` - Commit details panel
   - `views/` - Main view containers (HistoryView, StatusView)
 
 ### Backend (Rust + Tauri)
 - **Entry**: `src-tauri/src/lib.rs` registers all Tauri commands
-- **Commands**: `src-tauri/src/commands/` - Tauri command handlers (repository, commits, branches, staging, diff, commit)
-- **Git Operations**: `src-tauri/src/git/` - Core git logic using `git2` crate (repository, commit, graph, diff, staging)
+- **Commands**: `src-tauri/src/commands/` - Tauri command handlers (repository, commits, branches, staging, diff, commit, stash, system)
+- **Git Operations**: `src-tauri/src/git/` - Core git logic using `git2` crate (repository, commit, graph, diff, staging, stash)
 - **State**: `src-tauri/src/state/mod.rs` - App state with repository handle
 - **Errors**: `src-tauri/src/error.rs` - Error types using `thiserror`
+- **Crash Handler**: `src-tauri/src/crash_handler.rs` - Panic hook for crash log files
+- **Update Logger**: `src-tauri/src/update_logger.rs` - Auto-update event logging
 
 ### IPC Flow
 Frontend components → Zustand actions → `git.ts` invoke() → Tauri commands → git module → git2
 
 ## Key Dependencies
-- **Frontend**: React 18, Zustand, react-window (virtualization), Tailwind CSS v4, clsx
+- **Frontend**: React 19, Zustand, react-window (virtualization), Tailwind CSS v4, clsx
 - **Backend**: Tauri 2.0, git2, serde, chrono, parking_lot
 
 ## Styling

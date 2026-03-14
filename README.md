@@ -1,19 +1,22 @@
 # Yet Another Git Gui
 
-A modern Git GUI built with Tauri, React, and TypeScript.    
+A cross-platform Git GUI for macOS and Linux — built to complement the CLI, not replace it.
 
-This is a largely vibe-coded project for me to get the feel of vibe coding. I will be tightening up the code as time allows and welcome any additions. This was created 
-from a desire for a Mac and Linux simple Git GUI that offers basic features that I like doing through a GUI, like looking at the commit graph and staging hunks, looking at diffs, etc.    
+![YAGG](YAGG-Default.png)
+
+This is a largely vibe-coded project for me to get the feel of vibe coding. I will be tightening up the code as time allows and welcome any additions. This was created from a desire for a Mac and Linux simple Git GUI that offers basic features that I like doing through a GUI, like looking at the commit graph and staging hunks, looking at diffs, etc.
 
 This is not a full featured git tool and is intended for use along with the CLI which is the main driver and is not intended to do everything the git CLI offers.
 
 ## Features
 
-- Commit graph visualization with branch lines
-- Two-view layout: History View and Status View
-- File staging with hunk and line-level control
-- Branch and tag management
-- Cross-platform (macOS, Linux)
+- Commit graph visualization with branch and merge lines
+- File staging with hunk-level and line-level control
+- Branch, tag, and stash management
+- Command palette for quick searchs (hashes, branches, authors, commit messages) and navigation
+- Full keyboard and/or mouse interactivity
+- Revert commits and files from history
+- Cross-platform: macOS and Linux
 
 ## Installation
 
@@ -86,6 +89,7 @@ pnpm tauri build
 | `pnpm test:e2e` | Run E2E tests |
 | `pnpm lint` | Lint code |
 | `pnpm format` | Format code |
+| `pnpm check` | Run all linters, type checks, and tests |
 
 ### Testing
 
@@ -110,9 +114,9 @@ See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
 ## Tech Stack
 
-- **Frontend:** React 18, TypeScript, Zustand, Vite
+- **Frontend:** React 19, TypeScript, Zustand, Vite, Tailwind CSS 4, react-window
 - **Backend:** Rust, Tauri 2.0, git2
-- **Testing:** Vitest, Playwright, cargo test
+- **Testing:** Vitest, Playwright, axe-core, cargo test
 
 ## Troubleshooting
 

@@ -43,6 +43,12 @@ pnpm lint:rust
 - Run `cargo fmt` before committing
 - Ensure `cargo clippy` passes without warnings
 
+### CSS / Styling
+- Tailwind CSS v4 with CSS-based config (no `tailwind.config.js`)
+- Custom theme tokens are defined in the `@theme` block in `src/styles/index.css`
+- `prettier-plugin-tailwindcss` auto-sorts Tailwind classes
+- When adding new colors, add them to the `@theme` block rather than using inline values
+
 ## Commit Messages
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated releases. Your commit messages determine whether a new version is released and what type of version bump occurs.
@@ -94,13 +100,36 @@ For breaking changes, you can either:
    BREAKING CHANGE: The graph rendering API has changed.
    ```
 
+## Project Structure
+
+- `src/components/` — React components organized by feature (graph, files, diff, commit, sidebar, etc.)
+- `src/stores/` — Zustand state stores
+- `src/services/` — Tauri IPC wrappers (git operations, clipboard, system)
+- `src-tauri/src/commands/` — Tauri command handlers
+- `src-tauri/src/git/` — Core git logic using git2
+- `e2e/` — Playwright E2E tests with Tauri mocks
+
+New components go in the appropriate feature subdirectory under `src/components/`. Tests are co-located (e.g., `MyComponent.test.tsx`).
+
+See [TESTING.md](TESTING.md) for comprehensive testing documentation including patterns, coverage targets, and accessibility testing.
+
 ## Pull Request Process
 
-1. Ensure all tests pass: `pnpm test && pnpm test:e2e && cd src-tauri && cargo test`
-2. Ensure linters pass: `pnpm lint && pnpm format:check && pnpm lint:rust`
-3. Update documentation if needed
-4. Create a pull request with a clear description
-5. Link any related issues
+1. Run `pnpm check` (runs all linters, type checks, and tests in one command)
+2. Update documentation if needed
+3. Create a pull request with a clear description
+4. Link any related issues
+
+## CI/CD
+
+Pull requests run automated checks via GitHub Actions:
+- **Commit linting** — PR commits are validated against conventional commit format
+- **Frontend linting** — ESLint + Prettier
+- **Rust linting** — `cargo fmt --check` + `cargo clippy -D warnings`
+- **Frontend unit tests** and **E2E tests** (Playwright)
+- **Rust tests**
+
+Builds (Linux + macOS) run on main branch merges only. Releases are automated via semantic-release based on conventional commit prefixes.
 
 ## Reporting Bugs
 

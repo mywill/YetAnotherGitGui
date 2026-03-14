@@ -157,7 +157,11 @@ Tauri API mocks are configured in `src/test/setup.ts`. The following are pre-moc
 
 - `@tauri-apps/api/core` - `invoke` function
 - `@tauri-apps/plugin-cli` - `getMatches` function
-- `@tauri-apps/plugin-clipboard-manager` - `writeText`, `readText` functions
+- `@tauri-apps/plugin-clipboard-manager` - `writeText` function
+- `@tauri-apps/plugin-updater` - `check` function
+- `@tauri-apps/plugin-process` - `relaunch` function
+- `@tauri-apps/plugin-opener` - `openUrl` function
+- `@tauri-apps/plugin-dialog` - `open` function
 - `window.confirm` and `window.alert`
 
 **To mock a specific Tauri command:**
@@ -276,8 +280,16 @@ src/
 │   ├── commit/
 │   │   └── CommitPanel.test.tsx
 │   ├── common/
+│   │   ├── AboutDialog.test.tsx
+│   │   ├── CommandPalette.test.tsx
 │   │   ├── ConfirmDialog.test.tsx
-│   │   └── ContextMenu.test.tsx
+│   │   ├── ContextMenu.test.tsx
+│   │   ├── KeyboardList.test.tsx
+│   │   ├── KeyboardListVirtualized.test.tsx
+│   │   ├── NotificationToast.test.tsx
+│   │   ├── RepoStateBanner.test.tsx
+│   │   ├── SettingsMenu.test.tsx
+│   │   └── YaggButton.test.tsx
 │   ├── diff/
 │   │   ├── DiffHunk.test.tsx
 │   │   └── DiffViewPanel.test.tsx
@@ -297,6 +309,7 @@ src/
 │   │   └── CommitFileItem.test.tsx
 │   ├── layout/
 │   │   ├── AppLayout.test.tsx
+│   │   ├── FileStatusCounts.test.tsx
 │   │   └── MainLayout.test.tsx
 │   ├── sidebar/
 │   │   ├── BranchItem.test.tsx
@@ -310,15 +323,19 @@ src/
 │   │   └── ViewSwitcher.test.tsx
 │   └── views/
 │       ├── HistoryView.test.tsx
-│       └── StatusView.test.tsx
+│       ├── StatusView.test.tsx
+│       └── WelcomeScreen.test.tsx
 ├── hooks/
-│   └── useCliArgs.test.ts
+│   ├── useCliArgs.test.ts
+│   ├── useCommandPaletteSearch.test.ts
+│   └── usePlatform.test.ts
 ├── services/
 │   ├── clipboard.test.ts
 │   ├── git.test.ts
 │   └── system.test.ts
 ├── stores/
 │   ├── dialogStore.test.ts
+│   ├── notificationStore.test.ts
 │   ├── repositoryStore.test.ts
 │   └── selectionStore.test.ts
 └── test/
@@ -341,13 +358,17 @@ src-tauri/src/
 │   ├── repository.rs    # includes #[cfg(test)] mod tests
 │   ├── staging.rs       # includes #[cfg(test)] mod tests
 │   └── stash.rs         # includes #[cfg(test)] mod tests
+├── crash_handler.rs     # includes #[cfg(test)] mod tests
 ├── error.rs             # includes #[cfg(test)] mod tests
+├── update_logger.rs     # includes #[cfg(test)] mod tests
 └── state/
     └── mod.rs           # includes #[cfg(test)] mod tests
 
 e2e/
-├── app.spec.ts          # E2E test specifications (75 tests)
-└── tauri-mocks.ts       # Tauri API mocks for browser testing
+├── app.spec.ts                        # Main E2E test specifications
+├── contrast-interactive-states.spec.ts # Interactive state contrast testing
+├── welcome-screen.spec.ts             # Welcome/empty screen tests
+└── tauri-mocks.ts                     # Tauri API mocks for browser testing
 ```
 
 ## CI/CD Considerations
