@@ -107,7 +107,7 @@ test.describe("Yet Another Git Gui Application", () => {
     // Check for keyboard shortcut hint in commit panel
     await expect(page.locator(".commit-hint")).toBeVisible({ timeout: 10000 });
     await expect(page.locator(".commit-hint")).toHaveText(
-      "Ctrl+Enter to commit"
+      "Cmd+Enter to commit"
     );
   });
 

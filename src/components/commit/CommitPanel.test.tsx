@@ -9,6 +9,10 @@ vi.mock("../../stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
 }));
 
+vi.mock("../../hooks/usePlatform", () => ({
+  usePlatform: vi.fn(() => ({ modKey: "Ctrl", platform: "linux" })),
+}));
+
 describe("CommitPanel", () => {
   const mockCreateCommit = vi.fn();
 

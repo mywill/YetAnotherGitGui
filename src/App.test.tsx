@@ -23,6 +23,10 @@ vi.mock("./hooks/useCliArgs", () => ({
   useCliArgs: vi.fn(),
 }));
 
+vi.mock("./hooks/usePlatform", () => ({
+  usePlatform: vi.fn(() => ({ modKey: "Ctrl", platform: "linux" })),
+}));
+
 // Mock NotificationToast as a no-op since it's tested separately
 vi.mock("./components/common/NotificationToast", () => ({
   NotificationToast: () => null,
@@ -361,6 +365,14 @@ describe("App", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+
+      expect(mockRefreshRepository).toHaveBeenCalledTimes(1);
+    });
+
+    it("refreshes repository on Meta+R (Cmd+R) key press", () => {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "r", metaKey: true });
 
       expect(mockRefreshRepository).toHaveBeenCalledTimes(1);
     });

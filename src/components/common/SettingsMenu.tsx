@@ -3,7 +3,6 @@ import {
   checkCliInstalled,
   installCli,
   uninstallCli,
-  getAppInfo,
   checkForUpdate,
   downloadAndInstallUpdate,
   getReleaseUrl,
@@ -13,13 +12,15 @@ import {
 } from "../../services/system";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useNotificationStore } from "../../stores/notificationStore";
+import { usePlatform } from "../../hooks/usePlatform";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
 import { YaggButton } from "./YaggButton";
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMac, setIsMac] = useState(false);
+  const { platform } = usePlatform();
+  const isMac = platform === "macos";
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
@@ -32,18 +33,12 @@ export function SettingsMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getAppInfo()
-      .then((info) => {
-        const mac = info.platform === "macos";
-        setIsMac(mac);
-        if (mac) {
-          checkCliInstalled()
-            .then(setCliInstalled)
-            .catch(() => setCliInstalled(null));
-        }
-      })
-      .catch(() => setIsMac(false));
-  }, []);
+    if (isMac) {
+      checkCliInstalled()
+        .then(setCliInstalled)
+        .catch(() => setCliInstalled(null));
+    }
+  }, [isMac]);
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);

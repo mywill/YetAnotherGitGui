@@ -10,6 +10,7 @@ import {
   checkForUpdate,
   downloadAndInstallUpdate,
 } from "../../services/system";
+import { usePlatform } from "../../hooks/usePlatform";
 
 vi.mock("../../services/system", () => ({
   checkCliInstalled: vi.fn(),
@@ -23,6 +24,10 @@ vi.mock("../../services/system", () => ({
   getReleaseUrl: vi.fn(
     (v: string) => `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${v}`
   ),
+}));
+
+vi.mock("../../hooks/usePlatform", () => ({
+  usePlatform: vi.fn(() => ({ modKey: "Cmd", platform: "macos" })),
 }));
 
 const mockShowSuccess = vi.fn();
@@ -40,6 +45,7 @@ vi.mock("../../stores/notificationStore", () => ({
 describe("SettingsMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(usePlatform).mockReturnValue({ modKey: "Cmd", platform: "macos" });
     vi.mocked(getAppInfo).mockResolvedValue({
       version: "1.2.0",
       tauri_version: "2.0.0",
@@ -170,12 +176,7 @@ describe("SettingsMenu", () => {
     });
 
     it("does not show CLI items on non-macOS platforms", async () => {
-      vi.mocked(getAppInfo).mockResolvedValue({
-        version: "1.2.0",
-        tauri_version: "2.0.0",
-        platform: "linux",
-        arch: "x86_64",
-      });
+      vi.mocked(usePlatform).mockReturnValue({ modKey: "Ctrl", platform: "linux" });
 
       render(<SettingsMenu />);
 
@@ -193,12 +194,7 @@ describe("SettingsMenu", () => {
     });
 
     it("does not show CLI separator on non-macOS platforms", async () => {
-      vi.mocked(getAppInfo).mockResolvedValue({
-        version: "1.2.0",
-        tauri_version: "2.0.0",
-        platform: "linux",
-        arch: "x86_64",
-      });
+      vi.mocked(usePlatform).mockReturnValue({ modKey: "Ctrl", platform: "linux" });
 
       render(<SettingsMenu />);
 

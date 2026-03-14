@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from "react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { usePlatform } from "../../hooks/usePlatform";
 import { YaggButton } from "../common/YaggButton";
 
 export function CommitPanel() {
   const [message, setMessage] = useState("");
   const [isCommitting, setIsCommitting] = useState(false);
+  const { modKey } = usePlatform();
 
   const fileStatuses = useRepositoryStore((s) => s.fileStatuses);
   const createCommit = useRepositoryStore((s) => s.createCommit);
@@ -54,7 +56,7 @@ export function CommitPanel() {
         >
           {isCommitting ? "Committing..." : "Commit"}
         </YaggButton>
-        <span className="commit-hint text-text-muted text-xs">Ctrl+Enter to commit</span>
+        <span className="commit-hint text-text-muted text-xs">{modKey}+Enter to commit</span>
       </div>
     </div>
   );

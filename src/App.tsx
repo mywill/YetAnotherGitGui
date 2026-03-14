@@ -15,6 +15,7 @@ import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCommandPaletteStore } from "./stores/commandPaletteStore";
 import { useCliArgs } from "./hooks/useCliArgs";
+import { usePlatform } from "./hooks/usePlatform";
 import { YaggButton } from "./components/common/YaggButton";
 import "./styles/index.css";
 
@@ -30,6 +31,8 @@ export function App() {
   const activeView = useSelectionStore((s) => s.activeView);
 
   const openCommandPalette = useCommandPaletteStore((s) => s.open);
+
+  const { modKey } = usePlatform();
 
   const dialogIsOpen = useDialogStore((s) => s.isOpen);
   const dialogTitle = useDialogStore((s) => s.title);
@@ -55,7 +58,7 @@ export function App() {
   // Keyboard shortcut for refresh (F5 or Ctrl+R)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
+      if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key === "r")) {
         e.preventDefault();
         if (!isLoading && repositoryInfo) {
           refreshRepository();
@@ -143,7 +146,7 @@ export function App() {
           <YaggButton
             className="h-6.5 px-2 leading-normal"
             onClick={openCommandPalette}
-            title="Search (Ctrl+K)"
+            title={`Search (${modKey}+K)`}
           >
             Search
           </YaggButton>
@@ -151,7 +154,7 @@ export function App() {
             className="h-6.5 px-2 leading-normal"
             onClick={refreshRepository}
             disabled={isLoading}
-            title="Refresh (F5 or Ctrl+R)"
+            title={`Refresh (F5 or ${modKey}+R)`}
           >
             Refresh
           </YaggButton>
