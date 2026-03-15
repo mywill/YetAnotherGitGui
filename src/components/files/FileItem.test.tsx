@@ -141,6 +141,17 @@ describe("FileItem", () => {
     expect(mockOnSelect).toHaveBeenCalledTimes(1);
   });
 
+  it("does not call onSelect or onSelectWithModifiers when file item is right-clicked", () => {
+    const mockOnSelectWithModifiers = vi.fn();
+    renderFileItem({ onSelectWithModifiers: mockOnSelectWithModifiers });
+
+    const fileItem = screen.getByText("test.tsx").closest(".file-item");
+    fireEvent.contextMenu(fileItem!);
+
+    expect(mockOnSelect).not.toHaveBeenCalled();
+    expect(mockOnSelectWithModifiers).not.toHaveBeenCalled();
+  });
+
   it("does not call onSelect when checkbox is clicked", () => {
     renderFileItem();
 

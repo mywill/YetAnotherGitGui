@@ -243,6 +243,16 @@ describe("KeyboardList", () => {
     expect(listbox).not.toHaveAttribute("aria-keyshortcuts");
   });
 
+  it("right-clicking an item sets it active without stealing focus", () => {
+    renderList();
+    const options = screen.getAllByRole("option");
+
+    fireEvent.contextMenu(options[2]);
+
+    expect(options[2]).toHaveAttribute("aria-selected", "true");
+    expect(options[0]).toHaveAttribute("aria-selected", "false");
+  });
+
   it("clicking an item sets it active and returns focus to listbox", () => {
     renderList();
     const listbox = screen.getByRole("listbox");
@@ -370,6 +380,23 @@ describe("KeyboardList", () => {
       expect(mockActiveChange).not.toHaveBeenCalled();
     });
 
+    it("right-click does not fire onActiveChange", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+
+      // First focus the list so onFocus fires
+      listbox.focus();
+      mockActiveChange.mockClear();
+
+      // Simulate real browser event ordering: mousedown(button=2) → focus → contextmenu
+      const options = screen.getAllByRole("option");
+      fireEvent.mouseDown(options[2], { button: 2 });
+      fireEvent.contextMenu(options[2]);
+      fireEvent.focus(listbox);
+
+      expect(mockActiveChange).not.toHaveBeenCalled();
+    });
+
     it("does not fire onActiveChange when not provided", () => {
       renderList(3);
       const listbox = screen.getByRole("listbox");
@@ -465,6 +492,74 @@ describe("KeyboardList", () => {
       );
 
       expect(mockActiveChange).toHaveBeenCalledWith(0, false);
+    });
+
+    it("repeated focus events after right-click never fire onActiveChange", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+      listbox.focus();
+      mockActiveChange.mockClear();
+
+      const options = screen.getAllByRole("option");
+      fireEvent.mouseDown(options[2], { button: 2 });
+      fireEvent.contextMenu(options[2]);
+
+      // Simulate multiple blur/focus cycles (context menu focus management)
+      fireEvent.focus(listbox);
+      fireEvent.focus(listbox);
+      fireEvent.focus(listbox);
+
+      expect(mockActiveChange).not.toHaveBeenCalled();
+    });
+
+    it("keyboard navigation fires onActiveChange after right-click sequence", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+      listbox.focus();
+      mockActiveChange.mockClear();
+
+      const options = screen.getAllByRole("option");
+      fireEvent.mouseDown(options[1], { button: 2 });
+      fireEvent.contextMenu(options[1]);
+      fireEvent.focus(listbox);
+
+      // Now simulate keyboard navigation
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+
+      expect(mockActiveChange).toHaveBeenCalledWith(2, false);
+    });
+
+    it("focus fires onActiveChange after right-click then keyboard interaction", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+      listbox.focus();
+
+      const options = screen.getAllByRole("option");
+      fireEvent.mouseDown(options[1], { button: 2 });
+      fireEvent.contextMenu(options[1]);
+      fireEvent.focus(listbox);
+
+      // Keyboard resets the flag
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+      mockActiveChange.mockClear();
+
+      // Now tab away and back — onFocus should fire onActiveChange
+      fireEvent.focus(listbox);
+      expect(mockActiveChange).toHaveBeenCalledWith(2, false);
+    });
+
+    it("left-click prevents onActiveChange on subsequent focus events", () => {
+      renderList(3, { onActiveChange: mockActiveChange });
+      const listbox = screen.getByRole("listbox");
+      listbox.focus();
+      mockActiveChange.mockClear();
+
+      const options = screen.getAllByRole("option");
+      fireEvent.click(options[2]);
+
+      // Re-focus should not fire onActiveChange (skipNextFocus persists)
+      fireEvent.focus(listbox);
+      expect(mockActiveChange).not.toHaveBeenCalled();
     });
 
     it("fires onActiveChange with clamped index when items are removed", () => {

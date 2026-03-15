@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -54,11 +55,26 @@ function KeyboardListItem({ index, children, className }: KeyboardListItemProps)
     useContext(KeyboardListContext);
   const isActive = index === activeIndex;
 
+  const handleMouseDown = useCallback(
+    (e: MouseEvent) => {
+      if (e.button === 2) {
+        setActiveIndex(index);
+        skipNextFocus.current = true;
+      }
+    },
+    [index, setActiveIndex, skipNextFocus]
+  );
+
   const handleClick = useCallback(() => {
     setActiveIndex(index);
     skipNextFocus.current = true;
     listRef.current?.focus();
   }, [index, setActiveIndex, skipNextFocus, listRef]);
+
+  const handleContextMenu = useCallback(() => {
+    setActiveIndex(index);
+    skipNextFocus.current = true;
+  }, [index, setActiveIndex, skipNextFocus]);
 
   return (
     <div
@@ -68,7 +84,9 @@ function KeyboardListItem({ index, children, className }: KeyboardListItemProps)
       tabIndex={-1}
       ref={(el) => registerItem(index, el)}
       className={className}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
     >
       {children}
     </div>
@@ -138,6 +156,7 @@ export function KeyboardList({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      skipNextFocusRef.current = false;
       const count = getItemCount();
       if (count === 0) return;
 
@@ -208,7 +227,6 @@ export function KeyboardList({
         onKeyDown={handleKeyDown}
         onFocus={() => {
           if (skipNextFocusRef.current) {
-            skipNextFocusRef.current = false;
             return;
           }
           const count = itemRefs.current.size;

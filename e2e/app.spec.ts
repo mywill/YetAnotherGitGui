@@ -978,6 +978,35 @@ test.describe("File Context Menus", () => {
     await expect(submenu.getByText("File name")).toBeVisible();
   });
 
+  test("right-click does not select or load diff for any file", async ({
+    page,
+  }) => {
+    // Verify no file is selected and no diff panel before right-click
+    await expect(page.locator(".file-item.selected")).toHaveCount(0);
+
+    // Right-click a file (use second file to avoid default-first-item edge cases)
+    const fileItems = page.locator(".file-item");
+    await expect(fileItems.first()).toBeVisible({ timeout: 10000 });
+    const target =
+      (await fileItems.count()) > 1 ? fileItems.nth(1) : fileItems.first();
+    await target.click({ button: "right" });
+
+    // Context menu should appear
+    const contextMenu = page.locator(".context-menu");
+    await expect(contextMenu).toBeVisible();
+
+    // Hover over each context menu item (the real bug trigger)
+    const menuItems = contextMenu.locator(".context-menu-item");
+    const menuCount = await menuItems.count();
+    for (let i = 0; i < menuCount; i++) {
+      await menuItems.nth(i).hover();
+      await page.waitForTimeout(100);
+    }
+
+    // No file should be selected after right-click + hovering menu items
+    await expect(page.locator(".file-item.selected")).toHaveCount(0);
+  });
+
   test("clicking Copy submenu item closes the context menu", async ({
     page,
   }) => {
