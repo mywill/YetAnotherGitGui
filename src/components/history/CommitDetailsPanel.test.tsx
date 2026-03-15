@@ -114,6 +114,21 @@ describe("CommitDetailsPanel", () => {
     expect(screen.getByText("src/old-file.ts")).toBeInTheDocument();
   });
 
+  it("commit-info section is scrollable and not fixed-height for long messages", () => {
+    const longMessage = "Long commit title\n\n" + "Detail line\n".repeat(50);
+    const longCommit = { ...mockCommitDetails, message: longMessage };
+    render(<CommitDetailsPanel details={longCommit} loading={false} />);
+
+    const commitInfo = document.querySelector(".commit-info");
+    expect(commitInfo).not.toBeNull();
+    // Should have overflow-y-auto for scrolling
+    expect(commitInfo!.className).toContain("overflow-y-auto");
+    // Should have a max-height cap so it doesn't consume all panel space
+    expect(commitInfo!.className).toMatch(/max-h-/);
+    // Should NOT have shrink-0 which prevents flex shrinking
+    expect(commitInfo!.className).not.toContain("shrink-0");
+  });
+
   it("shows files changed header", () => {
     render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
 

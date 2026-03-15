@@ -65,7 +65,7 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
 
   return (
     <div className="commit-details-panel flex h-full flex-col overflow-hidden">
-      <div className="commit-info border-border shrink-0 border-b p-3">
+      <div className="commit-info border-border max-h-[50%] min-h-24 overflow-y-auto border-b p-3">
         <div className="commit-hash mb-2 flex items-center gap-2">
           <span className="label text-text-muted text-xs">Commit</span>
           <code className="hash bg-bg-tertiary text-text-primary rounded px-1.5 py-0.5 font-mono text-xs">
