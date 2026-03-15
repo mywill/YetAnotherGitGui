@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitFileDiff } from "./CommitFileDiff";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import type { FileDiff } from "../../types";
 
 // Mock stores
@@ -21,14 +22,11 @@ describe("CommitFileDiff", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
-      selector({ revertCommitFileLines: mockRevertCommitFileLines, loadCommitDiffHunk: vi.fn() })
-    );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useDialogStore).mockImplementation((selector: any) =>
-      selector({ showConfirm: mockShowConfirm })
-    );
+    mockStore(useRepositoryStore, {
+      revertCommitFileLines: mockRevertCommitFileLines,
+      loadCommitDiffHunk: vi.fn(),
+    });
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   describe("binary file handling", () => {
@@ -398,13 +396,10 @@ describe("CommitFileDiff", () => {
     const mockLoadCommitDiffHunk = vi.fn();
 
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
-        selector({
-          revertCommitFileLines: vi.fn(),
-          loadCommitDiffHunk: mockLoadCommitDiffHunk,
-        })
-      );
+      mockStore(useRepositoryStore, {
+        revertCommitFileLines: vi.fn(),
+        loadCommitDiffHunk: mockLoadCommitDiffHunk,
+      });
     });
 
     it("renders collapsed placeholder for unloaded hunks", () => {

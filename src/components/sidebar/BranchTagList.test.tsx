@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BranchTagList } from "./BranchTagList";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { mockStore } from "../../test/mockStores";
 import type { BranchInfo, TagInfo, StashInfo } from "../../types";
 
 // Mock the repository store
@@ -38,10 +39,7 @@ describe("BranchTagList", () => {
     tags: TagInfo[] = [],
     stashes: StashInfo[] = []
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
-      selector({ branches, tags, stashes })
-    );
+    mockStore(useRepositoryStore, { branches, tags, stashes });
   }
 
   describe("section rendering", () => {

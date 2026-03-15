@@ -4,6 +4,7 @@ import { StashItem } from "./StashItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import { copyToClipboard } from "../../services/clipboard";
 import type { StashInfo, StashDetails } from "../../types";
 
@@ -38,35 +39,14 @@ describe("StashItem", () => {
     mockShowConfirm.mockResolvedValue(true);
     mockSelectedStashDetails = null;
 
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          loadStashDetails: mockLoadStashDetails,
-          applyStash: mockApplyStash,
-          dropStash: mockDropStash,
-          selectedStashDetails: mockSelectedStashDetails,
-        };
-        return selector(state);
-      }
-    );
-
-    (useSelectionStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          setActiveView: mockSetActiveView,
-        };
-        return selector(state);
-      }
-    );
-
-    (useDialogStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          showConfirm: mockShowConfirm,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      loadStashDetails: mockLoadStashDetails,
+      applyStash: mockApplyStash,
+      dropStash: mockDropStash,
+      selectedStashDetails: mockSelectedStashDetails,
+    });
+    mockStore(useSelectionStore, { setActiveView: mockSetActiveView });
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("renders stash name", () => {

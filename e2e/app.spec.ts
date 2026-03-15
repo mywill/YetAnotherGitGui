@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { tauriMocks } from "./tauri-mocks";
+import { switchToStatusView, switchToHistoryView } from "./helpers";
 
 /**
  * E2E tests for Yet Another Git Gui
@@ -15,22 +16,6 @@ import { tauriMocks } from "./tauri-mocks";
  *
  * To run: npm run test:e2e
  */
-
-// Helper to switch to Status View
-async function switchToStatusView(page: import("@playwright/test").Page) {
-  const statusTab = page.locator(".view-tab", { hasText: "Status" });
-  await statusTab.click();
-  // Wait for status view to load
-  await page.waitForSelector(".status-view", { timeout: 10000 });
-}
-
-// Helper to switch to History View
-async function switchToHistoryView(page: import("@playwright/test").Page) {
-  const historyTab = page.locator(".view-tab", { hasText: "History" });
-  await historyTab.click();
-  // Wait for history view to load
-  await page.waitForSelector(".history-view", { timeout: 10000 });
-}
 
 test.describe("Yet Another Git Gui Application", () => {
   test.beforeEach(async ({ page }) => {

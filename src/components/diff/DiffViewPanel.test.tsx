@@ -4,6 +4,7 @@ import { DiffViewPanel } from "./DiffViewPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import type { FileDiff } from "../../types";
 
 vi.mock("../../stores/repositoryStore", () => ({
@@ -57,43 +58,20 @@ describe("DiffViewPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useRepositoryStore).mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (selector: any) => {
-        const state = {
-          stageHunk: mockStageHunk,
-          unstageHunk: mockUnstageHunk,
-          stageLines: mockStageLines,
-          discardHunk: mockDiscardHunk,
-          discardLines: mockDiscardLines,
-          currentDiffPath: "test.txt",
-          currentDiffIsUntracked: false,
-          loadDiffHunk: vi.fn(),
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      stageHunk: mockStageHunk,
+      unstageHunk: mockUnstageHunk,
+      stageLines: mockStageLines,
+      discardHunk: mockDiscardHunk,
+      discardLines: mockDiscardLines,
+      currentDiffPath: "test.txt",
+      currentDiffIsUntracked: false,
+      loadDiffHunk: vi.fn(),
+    });
 
-    // Default: no files selected
-    vi.mocked(useSelectionStore).mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (selector: any) => {
-        const state = {
-          selectedFilePaths: new Set(),
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useSelectionStore, { selectedFilePaths: new Set() });
 
-    vi.mocked(useDialogStore).mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (selector: any) => {
-        const state = {
-          showConfirm: mockShowConfirm,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("renders loading state", () => {
@@ -401,19 +379,13 @@ describe("DiffViewPanel", () => {
 
   describe("multi-file selection", () => {
     it("shows multi-select message when multiple files are selected", () => {
-      vi.mocked(useSelectionStore).mockImplementation(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (selector: any) => {
-          const state = {
-            selectedFilePaths: new Set([
-              "unstaged:file1.txt",
-              "unstaged:file2.txt",
-              "unstaged:file3.txt",
-            ]),
-          };
-          return selector(state);
-        }
-      );
+      mockStore(useSelectionStore, {
+        selectedFilePaths: new Set([
+          "unstaged:file1.txt",
+          "unstaged:file2.txt",
+          "unstaged:file3.txt",
+        ]),
+      });
 
       const diff: FileDiff = {
         path: "file1.txt",
@@ -440,15 +412,9 @@ describe("DiffViewPanel", () => {
     });
 
     it("shows diff when only one file is selected", () => {
-      vi.mocked(useSelectionStore).mockImplementation(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (selector: any) => {
-          const state = {
-            selectedFilePaths: new Set(["unstaged:file1.txt"]),
-          };
-          return selector(state);
-        }
-      );
+      mockStore(useSelectionStore, {
+        selectedFilePaths: new Set(["unstaged:file1.txt"]),
+      });
 
       const diff: FileDiff = {
         path: "file1.txt",
@@ -474,15 +440,9 @@ describe("DiffViewPanel", () => {
     });
 
     it("has correct CSS class for multi-select state", () => {
-      vi.mocked(useSelectionStore).mockImplementation(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (selector: any) => {
-          const state = {
-            selectedFilePaths: new Set(["unstaged:file1.txt", "unstaged:file2.txt"]),
-          };
-          return selector(state);
-        }
-      );
+      mockStore(useSelectionStore, {
+        selectedFilePaths: new Set(["unstaged:file1.txt", "unstaged:file2.txt"]),
+      });
 
       const { container } = render(<DiffViewPanel diff={null} loading={false} staged={false} />);
 
@@ -494,22 +454,16 @@ describe("DiffViewPanel", () => {
     const mockLoadDiffHunk = vi.fn();
 
     beforeEach(() => {
-      vi.mocked(useRepositoryStore).mockImplementation(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (selector: any) => {
-          const state = {
-            stageHunk: vi.fn(),
-            unstageHunk: vi.fn(),
-            stageLines: vi.fn(),
-            discardHunk: vi.fn(),
-            discardLines: vi.fn(),
-            currentDiffPath: "large-file.ts",
-            currentDiffIsUntracked: false,
-            loadDiffHunk: mockLoadDiffHunk,
-          };
-          return selector(state);
-        }
-      );
+      mockStore(useRepositoryStore, {
+        stageHunk: vi.fn(),
+        unstageHunk: vi.fn(),
+        stageLines: vi.fn(),
+        discardHunk: vi.fn(),
+        discardLines: vi.fn(),
+        currentDiffPath: "large-file.ts",
+        currentDiffIsUntracked: false,
+        loadDiffHunk: mockLoadDiffHunk,
+      });
     });
 
     it("renders collapsed placeholder for unloaded hunks", () => {

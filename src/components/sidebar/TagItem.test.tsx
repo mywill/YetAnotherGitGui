@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TagItem } from "./TagItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import { copyToClipboard } from "../../services/clipboard";
 import type { TagInfo } from "../../types";
 
@@ -32,24 +33,11 @@ describe("TagItem", () => {
     vi.clearAllMocks();
     mockShowConfirm.mockResolvedValue(true);
 
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          checkoutCommit: mockCheckoutCommit,
-          deleteTag: mockDeleteTag,
-        };
-        return selector(state);
-      }
-    );
-
-    (useDialogStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          showConfirm: mockShowConfirm,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      checkoutCommit: mockCheckoutCommit,
+      deleteTag: mockDeleteTag,
+    });
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("renders tag name", () => {

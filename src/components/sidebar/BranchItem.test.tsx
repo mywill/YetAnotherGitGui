@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BranchItem } from "./BranchItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import { copyToClipboard } from "../../services/clipboard";
 import type { BranchInfo } from "../../types";
 
@@ -32,24 +33,11 @@ describe("BranchItem", () => {
     vi.clearAllMocks();
     mockShowConfirm.mockResolvedValue(true);
 
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          checkoutBranch: mockCheckoutBranch,
-          deleteBranch: mockDeleteBranch,
-        };
-        return selector(state);
-      }
-    );
-
-    (useDialogStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          showConfirm: mockShowConfirm,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      checkoutBranch: mockCheckoutBranch,
+      deleteBranch: mockDeleteBranch,
+    });
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("renders local branch name", () => {

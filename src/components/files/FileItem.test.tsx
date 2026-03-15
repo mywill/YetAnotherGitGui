@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FileItem } from "./FileItem";
 import type { FileStatus } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { mockStore } from "../../test/mockStores";
 import { copyToClipboard } from "../../services/clipboard";
 
 vi.mock("../../services/clipboard", () => ({
@@ -24,10 +25,7 @@ describe("FileItem", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useRepositoryStore).mockImplementation(
-      (selector: (state: Record<string, unknown>) => unknown) =>
-        selector({ repositoryInfo: { path: "/mock/repo/path" } })
-    );
+    mockStore(useRepositoryStore, { repositoryInfo: { path: "/mock/repo/path" } });
   });
 
   const defaultFile: FileStatus = {

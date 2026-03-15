@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { HistoryView } from "./HistoryView";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { mockStore } from "../../test/mockStores";
 
 // Mock the repository store
 vi.mock("../../stores/repositoryStore", () => ({
@@ -44,9 +45,7 @@ describe("HistoryView", () => {
       ...overrides,
     };
 
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => selector(state)
-    );
+    mockStore(useRepositoryStore, state);
 
     return state;
   }

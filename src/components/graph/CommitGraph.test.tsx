@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitGraph } from "./CommitGraph";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import type { GraphCommit } from "../../types";
 
 // Mock ResizeObserver
@@ -97,43 +98,26 @@ describe("CommitGraph", () => {
     vi.clearAllMocks();
     mockShowConfirm.mockResolvedValue(true);
 
-    (useRepositoryStore as unknown as Mock).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          checkoutCommit: mockCheckoutCommit,
-          loadCommitDetails: mockLoadCommitDetails,
-          repositoryInfo: {
-            path: "/test/repo",
-            current_branch: "main",
-            is_detached: false,
-            remotes: [],
-            head_hash: "abc123def456789",
-          },
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      checkoutCommit: mockCheckoutCommit,
+      loadCommitDetails: mockLoadCommitDetails,
+      repositoryInfo: {
+        path: "/test/repo",
+        current_branch: "main",
+        is_detached: false,
+        remotes: [],
+        head_hash: "abc123def456789",
+      },
+    });
 
-    (useSelectionStore as unknown as Mock).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          selectedCommitHash: null,
-          selectCommit: mockSelectCommit,
-          scrollToCommit: null,
-          clearScrollToCommit: mockClearScrollToCommit,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useSelectionStore, {
+      selectedCommitHash: null,
+      selectCommit: mockSelectCommit,
+      scrollToCommit: null,
+      clearScrollToCommit: mockClearScrollToCommit,
+    });
 
-    (useDialogStore as unknown as Mock).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          showConfirm: mockShowConfirm,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("renders with no commits", () => {
@@ -264,17 +248,12 @@ describe("CommitGraph", () => {
   });
 
   it("applies selected class to selected commit", () => {
-    (useSelectionStore as unknown as Mock).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          selectedCommitHash: "selected-commit",
-          selectCommit: mockSelectCommit,
-          scrollToCommit: null,
-          clearScrollToCommit: mockClearScrollToCommit,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useSelectionStore, {
+      selectedCommitHash: "selected-commit",
+      selectCommit: mockSelectCommit,
+      scrollToCommit: null,
+      clearScrollToCommit: mockClearScrollToCommit,
+    });
 
     const commits = [
       createMockCommit({ hash: "selected-commit", message: "Selected" }),

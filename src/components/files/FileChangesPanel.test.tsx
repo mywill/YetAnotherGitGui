@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FileChangesPanel } from "./FileChangesPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { mockStore } from "../../test/mockStores";
 import type { FileStatuses } from "../../types";
 
 // Mock the repository store
@@ -38,7 +39,7 @@ describe("FileChangesPanel", () => {
   });
 
   function setupStore() {
-    const state = {
+    mockStore(useRepositoryStore, {
       stageFile: mockStageFile,
       unstageFile: mockUnstageFile,
       stageFiles: mockStageFiles,
@@ -46,25 +47,15 @@ describe("FileChangesPanel", () => {
       loadFileDiff: mockLoadFileDiff,
       revertFile: mockRevertFile,
       deleteFile: mockDeleteFile,
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) => {
-      return selector(state);
     });
   }
 
   function setupSelectionStore() {
-    const state = {
+    mockStore(useSelectionStore, {
       selectedFilePaths: mockSelectedFilePaths,
       toggleFileSelection: mockToggleFileSelection,
       selectSingleFile: mockSelectSingleFile,
       clearFileSelection: mockClearFileSelection,
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useSelectionStore).mockImplementation((selector: any) => {
-      return selector(state);
     });
   }
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitPanel } from "./CommitPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { mockStore } from "../../test/mockStores";
 import type { FileStatuses } from "../../types";
 
 // Mock the repository store
@@ -21,14 +22,9 @@ describe("CommitPanel", () => {
   });
 
   function setupStore(overrides: { fileStatuses?: FileStatuses | null } = {}) {
-    const defaultState = {
+    mockStore(useRepositoryStore, {
       fileStatuses: overrides.fileStatuses ?? { staged: [], unstaged: [], untracked: [] },
       createCommit: mockCreateCommit,
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) => {
-      return selector(defaultState);
     });
   }
 

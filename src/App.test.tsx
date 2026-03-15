@@ -5,6 +5,7 @@ import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCliArgs } from "./hooks/useCliArgs";
+import { mockStore } from "./test/mockStores";
 
 // Mock all stores and hooks
 vi.mock("./stores/repositoryStore", () => ({
@@ -135,21 +136,17 @@ describe("App", () => {
       dialogTitle = "Test Dialog",
     } = overrides;
 
-    const repoState = {
+    mockStore(useRepositoryStore, {
       repositoryInfo,
       isLoading,
       openRepository: mockOpenRepository,
       refreshRepository: mockRefreshRepository,
       loadBranchesAndTags: mockLoadBranchesAndTags,
-    };
+    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) => selector(repoState));
+    mockStore(useSelectionStore, { activeView });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useSelectionStore).mockImplementation((selector: any) => selector({ activeView }));
-
-    const dialogState = {
+    mockStore(useDialogStore, {
       isOpen: dialogIsOpen,
       title: dialogTitle,
       message: "Test message",
@@ -157,10 +154,7 @@ describe("App", () => {
       cancelLabel: "Cancel",
       onConfirm: mockOnConfirm,
       closeDialog: mockCloseDialog,
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useDialogStore).mockImplementation((selector: any) => selector(dialogState));
+    });
 
     vi.mocked(useCliArgs).mockReturnValue({
       repoPath,

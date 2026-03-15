@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommitFileItem } from "./CommitFileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import type { CommitFileChange } from "../../types";
 
 // Mock the repository store
@@ -30,24 +31,14 @@ describe("CommitFileItem", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default mock implementation
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          expandedCommitFiles: new Set<string>(),
-          commitFileDiffs: new Map(),
-          toggleCommitFileExpanded: mockToggleExpanded,
-          loadCommitFileDiff: mockLoadDiff,
-          revertCommitFile: mockRevertCommitFile,
-        };
-        return selector(state);
-      }
-    );
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useDialogStore).mockImplementation((selector: any) =>
-      selector({ showConfirm: mockShowConfirm })
-    );
+    mockStore(useRepositoryStore, {
+      expandedCommitFiles: new Set<string>(),
+      commitFileDiffs: new Map(),
+      toggleCommitFileExpanded: mockToggleExpanded,
+      loadCommitFileDiff: mockLoadDiff,
+      revertCommitFile: mockRevertCommitFile,
+    });
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("renders file path", () => {
@@ -123,17 +114,12 @@ describe("CommitFileItem", () => {
   });
 
   it("shows expanded icon when file is expanded", () => {
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          expandedCommitFiles: new Set(["src/main.ts"]),
-          commitFileDiffs: new Map(),
-          toggleCommitFileExpanded: mockToggleExpanded,
-          loadCommitFileDiff: mockLoadDiff,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      expandedCommitFiles: new Set(["src/main.ts"]),
+      commitFileDiffs: new Map(),
+      toggleCommitFileExpanded: mockToggleExpanded,
+      loadCommitFileDiff: mockLoadDiff,
+    });
 
     render(<CommitFileItem file={mockFile} commitHash="abc123" />);
 
@@ -141,17 +127,12 @@ describe("CommitFileItem", () => {
   });
 
   it("shows loading message when expanded but diff not loaded", () => {
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          expandedCommitFiles: new Set(["src/main.ts"]),
-          commitFileDiffs: new Map(),
-          toggleCommitFileExpanded: mockToggleExpanded,
-          loadCommitFileDiff: mockLoadDiff,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      expandedCommitFiles: new Set(["src/main.ts"]),
+      commitFileDiffs: new Map(),
+      toggleCommitFileExpanded: mockToggleExpanded,
+      loadCommitFileDiff: mockLoadDiff,
+    });
 
     render(<CommitFileItem file={mockFile} commitHash="abc123" />);
 
@@ -166,18 +147,13 @@ describe("CommitFileItem", () => {
       total_lines: 0,
     };
 
-    (useRepositoryStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      (selector: (state: unknown) => unknown) => {
-        const state = {
-          expandedCommitFiles: new Set<string>(),
-          commitFileDiffs: new Map([["src/main.ts", mockDiff]]),
-          toggleCommitFileExpanded: mockToggleExpanded,
-          loadCommitFileDiff: mockLoadDiff,
-          revertCommitFile: mockRevertCommitFile,
-        };
-        return selector(state);
-      }
-    );
+    mockStore(useRepositoryStore, {
+      expandedCommitFiles: new Set<string>(),
+      commitFileDiffs: new Map([["src/main.ts", mockDiff]]),
+      toggleCommitFileExpanded: mockToggleExpanded,
+      loadCommitFileDiff: mockLoadDiff,
+      revertCommitFile: mockRevertCommitFile,
+    });
 
     render(<CommitFileItem file={mockFile} commitHash="abc123" />);
 

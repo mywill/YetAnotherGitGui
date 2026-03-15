@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { tauriMocks } from "./tauri-mocks";
+import { switchToStatusView, switchToHistoryView } from "./helpers";
 
 /**
  * WCAG AA Color Contrast Tests for Interactive States
@@ -12,20 +13,6 @@ import { tauriMocks } from "./tauri-mocks";
  * Some tests are expected to fail — known contrast issues are documented
  * inline and will be fixed in a follow-up pass.
  */
-
-// --- Helpers ---
-
-async function switchToStatusView(page: Page) {
-  const statusTab = page.locator(".view-tab", { hasText: "Status" });
-  await statusTab.click();
-  await page.waitForSelector(".status-view", { timeout: 10000 });
-}
-
-async function switchToHistoryView(page: Page) {
-  const historyTab = page.locator(".view-tab", { hasText: "History" });
-  await historyTab.click();
-  await page.waitForSelector(".history-view", { timeout: 10000 });
-}
 
 /**
  * Scan a region for WCAG AA color-contrast violations.

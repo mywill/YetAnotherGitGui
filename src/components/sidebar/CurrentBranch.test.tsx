@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CurrentBranch } from "./CurrentBranch";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { mockStore } from "../../test/mockStores";
 
 // Mock the repository store
 vi.mock("../../stores/repositoryStore", () => ({
@@ -21,10 +22,7 @@ describe("CurrentBranch", () => {
       remotes: string[];
     } | null
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
-      selector({ repositoryInfo })
-    );
+    mockStore(useRepositoryStore, { repositoryInfo });
   }
 
   describe("no repository", () => {

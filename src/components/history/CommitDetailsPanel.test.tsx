@@ -4,6 +4,7 @@ import { CommitDetailsPanel } from "./CommitDetailsPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { mockStore } from "../../test/mockStores";
 import type { CommitDetails } from "../../types";
 
 // Mock stores
@@ -50,18 +51,9 @@ describe("CommitDetailsPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) =>
-      selector({ revertCommit: mockRevertCommit })
-    );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useSelectionStore).mockImplementation((selector: any) =>
-      selector({ setActiveView: mockSetActiveView })
-    );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useDialogStore).mockImplementation((selector: any) =>
-      selector({ showConfirm: mockShowConfirm })
-    );
+    mockStore(useRepositoryStore, { revertCommit: mockRevertCommit });
+    mockStore(useSelectionStore, { setActiveView: mockSetActiveView });
+    mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
   it("shows empty state when no commit is selected", () => {

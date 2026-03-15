@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { StatusView } from "./StatusView";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { mockStore } from "../../test/mockStores";
 import type { FileStatuses, FileDiff } from "../../types";
 
 vi.mock("../../stores/repositoryStore", () => ({
@@ -85,10 +86,7 @@ describe("StatusView", () => {
       ...overrides,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(useRepositoryStore).mockImplementation((selector: any) => {
-      return selector(defaultState);
-    });
+    mockStore(useRepositoryStore, defaultState);
   }
 
   it("renders all main panels", () => {
