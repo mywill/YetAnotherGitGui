@@ -12,8 +12,8 @@ Thank you for your interest in contributing! This document provides guidelines f
 ## Development Setup
 
 Prerequisites:
-- Node.js 18+
-- Rust 1.70+
+- Node.js 22+
+- Rust (latest stable)
 - Platform-specific [Tauri dependencies](https://tauri.app/start/prerequisites/)
 
 ```bash
@@ -25,9 +25,11 @@ pnpm test
 pnpm test:e2e
 cd src-tauri && cargo test
 
-# Lint code
+# Lint and type check
 pnpm lint
+pnpm format:check
 pnpm lint:rust
+npx tsc --noEmit
 ```
 
 ## Code Style
@@ -115,7 +117,7 @@ See [TESTING.md](TESTING.md) for comprehensive testing documentation including p
 
 ## Pull Request Process
 
-1. Run `pnpm check` (runs all linters, type checks, and tests in one command)
+1. Run `pnpm check` (runs all linters, type checks, and tests — including `cargo fmt --check` and `cargo clippy`)
 2. Update documentation if needed
 3. Create a pull request with a clear description
 4. Link any related issues

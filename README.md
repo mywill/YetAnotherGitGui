@@ -13,7 +13,7 @@ This is not a full featured git tool and is intended for use along with the CLI 
 - Commit graph visualization with branch and merge lines
 - File staging with hunk-level and line-level control
 - Branch, tag, and stash management
-- Command palette for quick searchs (hashes, branches, authors, commit messages) and navigation
+- Command palette for quick searches (hashes, branches, authors, commit messages) and navigation
 - Full keyboard and/or mouse interactivity
 - Revert commits and files from history
 - Cross-platform: macOS and Linux
@@ -35,7 +35,7 @@ sudo rpm -i Yet.Another.Git.Gui_*.rpm
 **AppImage (any distro):**
 ```bash
 chmod +x "Yet.Another.Git.Gui_*.AppImage"
-./"Yet.Another.Git.Gui_*."
+./"Yet.Another.Git.Gui_*.AppImage"
 ```
 
 After installing via .deb or .rpm, the `yagg` command is available system-wide:
@@ -60,7 +60,7 @@ yagg /path/to/repo    # Open specific repository
 
 ### From Source
 
-Prerequisites: Node.js 18+, Rust 1.70+, platform-specific [Tauri dependencies](https://tauri.app/start/prerequisites/)
+Prerequisites: Node.js 22+, Rust (latest stable), platform-specific [Tauri dependencies](https://tauri.app/start/prerequisites/)
 
 ```bash
 # Clone the repository
@@ -114,7 +114,7 @@ See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
 ## Tech Stack
 
-- **Frontend:** React 19, TypeScript, Zustand, Vite, Tailwind CSS 4, react-window
+- **Frontend:** React 19, TypeScript, Zustand, Vite, Tailwind CSS 4, react-window, date-fns
 - **Backend:** Rust, Tauri 2.0, git2
 - **Testing:** Vitest, Playwright, axe-core, cargo test
 

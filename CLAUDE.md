@@ -213,13 +213,20 @@ npx tsc --noEmit
 - **Errors**: `src-tauri/src/error.rs` - Error types using `thiserror`
 - **Crash Handler**: `src-tauri/src/crash_handler.rs` - Panic hook for crash log files
 - **Update Logger**: `src-tauri/src/update_logger.rs` - Auto-update event logging
+- **Test Utilities**: `src-tauri/src/test_utils.rs` - Shared test helpers (create_test_repo, etc.)
+
+### Hooks
+- `src/hooks/useContextMenu.ts` - Context menu positioning and lifecycle
+- `src/hooks/useCliArgs.ts` - CLI argument parsing via Tauri plugin
+- `src/hooks/useCommandPaletteSearch.ts` - Search/filter logic for command palette
+- `src/hooks/usePlatform.ts` - Platform detection (macOS/Linux)
 
 ### IPC Flow
 Frontend components → Zustand actions → `git.ts` invoke() → Tauri commands → git module → git2
 
 ## Key Dependencies
-- **Frontend**: React 19, Zustand, react-window (virtualization), Tailwind CSS v4, clsx
-- **Backend**: Tauri 2.0, git2, serde, chrono, parking_lot
+- **Frontend**: React 19, Zustand, react-window (virtualization), Tailwind CSS v4, clsx, date-fns
+- **Backend**: Tauri 2.0, git2, serde, serde_json, chrono, parking_lot, dirs
 
 ## Styling
 
@@ -256,7 +263,7 @@ pnpm test:e2e:ui             # Run with interactive UI
 - Component tests are co-located with components (e.g., `CommitPanel.test.tsx`)
 - Tauri APIs are mocked in `src/test/setup.ts`
 - Rust tests use `tempfile` for temporary git repos
-- E2E tests are in `e2e/` directory with Tauri mocks in `e2e/tauri-mocks.ts`
+- E2E tests are in `e2e/` directory with Tauri mocks in `e2e/tauri-mocks.ts` and shared helpers in `e2e/helpers.ts`
 - Zustand stores can be accessed in E2E tests via dynamic import: `await page.evaluate(async () => { const mod = await import('/src/stores/notificationStore.ts'); mod.useNotificationStore.getState().showError('test'); })`
 
 See `TESTING.md` for comprehensive testing documentation.

@@ -361,6 +361,7 @@ src-tauri/src/
 ├── crash_handler.rs     # includes #[cfg(test)] mod tests
 ├── error.rs             # includes #[cfg(test)] mod tests
 ├── update_logger.rs     # includes #[cfg(test)] mod tests
+├── test_utils.rs        # shared test helpers (create_test_repo, etc.)
 └── state/
     └── mod.rs           # includes #[cfg(test)] mod tests
 
@@ -368,6 +369,7 @@ e2e/
 ├── app.spec.ts                        # Main E2E test specifications
 ├── contrast-interactive-states.spec.ts # Interactive state contrast testing
 ├── welcome-screen.spec.ts             # Welcome/empty screen tests
+├── helpers.ts                         # Shared E2E test helpers
 └── tauri-mocks.ts                     # Tauri API mocks for browser testing
 ```
 
@@ -391,7 +393,7 @@ For continuous integration:
    - Playwright browsers installed: `pnpm test:e2e:install`
    - The Vite dev server (started automatically by Playwright)
 
-Example GitHub Actions workflow:
+Example GitHub Actions workflow (simplified — see `.github/workflows/ci.yml` for the full CI configuration):
 
 ```yaml
 jobs:
@@ -402,7 +404,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
@@ -421,7 +423,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:e2e:install
@@ -451,11 +453,11 @@ cd src-tauri && cargo llvm-cov --html
 open target/llvm-cov/html/index.html
 ```
 
-### Current Coverage Targets
+### Coverage Goals
 
 | Layer | Lines | Functions |
 |-------|-------|-----------|
 | Frontend | > 90% | > 75% |
 | Rust | > 85% | > 80% |
 
-Coverage configuration is in `vitest.config.ts` for frontend and uses default settings for Rust.
+These are aspirational goals, not enforced thresholds — `vitest.config.ts` does not currently set coverage threshold enforcement. Coverage configuration is in `vitest.config.ts` for frontend and uses default settings for Rust.
