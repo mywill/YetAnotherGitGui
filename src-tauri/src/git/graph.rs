@@ -133,9 +133,10 @@ pub fn build_commit_graph(
                             && l.from_column == existing_col)
                     });
 
-                    // Retroactively fix the previous commit's ToParent line that
-                    // was pointing to existing_col — convert it to a convergence line
+                    // Retroactively fix ALL previous commits' ToParent lines that
+                    // were pointing to existing_col — convert them to convergence lines
                     for prev_gc in result.iter_mut().rev() {
+                        // Fix ToParent convergence lines pointing to old column
                         if prev_gc.commit.parent_hashes.first() == Some(parent) {
                             for line in prev_gc.lines.iter_mut() {
                                 if matches!(line.line_type, GraphLineType::ToParent)
@@ -146,6 +147,16 @@ pub fn build_commit_graph(
                                     break;
                                 }
                             }
+                        }
+
+                        // Remove orphaned PassThrough lines for old column
+                        prev_gc.lines.retain(|l| {
+                            !(matches!(l.line_type, GraphLineType::PassThrough)
+                                && l.from_column == existing_col)
+                        });
+
+                        // Stop at the commit that was IN the old column
+                        if prev_gc.column == existing_col {
                             break;
                         }
                     }
@@ -758,6 +769,8 @@ mod tests {
             "Max column should be <= 1 (only main + one branch at a time), got {}",
             max_col
         );
+
+        validate_graph_invariants(&graph);
     }
 
     #[test]
@@ -906,6 +919,8 @@ mod tests {
         assert_eq!(graph[4].column, 0, "5c1dd64 should be col 0");
         let max_col = graph.iter().map(|g| g.column).max().unwrap();
         assert!(max_col <= 2, "Max column should be <= 2, got {}", max_col);
+
+        validate_graph_invariants(&graph);
     }
 
     #[test]
@@ -975,6 +990,8 @@ mod tests {
             "Max column should be 1 (col 1 reused), got {}",
             max_col
         );
+
+        validate_graph_invariants(&graph);
     }
 
     #[test]
@@ -1778,6 +1795,157 @@ mod tests {
             branch_names.contains(&"feature"),
             "commit3 should have feature ref"
         );
+
+        validate_graph_invariants(&graph);
+    }
+
+    #[test]
+    fn test_unmerged_branch_tips_converge() {
+        // Two unmerged branch tips sharing the same parent, with mainline
+        // taking over that parent's column. Both siblings must converge.
+        //
+        //   main2 → main1           (mainline, column 0)
+        //   branch_b → root         (unmerged tip, newer, column 1)
+        //   branch_a → root         (unmerged tip, column 2)
+        //   main1 → root            (mainline continues, triggers takeover)
+        //   root                     (common ancestor)
+        let commits = vec![
+            create_commit_info("main2", "main2", vec!["main1".to_string()]),
+            create_commit_info("branch_b", "branch_b", vec!["root".to_string()]),
+            create_commit_info("branch_a", "branch_a", vec!["root".to_string()]),
+            create_commit_info("main1", "main1", vec!["root".to_string()]),
+            create_commit_info("root", "root", vec![]),
+        ];
+        let refs = HashMap::new();
+        let graph = build_commit_graph(commits, refs);
+
+        // root should be in column 0 (mainline took it over)
+        let root_gc = graph.iter().find(|g| g.commit.hash == "root").unwrap();
+        assert_eq!(root_gc.column, 0, "root should be col 0");
+
+        // Both branch_b and branch_a should have ToParent lines converging to column 0
+        for name in &["branch_b", "branch_a"] {
+            let gc = graph.iter().find(|g| g.commit.hash == *name).unwrap();
+            let to_parent = gc
+                .lines
+                .iter()
+                .find(|l| matches!(l.line_type, GraphLineType::ToParent) && !l.is_merge);
+            assert!(to_parent.is_some(), "{} should have a ToParent line", name);
+            assert_eq!(
+                to_parent.unwrap().to_column,
+                0,
+                "{} ToParent should converge to column 0, got {}",
+                name,
+                to_parent.unwrap().to_column
+            );
+        }
+
+        // No orphaned PassThrough lines for any freed column in rows after takeover
+        let main1_gc = graph.iter().find(|g| g.commit.hash == "main1").unwrap();
+        let orphaned_pt = main1_gc.lines.iter().any(|l| {
+            matches!(l.line_type, GraphLineType::PassThrough) && l.from_column != main1_gc.column
+        });
+        assert!(
+            !orphaned_pt,
+            "main1 should have no orphaned PassThrough lines"
+        );
+
+        validate_graph_invariants(&graph);
+    }
+
+    #[test]
+    fn test_three_unmerged_siblings_converge() {
+        // Three unmerged branch tips sharing the same parent (stress test).
+        //
+        //   main2 → main1           (mainline, column 0)
+        //   branch_c → root         (unmerged tip, newest, column 1)
+        //   branch_b → root         (unmerged tip, column 2)
+        //   branch_a → root         (unmerged tip, column 3)
+        //   main1 → root            (mainline, triggers takeover from col 1 → col 0)
+        //   root                     (common ancestor)
+        let commits = vec![
+            create_commit_info("main2", "main2", vec!["main1".to_string()]),
+            create_commit_info("branch_c", "branch_c", vec!["root".to_string()]),
+            create_commit_info("branch_b", "branch_b", vec!["root".to_string()]),
+            create_commit_info("branch_a", "branch_a", vec!["root".to_string()]),
+            create_commit_info("main1", "main1", vec!["root".to_string()]),
+            create_commit_info("root", "root", vec![]),
+        ];
+        let refs = HashMap::new();
+        let graph = build_commit_graph(commits, refs);
+
+        // root should be in column 0
+        let root_gc = graph.iter().find(|g| g.commit.hash == "root").unwrap();
+        assert_eq!(root_gc.column, 0, "root should be col 0");
+
+        // All three branches should have ToParent lines converging to column 0
+        for name in &["branch_c", "branch_b", "branch_a"] {
+            let gc = graph.iter().find(|g| g.commit.hash == *name).unwrap();
+            let to_parent = gc
+                .lines
+                .iter()
+                .find(|l| matches!(l.line_type, GraphLineType::ToParent) && !l.is_merge);
+            assert!(to_parent.is_some(), "{} should have a ToParent line", name);
+            assert_eq!(
+                to_parent.unwrap().to_column,
+                0,
+                "{} ToParent should converge to column 0, got {}",
+                name,
+                to_parent.unwrap().to_column
+            );
+        }
+
+        validate_graph_invariants(&graph);
+    }
+
+    #[test]
+    fn test_takeover_termination_with_reused_column() {
+        // Validates that the fix's termination condition doesn't stop prematurely
+        // on an unrelated commit that happened to be at the same column number.
+        //
+        //   merge1(main2, old_feat)  (merges old_feat, frees column 1)
+        //   old_feat → main1        (was in column 1, now merged)
+        //   main2 → main1           (mainline)
+        //   branch_b → root         (new tip, gets column 1 — reused!)
+        //   branch_a → root         (new tip, column 2)
+        //   main1 → root            (triggers takeover from col 1 → col 0)
+        //   root
+        let commits = vec![
+            create_commit_info(
+                "merge1",
+                "merge1",
+                vec!["main2".to_string(), "old_feat".to_string()],
+            ),
+            create_commit_info("old_feat", "old_feat", vec!["main1".to_string()]),
+            create_commit_info("main2", "main2", vec!["main1".to_string()]),
+            create_commit_info("branch_b", "branch_b", vec!["root".to_string()]),
+            create_commit_info("branch_a", "branch_a", vec!["root".to_string()]),
+            create_commit_info("main1", "main1", vec!["root".to_string()]),
+            create_commit_info("root", "root", vec![]),
+        ];
+        let refs = HashMap::new();
+        let graph = build_commit_graph(commits, refs);
+
+        // root should be in column 0
+        let root_gc = graph.iter().find(|g| g.commit.hash == "root").unwrap();
+        assert_eq!(root_gc.column, 0, "root should be col 0");
+
+        // branch_b and branch_a should converge ToParent to column 0
+        for name in &["branch_b", "branch_a"] {
+            let gc = graph.iter().find(|g| g.commit.hash == *name).unwrap();
+            let to_parent = gc
+                .lines
+                .iter()
+                .find(|l| matches!(l.line_type, GraphLineType::ToParent) && !l.is_merge);
+            assert!(to_parent.is_some(), "{} should have a ToParent line", name);
+            assert_eq!(
+                to_parent.unwrap().to_column,
+                0,
+                "{} ToParent should converge to column 0, got {}",
+                name,
+                to_parent.unwrap().to_column
+            );
+        }
 
         validate_graph_invariants(&graph);
     }
