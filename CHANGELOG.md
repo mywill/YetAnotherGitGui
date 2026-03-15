@@ -1,3 +1,14 @@
+## [1.8.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.8.0...v1.8.1) (2026-03-15)
+
+
+### Bug Fixes
+
+* fix some context menu behavior that broke with the refactor ([e12084a](https://github.com/mywill/YetAnotherGitGui/commit/e12084a866514f1b8d67f56b7c86b2c24b7bcf5a))
+* Update to the file selection logic to work more consistant with keybinds and mouse interactions ([33c2eaa](https://github.com/mywill/YetAnotherGitGui/commit/33c2eaa39ca93e650789d03bf5d5b572e9c9299e))
+* updated for edge case where the graph would not render correctly for some branch sources ([28160a9](https://github.com/mywill/YetAnotherGitGui/commit/28160a9a20f950023a6af8425588438703887058))
+* updated so long commit messages will still show files and the full message in history view ([fa90730](https://github.com/mywill/YetAnotherGitGui/commit/fa90730e8ab0a102b85e5bdd5d9f97808710d01a))
+* updated to show the correct keybind reguardless of OS ([214b4ba](https://github.com/mywill/YetAnotherGitGui/commit/214b4ba54b2bc82ca81cbaceb76d196ab8d73b5f))
+
 # [1.8.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.7.0...v1.8.0) (2026-03-11)
 
 
