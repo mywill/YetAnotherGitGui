@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { HistoryView } from "./HistoryView";
-import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
 import { mockStore } from "../../test/mockStores";
 
 // Mock the repository store
 vi.mock("../../stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
+  useIsEmptyRepo: vi.fn(),
 }));
 
 // Mock child components to simplify testing
@@ -35,7 +36,7 @@ describe("HistoryView", () => {
     document.body.style.userSelect = "";
   });
 
-  function setupStore(overrides = {}) {
+  function setupStore(overrides: Record<string, unknown> = {}, isEmptyRepo = false) {
     const state = {
       commits: [],
       hasMoreCommits: false,
@@ -46,6 +47,7 @@ describe("HistoryView", () => {
     };
 
     mockStore(useRepositoryStore, state);
+    vi.mocked(useIsEmptyRepo).mockReturnValue(isEmptyRepo);
 
     return state;
   }
@@ -214,6 +216,34 @@ describe("HistoryView", () => {
       expect(detailsPanel).toHaveStyle({ width: "600px" });
 
       fireEvent.mouseUp(document);
+    });
+  });
+
+  describe("empty repo", () => {
+    it("shows empty state message when repo has no commits", () => {
+      setupStore({}, true);
+
+      render(<HistoryView />);
+
+      expect(
+        screen.getByText("No commits yet. Create your first commit in the Status view.")
+      ).toBeInTheDocument();
+    });
+
+    it("does not show commit graph when repo is empty", () => {
+      setupStore({}, true);
+
+      render(<HistoryView />);
+
+      expect(screen.queryByTestId("commit-graph")).not.toBeInTheDocument();
+    });
+
+    it("has history-view class on empty state", () => {
+      setupStore({}, true);
+
+      const { container } = render(<HistoryView />);
+
+      expect(container.querySelector(".history-view")).toBeInTheDocument();
     });
   });
 });

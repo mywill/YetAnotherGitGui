@@ -173,7 +173,7 @@ pub fn get_file_diff_with_config(
 
     let diff = if staged {
         // Staged: diff between HEAD and index
-        let head_tree = repo.head()?.peel_to_tree().ok();
+        let head_tree = repo.head().ok().and_then(|h| h.peel_to_tree().ok());
         repo.diff_tree_to_index(head_tree.as_ref(), None, Some(&mut diff_opts))?
     } else {
         // Unstaged: diff between index and workdir (includes untracked files)
@@ -886,6 +886,38 @@ mod tests {
             has_unloaded,
             "Should have some unloaded hunks with small budget"
         );
+    }
+
+    #[test]
+    fn test_get_file_diff_staged_empty_repo() {
+        let (temp_dir, repo) = create_test_repo();
+
+        // Create and stage a file in an empty repo (no commits)
+        let file_path = temp_dir.path().join("new.txt");
+        fs::write(&file_path, "hello\nworld\n").unwrap();
+
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("new.txt")).unwrap();
+        index.write().unwrap();
+
+        // Getting a staged diff should work even with no HEAD
+        let diff = get_file_diff(&repo, "new.txt", true).unwrap();
+
+        assert_eq!(diff.path, "new.txt");
+        assert!(!diff.is_binary);
+        assert!(!diff.hunks.is_empty());
+
+        // All lines should be additions since there's no HEAD to compare against
+        let hunk = &diff.hunks[0];
+        let non_header_lines: Vec<_> = hunk
+            .lines
+            .iter()
+            .filter(|l| !matches!(l.line_type, LineType::Header))
+            .collect();
+        assert!(!non_header_lines.is_empty());
+        assert!(non_header_lines
+            .iter()
+            .all(|l| matches!(l.line_type, LineType::Addition)));
     }
 
     #[test]

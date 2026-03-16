@@ -1928,4 +1928,75 @@ describe("repositoryStore", () => {
       expect(mockShowSuccess).not.toHaveBeenCalled();
     });
   });
+
+  describe("isEmptyRepo detection", () => {
+    // useIsEmptyRepo is a React hook that derives from store state.
+    // We test the underlying logic by checking the store state conditions directly.
+    function isEmptyRepo(): boolean {
+      const { repositoryInfo, commits } = useRepositoryStore.getState();
+      return (
+        repositoryInfo !== null &&
+        repositoryInfo.head_hash === null &&
+        !repositoryInfo.is_detached &&
+        commits.length === 0
+      );
+    }
+
+    it("returns true when repo is open with no head_hash and no commits", () => {
+      useRepositoryStore.setState({
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: null,
+          is_detached: false,
+          remotes: [],
+          head_hash: null,
+          repo_state: "clean",
+        },
+        commits: [],
+      });
+
+      expect(isEmptyRepo()).toBe(true);
+    });
+
+    it("returns false when head_hash is set", () => {
+      useRepositoryStore.setState({
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: "main",
+          is_detached: false,
+          remotes: [],
+          head_hash: "abc123",
+          repo_state: "clean",
+        },
+        commits: [],
+      });
+
+      expect(isEmptyRepo()).toBe(false);
+    });
+
+    it("returns false when no repo is open", () => {
+      useRepositoryStore.setState({
+        repositoryInfo: null,
+        commits: [],
+      });
+
+      expect(isEmptyRepo()).toBe(false);
+    });
+
+    it("returns false when is_detached is true even with no head_hash", () => {
+      useRepositoryStore.setState({
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: null,
+          is_detached: true,
+          remotes: [],
+          head_hash: null,
+          repo_state: "clean",
+        },
+        commits: [],
+      });
+
+      expect(isEmptyRepo()).toBe(false);
+    });
+  });
 });

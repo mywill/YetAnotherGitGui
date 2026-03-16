@@ -1676,3 +1676,38 @@ test.describe("Repo State Banner - Accessibility", () => {
     expect(contrastViolations).toEqual([]);
   });
 });
+
+test.describe("Empty Repository", () => {
+  test.beforeEach(async ({ page }) => {
+    // Set the empty repo flag before injecting mocks
+    await page.addInitScript(`window.__MOCK_EMPTY_REPO__ = true;`);
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("shows 'New repository' badge in header", async ({ page }) => {
+    await expect(page.locator(".app")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".branch-indicator")).toContainText(
+      "New repository",
+    );
+  });
+
+  test("shows empty state message in history view", async ({ page }) => {
+    await expect(page.locator(".app")).toBeVisible({ timeout: 10000 });
+    await switchToHistoryView(page);
+
+    await expect(
+      page.getByText(
+        "No commits yet. Create your first commit in the Status view.",
+      ),
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  test("does not show commit graph in history view", async ({ page }) => {
+    await expect(page.locator(".app")).toBeVisible({ timeout: 10000 });
+    await switchToHistoryView(page);
+
+    await expect(page.locator(".history-graph")).not.toBeVisible();
+  });
+});

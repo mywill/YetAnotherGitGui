@@ -1,18 +1,31 @@
 import { useState, useCallback } from "react";
 import { CommitGraph } from "../graph/CommitGraph";
 import { CommitDetailsPanel } from "../history/CommitDetailsPanel";
-import { useRepositoryStore } from "../../stores/repositoryStore";
+import { DetailsPanelEmpty } from "../common/DetailsPanelStates";
+import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
 
 export function HistoryView() {
   const commits = useRepositoryStore((s) => s.commits);
   const selectedCommitDetails = useRepositoryStore((s) => s.selectedCommitDetails);
   const commitDetailsLoading = useRepositoryStore((s) => s.commitDetailsLoading);
+  const isEmptyRepo = useIsEmptyRepo();
 
   const [detailsWidth, setDetailsWidth] = useState(400);
 
   const handleResize = useCallback((delta: number) => {
     setDetailsWidth((w) => Math.max(300, Math.min(600, w - delta)));
   }, []);
+
+  if (isEmptyRepo) {
+    return (
+      <div className="history-view flex min-h-0 flex-1 overflow-hidden">
+        <DetailsPanelEmpty
+          className="history-empty flex-1"
+          label="No commits yet. Create your first commit in the Status view."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="history-view flex min-h-0 flex-1 overflow-hidden">

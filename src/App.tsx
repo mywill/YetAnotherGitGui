@@ -10,7 +10,7 @@ import { SettingsMenu } from "./components/common/SettingsMenu";
 import { NotificationToast } from "./components/common/NotificationToast";
 import { RepoStateBanner } from "./components/common/RepoStateBanner";
 import { FileStatusCounts } from "./components/layout/FileStatusCounts";
-import { useRepositoryStore } from "./stores/repositoryStore";
+import { useRepositoryStore, useIsEmptyRepo } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCommandPaletteStore } from "./stores/commandPaletteStore";
@@ -31,6 +31,8 @@ export function App() {
   const activeView = useSelectionStore((s) => s.activeView);
 
   const openCommandPalette = useCommandPaletteStore((s) => s.open);
+
+  const isEmptyRepo = useIsEmptyRepo();
 
   const { modKey } = usePlatform();
 
@@ -131,7 +133,8 @@ export function App() {
                 <span>
                   {repositoryInfo.is_detached
                     ? "HEAD detached"
-                    : repositoryInfo.current_branch || "No branch"}
+                    : repositoryInfo.current_branch ||
+                      (isEmptyRepo ? "New repository" : "No branch")}
                 </span>
               </span>
             </>

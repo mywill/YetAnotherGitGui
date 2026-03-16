@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { App } from "./App";
-import { useRepositoryStore } from "./stores/repositoryStore";
+import { useRepositoryStore, useIsEmptyRepo } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCliArgs } from "./hooks/useCliArgs";
@@ -10,6 +10,7 @@ import { mockStore } from "./test/mockStores";
 // Mock all stores and hooks
 vi.mock("./stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
+  useIsEmptyRepo: vi.fn(),
 }));
 
 vi.mock("./stores/selectionStore", () => ({
@@ -119,6 +120,7 @@ describe("App", () => {
       activeView?: "history" | "status";
       dialogIsOpen?: boolean;
       dialogTitle?: string;
+      isEmptyRepo?: boolean;
     } = {}
   ) {
     const {
@@ -134,7 +136,10 @@ describe("App", () => {
       activeView = "status",
       dialogIsOpen = false,
       dialogTitle = "Test Dialog",
+      isEmptyRepo = false,
     } = overrides;
+
+    vi.mocked(useIsEmptyRepo).mockReturnValue(isEmptyRepo);
 
     mockStore(useRepositoryStore, {
       repositoryInfo,
@@ -282,6 +287,22 @@ describe("App", () => {
       render(<App />);
 
       expect(screen.getByText("No branch")).toBeInTheDocument();
+    });
+
+    it("shows 'New repository' badge for empty repo", () => {
+      setupDefaultMocks({
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: null,
+          is_detached: false,
+          remotes: [],
+        },
+        isEmptyRepo: true,
+      });
+
+      render(<App />);
+
+      expect(screen.getByText("New repository")).toBeInTheDocument();
     });
 
     it("renders sidebar component", () => {

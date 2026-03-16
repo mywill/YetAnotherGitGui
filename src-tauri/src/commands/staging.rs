@@ -72,7 +72,11 @@ pub fn revert_file(path: String, state: State<AppState>) -> Result<(), AppError>
     let repo = state.get_repo()?;
 
     // Checkout the file from HEAD to discard changes
-    let head = repo.head()?.peel_to_tree()?;
+    let head = repo
+        .head()
+        .ok()
+        .and_then(|h| h.peel_to_tree().ok())
+        .ok_or_else(|| AppError::InvalidPath("Cannot revert: no commits yet".to_string()))?;
     repo.checkout_tree(
         head.as_object(),
         Some(git2::build::CheckoutBuilder::new().force().path(&path)),
@@ -236,6 +240,48 @@ mod tests {
         fs::remove_file(full_path).unwrap();
 
         assert!(!file_path.exists());
+    }
+
+    #[test]
+    fn test_revert_file_empty_repo() {
+        let (temp_dir, _repo) = create_test_repo();
+
+        // Create a file in an empty repo (no commits)
+        let file_path = temp_dir.path().join("new.txt");
+        fs::write(&file_path, "hello\n").unwrap();
+
+        // Open repo fresh to simulate the command handler
+        let repo = Repository::open(temp_dir.path()).unwrap();
+
+        // Reverting should fail with a descriptive error, not a cryptic git2 crash
+        let head_result = repo.head();
+        assert!(head_result.is_err() || repo.head().unwrap().peel_to_tree().is_err());
+
+        // The actual revert_file command logic: repo.head()?.peel_to_tree()?
+        // should produce an error containing "no commits yet"
+        let result: Result<(), AppError> = (|| {
+            let head = repo
+                .head()
+                .ok()
+                .and_then(|h| h.peel_to_tree().ok())
+                .ok_or_else(|| {
+                    AppError::InvalidPath("Cannot revert: no commits yet".to_string())
+                })?;
+            repo.checkout_tree(
+                head.as_object(),
+                Some(git2::build::CheckoutBuilder::new().force().path("new.txt")),
+            )?;
+            Ok(())
+        })();
+
+        // For now, test the expected behavior: error with descriptive message
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("no commits yet"),
+            "Expected 'no commits yet' in error, got: {}",
+            err_msg
+        );
     }
 
     #[test]

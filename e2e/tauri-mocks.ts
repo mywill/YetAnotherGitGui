@@ -56,6 +56,16 @@ export const tauriMocks = `
           return '/mock/repo/path';
 
         case 'open_repository':
+          if (window.__MOCK_EMPTY_REPO__) {
+            return {
+              path: args?.path || '/mock/repo/path',
+              current_branch: null,
+              is_detached: false,
+              remotes: [],
+              head_hash: null,
+              repo_state: 'clean'
+            };
+          }
           return {
             path: args?.path || '/mock/repo/path',
             current_branch: 'main',
@@ -66,6 +76,16 @@ export const tauriMocks = `
           };
 
         case 'get_repository_info':
+          if (window.__MOCK_EMPTY_REPO__) {
+            return {
+              path: '/mock/repo/path',
+              current_branch: null,
+              is_detached: false,
+              remotes: [],
+              head_hash: null,
+              repo_state: 'clean'
+            };
+          }
           return {
             path: '/mock/repo/path',
             current_branch: 'main',
@@ -77,6 +97,8 @@ export const tauriMocks = `
 
         case 'get_all_commit_graph':
         case 'get_commit_graph':
+          if (window.__MOCK_EMPTY_REPO__) return [];
+
           return [
             {
               hash: 'abc123def456789',
@@ -162,6 +184,9 @@ export const tauriMocks = `
           ];
 
         case 'get_file_statuses':
+          if (window.__MOCK_EMPTY_REPO__) {
+            return { staged: [], unstaged: [], untracked: [] };
+          }
           return {
             staged: [
               { path: 'staged-file.ts', status: 'modified', is_staged: true }
@@ -245,6 +270,7 @@ export const tauriMocks = `
           return 'new-commit-hash-123';
 
         case 'list_branches':
+          if (window.__MOCK_EMPTY_REPO__) return [];
           return [
             { name: 'main', is_remote: false, is_head: true, target_hash: 'abc123def456789' },
             { name: 'feature/test', is_remote: false, is_head: false, target_hash: 'def456789abc123' },
@@ -252,12 +278,14 @@ export const tauriMocks = `
           ];
 
         case 'list_tags':
+          if (window.__MOCK_EMPTY_REPO__) return [];
           return [
             { name: 'v1.0.0', target_hash: 'abc123def456789', is_annotated: true, message: 'First release' },
             { name: 'v0.9.0', target_hash: 'def456789abc123', is_annotated: false, message: null }
           ];
 
         case 'list_stashes':
+          if (window.__MOCK_EMPTY_REPO__) return [];
           return [
             {
               index: 0,

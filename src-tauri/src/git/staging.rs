@@ -159,22 +159,33 @@ pub fn stage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
 }
 
 pub fn unstage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
-    let head = repo.head()?.peel_to_commit()?;
-    let head_tree = head.tree()?;
+    let head_tree = repo
+        .head()
+        .ok()
+        .and_then(|h| h.peel_to_commit().ok())
+        .and_then(|c| c.tree().ok());
 
     let mut index = repo.index()?;
 
-    // Try to get the file from HEAD
-    if let Ok(entry) = head_tree.get_path(Path::new(path)) {
-        // File exists in HEAD, restore it to index
-        let entry_oid = entry.id();
-        index.add_frombuffer(
-            &create_index_entry(path, entry.filemode() as u32, 0, entry_oid),
-            repo.find_blob(entry_oid)?.content(),
-        )?;
-    } else {
-        // File doesn't exist in HEAD, remove from index
-        index.remove_path(Path::new(path))?;
+    match head_tree {
+        Some(tree) => {
+            // Try to get the file from HEAD
+            if let Ok(entry) = tree.get_path(Path::new(path)) {
+                // File exists in HEAD, restore it to index
+                let entry_oid = entry.id();
+                index.add_frombuffer(
+                    &create_index_entry(path, entry.filemode() as u32, 0, entry_oid),
+                    repo.find_blob(entry_oid)?.content(),
+                )?;
+            } else {
+                // File doesn't exist in HEAD, remove from index
+                index.remove_path(Path::new(path))?;
+            }
+        }
+        None => {
+            // Empty repo (no commits): unstaging means removing from index
+            index.remove_path(Path::new(path))?;
+        }
     }
 
     index.write()?;
@@ -2040,5 +2051,46 @@ mod tests {
         let content = fs::read_to_string(temp_dir.path().join("file.txt")).unwrap();
         assert!(content.contains("line2"));
         assert!(!content.contains("modified2"));
+    }
+
+    #[test]
+    fn test_stage_file_empty_repo() {
+        let (temp_dir, repo) = create_test_repo();
+
+        // Create a file in an empty repo (no commits)
+        let file_path = temp_dir.path().join("new.txt");
+        fs::write(&file_path, "hello\n").unwrap();
+
+        // Stage it
+        let result = stage_file(&repo, "new.txt");
+        assert!(result.is_ok());
+
+        // Verify it appears in staged statuses
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.iter().any(|s| s.path == "new.txt"));
+    }
+
+    #[test]
+    fn test_unstage_file_empty_repo() {
+        let (temp_dir, repo) = create_test_repo();
+
+        // Create and stage a file in an empty repo (no commits)
+        let file_path = temp_dir.path().join("new.txt");
+        fs::write(&file_path, "hello\n").unwrap();
+
+        stage_file(&repo, "new.txt").unwrap();
+
+        // Verify it's staged
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.iter().any(|s| s.path == "new.txt"));
+
+        // Unstage it — this should work even without a HEAD commit
+        let result = unstage_file(&repo, "new.txt");
+        assert!(result.is_ok());
+
+        // Verify it moved back to untracked
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.is_empty());
+        assert!(statuses.untracked.iter().any(|s| s.path == "new.txt"));
     }
 }

@@ -137,6 +137,17 @@ async function withStagingRefresh(
   }
 }
 
+export function useIsEmptyRepo(): boolean {
+  const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
+  const commits = useRepositoryStore((s) => s.commits);
+  return (
+    repositoryInfo !== null &&
+    repositoryInfo.head_hash === null &&
+    !repositoryInfo.is_detached &&
+    commits.length === 0
+  );
+}
+
 export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   repositoryInfo: null,
   isLoading: false,
