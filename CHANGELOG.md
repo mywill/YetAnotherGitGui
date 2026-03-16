@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.8.1...v1.8.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* Updated to better handle an empty repo ([01483f8](https://github.com/mywill/YetAnotherGitGui/commit/01483f87b410dc8d3464c5e6c98e0e4ebdbf7237))
+
 ## [1.8.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.8.0...v1.8.1) (2026-03-15)
 
 
