@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.8.2...v1.9.0) (2026-03-29)
+
+
+### Features
+
+* added a basic terminal so you can quickly run commands when needed ([359b7fd](https://github.com/mywill/YetAnotherGitGui/commit/359b7fd016ce840e540e69927bb07bf4deed5546))
+
 ## [1.8.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.8.1...v1.8.2) (2026-03-16)
 
 
