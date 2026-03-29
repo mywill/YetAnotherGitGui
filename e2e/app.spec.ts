@@ -101,9 +101,9 @@ test.describe("Yet Another Git Gui Application", () => {
     await expect(page.locator(".repo-path")).toBeVisible({ timeout: 10000 });
     await expect(page.locator(".repo-path")).toHaveText("/mock/repo/path");
 
-    // Check for branch indicator
-    await expect(page.locator(".branch-indicator")).toBeVisible();
-    await expect(page.locator(".branch-indicator")).toHaveText("main");
+    // Check for branch indicator in status bar
+    await expect(page.locator(".status-bar .branch-indicator")).toBeVisible();
+    await expect(page.locator(".status-bar .branch-indicator")).toHaveText("main");
   });
 
   test("refresh button is present", async ({ page }) => {
@@ -1623,8 +1623,9 @@ test.describe("Repo State Banner", () => {
   });
 
   test("banner has accessible role and aria-live", async ({ page }) => {
-    const banner = page.locator('[role="status"]');
+    const banner = page.locator(".repo-state-banner");
     await expect(banner).toBeVisible({ timeout: 10000 });
+    await expect(banner).toHaveAttribute("role", "status");
     await expect(banner).toHaveAttribute("aria-live", "polite");
   });
 
@@ -1686,9 +1687,9 @@ test.describe("Empty Repository", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("shows 'New repository' badge in header", async ({ page }) => {
+  test("shows 'New repository' badge in status bar", async ({ page }) => {
     await expect(page.locator(".app")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator(".branch-indicator")).toContainText(
+    await expect(page.locator(".status-bar .branch-indicator")).toContainText(
       "New repository",
     );
   });

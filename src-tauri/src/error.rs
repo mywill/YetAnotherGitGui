@@ -17,6 +17,9 @@ pub enum AppError {
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("Terminal error: {0}")]
+    Terminal(String),
 }
 
 impl Serialize for AppError {

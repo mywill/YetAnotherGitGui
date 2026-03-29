@@ -40,6 +40,13 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn().mockResolvedValue(null),
 }));
 
+// Mock Tauri event API
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => {}),
+  once: vi.fn().mockResolvedValue(() => {}),
+  emit: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock window.confirm and window.alert
 beforeAll(() => {
   vi.stubGlobal(

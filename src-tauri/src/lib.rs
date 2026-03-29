@@ -3,11 +3,13 @@ pub mod crash_handler;
 mod error;
 mod git;
 mod state;
+pub mod terminal;
 #[cfg(test)]
 mod test_utils;
 pub mod update_logger;
 
 use state::AppState;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -60,7 +62,17 @@ pub fn run() {
             commands::get_stash_file_diff,
             commands::write_update_log,
             commands::get_update_log_path,
+            commands::spawn_terminal,
+            commands::write_terminal,
+            commands::resize_terminal,
+            commands::kill_terminal,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                let state = window.state::<AppState>();
+                state.terminal_manager.kill_all();
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

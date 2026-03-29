@@ -10,10 +10,13 @@ import { SettingsMenu } from "./components/common/SettingsMenu";
 import { NotificationToast } from "./components/common/NotificationToast";
 import { RepoStateBanner } from "./components/common/RepoStateBanner";
 import { FileStatusCounts } from "./components/layout/FileStatusCounts";
-import { useRepositoryStore, useIsEmptyRepo } from "./stores/repositoryStore";
+import { StatusBar } from "./components/layout/StatusBar";
+import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCommandPaletteStore } from "./stores/commandPaletteStore";
+import { useTerminalStore } from "./stores/terminalStore";
+import { TerminalPanel } from "./components/terminal/TerminalPanel";
 import { useCliArgs } from "./hooks/useCliArgs";
 import { usePlatform } from "./hooks/usePlatform";
 import { YaggButton } from "./components/common/YaggButton";
@@ -32,7 +35,8 @@ export function App() {
 
   const openCommandPalette = useCommandPaletteStore((s) => s.open);
 
-  const isEmptyRepo = useIsEmptyRepo();
+  const terminalIsOpen = useTerminalStore((s) => s.isOpen);
+  const toggleTerminal = useTerminalStore((s) => s.toggleTerminal);
 
   const { modKey } = usePlatform();
 
@@ -60,6 +64,7 @@ export function App() {
   // Keyboard shortcut for refresh (F5 or Ctrl+R)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.closest(".xterm")) return;
       if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key === "r")) {
         e.preventDefault();
         if (!isLoading && repositoryInfo) {
@@ -75,6 +80,7 @@ export function App() {
   // Keyboard shortcut for command palette (Ctrl+K / Cmd+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.closest(".xterm")) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         if (repositoryInfo) {
@@ -86,6 +92,19 @@ export function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [repositoryInfo, openCommandPalette]);
+
+  // Keyboard shortcut for terminal (Ctrl+` / Cmd+`)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "`") {
+        e.preventDefault();
+        toggleTerminal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleTerminal]);
 
   if (cliLoading || isLoading) {
     return (
@@ -125,19 +144,9 @@ export function App() {
             Yet Another Git Gui
           </span>
           {repositoryInfo && (
-            <>
-              <span className="repo-path text-text-secondary max-w-75 truncate text-xs leading-normal">
-                {repositoryInfo.path}
-              </span>
-              <span className="branch-indicator app-region-no-drag bg-bg-selected grid h-5 place-items-center rounded px-2 text-xs">
-                <span>
-                  {repositoryInfo.is_detached
-                    ? "HEAD detached"
-                    : repositoryInfo.current_branch ||
-                      (isEmptyRepo ? "New repository" : "No branch")}
-                </span>
-              </span>
-            </>
+            <span className="repo-path text-text-secondary max-w-75 truncate text-xs leading-normal">
+              {repositoryInfo.path}
+            </span>
           )}
         </div>
         {repositoryInfo && (
@@ -167,11 +176,16 @@ export function App() {
 
       <RepoStateBanner />
 
-      <main className="app-main flex-1 overflow-hidden">
-        <AppLayout sidebar={<Sidebar />}>
-          {activeView === "history" ? <HistoryView /> : <StatusView />}
-        </AppLayout>
-      </main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <main className="app-main min-h-0 flex-1 overflow-hidden">
+          <AppLayout sidebar={<Sidebar />}>
+            {activeView === "history" ? <HistoryView /> : <StatusView />}
+          </AppLayout>
+        </main>
+        {terminalIsOpen && <TerminalPanel />}
+      </div>
+
+      <StatusBar />
 
       <NotificationToast />
 
