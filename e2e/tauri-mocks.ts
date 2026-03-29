@@ -400,6 +400,15 @@ export const tauriMocks = `
             total_lines: 3
           };
 
+        case 'spawn_terminal':
+          return 1;
+        case 'write_terminal':
+          return undefined;
+        case 'resize_terminal':
+          return undefined;
+        case 'kill_terminal':
+          return undefined;
+
         default:
           console.warn('[E2E Mock] Unhandled command:', cmd);
           return null;

@@ -2,15 +2,18 @@ use git2::Repository;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
 use crate::error::AppError;
+use crate::terminal::TerminalManager;
 
 pub struct AppState {
     pub repository: Mutex<Option<Repository>>,
+    pub terminal_manager: TerminalManager,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
             repository: Mutex::new(None),
+            terminal_manager: TerminalManager::new(),
         }
     }
 

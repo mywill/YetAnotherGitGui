@@ -46,7 +46,7 @@ mod tests {
     use crate::state::AppState;
     use crate::test_utils::*;
     use git2::Repository;
-    use parking_lot::Mutex;
+
     use std::fs;
     use std::path::Path;
 
@@ -136,9 +136,7 @@ mod tests {
 
     #[test]
     fn test_no_repository_error() {
-        let state = AppState {
-            repository: Mutex::new(None),
-        };
+        let state = AppState::new();
 
         let repo_lock = state.repository.lock();
         let result: Result<&Repository, AppError> =

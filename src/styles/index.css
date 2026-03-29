@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./tauri.css";
 @import "./grid-layout.css";
+@import "@xterm/xterm/css/xterm.css";
 
 /* ─── Theme: map existing design tokens to Tailwind ─── */
 @theme {

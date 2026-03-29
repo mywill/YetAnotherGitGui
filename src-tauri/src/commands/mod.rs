@@ -6,6 +6,7 @@ pub mod repository;
 pub mod staging;
 pub mod stash;
 pub mod system;
+pub mod terminal;
 
 pub use branches::*;
 pub use commit::*;
@@ -15,3 +16,4 @@ pub use repository::*;
 pub use staging::*;
 pub use stash::*;
 pub use system::*;
+pub use terminal::*;

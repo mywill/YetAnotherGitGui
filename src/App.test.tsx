@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { App } from "./App";
-import { useRepositoryStore, useIsEmptyRepo } from "./stores/repositoryStore";
+import { useRepositoryStore } from "./stores/repositoryStore";
 import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCliArgs } from "./hooks/useCliArgs";
@@ -10,7 +10,6 @@ import { mockStore } from "./test/mockStores";
 // Mock all stores and hooks
 vi.mock("./stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
-  useIsEmptyRepo: vi.fn(),
 }));
 
 vi.mock("./stores/selectionStore", () => ({
@@ -72,6 +71,10 @@ vi.mock("./components/layout/FileStatusCounts", () => ({
   FileStatusCounts: () => <div data-testid="file-status-counts">FileStatusCounts</div>,
 }));
 
+vi.mock("./components/layout/StatusBar", () => ({
+  StatusBar: () => <div data-testid="status-bar">StatusBar</div>,
+}));
+
 vi.mock("./components/common/ConfirmDialog", () => ({
   ConfirmDialog: ({
     title,
@@ -120,7 +123,6 @@ describe("App", () => {
       activeView?: "history" | "status";
       dialogIsOpen?: boolean;
       dialogTitle?: string;
-      isEmptyRepo?: boolean;
     } = {}
   ) {
     const {
@@ -136,10 +138,7 @@ describe("App", () => {
       activeView = "status",
       dialogIsOpen = false,
       dialogTitle = "Test Dialog",
-      isEmptyRepo = false,
     } = overrides;
-
-    vi.mocked(useIsEmptyRepo).mockReturnValue(isEmptyRepo);
 
     mockStore(useRepositoryStore, {
       repositoryInfo,
@@ -253,56 +252,10 @@ describe("App", () => {
       expect(screen.getByText("/test/repo")).toBeInTheDocument();
     });
 
-    it("renders current branch in header", () => {
+    it("renders status bar", () => {
       render(<App />);
 
-      expect(screen.getByText("main")).toBeInTheDocument();
-    });
-
-    it("shows detached HEAD indicator", () => {
-      setupDefaultMocks({
-        repositoryInfo: {
-          path: "/test/repo",
-          current_branch: null,
-          is_detached: true,
-          remotes: [],
-        },
-      });
-
-      render(<App />);
-
-      expect(screen.getByText("HEAD detached")).toBeInTheDocument();
-    });
-
-    it("shows 'No branch' when no current branch", () => {
-      setupDefaultMocks({
-        repositoryInfo: {
-          path: "/test/repo",
-          current_branch: null,
-          is_detached: false,
-          remotes: [],
-        },
-      });
-
-      render(<App />);
-
-      expect(screen.getByText("No branch")).toBeInTheDocument();
-    });
-
-    it("shows 'New repository' badge for empty repo", () => {
-      setupDefaultMocks({
-        repositoryInfo: {
-          path: "/test/repo",
-          current_branch: null,
-          is_detached: false,
-          remotes: [],
-        },
-        isEmptyRepo: true,
-      });
-
-      render(<App />);
-
-      expect(screen.getByText("New repository")).toBeInTheDocument();
+      expect(screen.getByTestId("status-bar")).toBeInTheDocument();
     });
 
     it("renders sidebar component", () => {
