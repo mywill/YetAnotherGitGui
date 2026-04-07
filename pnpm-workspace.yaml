@@ -1,0 +1,11 @@
+packages: []
+
+# Supply chain security: block dependency versions published less than 7 days ago.
+# This creates a quarantine period for new releases to be vetted by the community
+# before they can enter the dependency graph.
+# See: https://pnpm.io/settings#minimumreleaseage
+minimumReleaseAge: 10080 # 7 days in minutes
+
+# Escape hatch: packages listed here bypass the cooldown.
+# Supports exact versions ('pkg@1.0.0'), ranges ('pkg@1.0.0 || 2.0.0'), and globs ('@myorg/*').
+minimumReleaseAgeExclude: []

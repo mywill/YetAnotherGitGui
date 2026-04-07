@@ -112,6 +112,30 @@ cd src-tauri && cargo llvm-cov --summary-only
 
 See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
+## Supply Chain Security
+
+This project enforces a **7-day dependency cooldown** to reduce the risk of supply chain attacks. Newly published npm package versions cannot enter the dependency graph until they have been available on the registry for at least 7 days, giving the community time to detect and flag malicious releases.
+
+### How It Works
+
+pnpm's built-in [`minimumReleaseAge`](https://pnpm.io/settings#minimumreleaseage) setting in `pnpm-workspace.yaml` blocks resolution of any package version published less than 10,080 minutes (7 days) ago. This applies to both direct and transitive dependencies.
+
+The cooldown is enforced at **resolution time** — when pnpm resolves new versions during `pnpm install`, `pnpm add`, or `pnpm update`. It is **not** re-checked during `--frozen-lockfile` installs (CI) or by Dependabot, which resolves versions using its own updater.
+
+### Overriding the Cooldown
+
+For urgent updates (e.g., a critical security patch published today), add the package to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`:
+
+```yaml
+minimumReleaseAgeExclude:
+  - 'package-name@1.2.3'    # exact version
+  - '@scope/*'               # all packages from a scope
+```
+
+### Rust Dependencies
+
+For Cargo/Rust dependencies, [`cargo-cooldown`](https://crates.io/crates/cargo-cooldown) provides equivalent functionality as a lightweight cargo wrapper. It is not currently configured in this project but can be added by installing the tool and creating a `cooldown.toml` in `src-tauri/`.
+
 ## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Zustand, Vite, Tailwind CSS 4, react-window, date-fns
@@ -150,7 +174,7 @@ The scripts live in `.yolo/`:
 | Script | Runs as | Purpose |
 |--------|---------|---------|
 | `root-setup.sh` | root | Installs Tauri 2.0 system libraries and Playwright's Chromium runtime deps via `apt-get` |
-| `user-setup.sh` | claude | Installs Rust (stable + clippy + rustfmt), cargo-llvm-cov, Node 22 via NVM, pnpm 9.15.4, and Playwright Chromium browsers |
+| `user-setup.sh` | claude | Installs Rust (stable + clippy + rustfmt), cargo-llvm-cov, Node 22 via NVM, pnpm 10.33.0, and Playwright Chromium browsers |
 
 After YOLO builds the container, all development and test commands work out of the box:
 

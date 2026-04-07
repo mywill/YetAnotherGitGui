@@ -19,7 +19,7 @@ nvm alias default 22
 
 # --- pnpm (locked to version in package.json) ---
 corepack enable
-corepack prepare pnpm@9.15.4 --activate
+corepack prepare pnpm@10.33.0 --activate
 
 # --- Playwright browsers ---
 # Install browsers to a stable, explicit path so the same location is used
