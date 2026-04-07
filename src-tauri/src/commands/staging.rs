@@ -127,6 +127,16 @@ pub fn delete_file(path: String, state: State<AppState>) -> Result<(), AppError>
     Ok(())
 }
 
+#[tauri::command]
+pub fn resolve_conflict(
+    path: String,
+    strategy: String,
+    state: State<AppState>,
+) -> Result<(), AppError> {
+    let repo = state.get_repo()?;
+    git::resolve_conflict(&repo, &path, &strategy)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

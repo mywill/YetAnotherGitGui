@@ -29,6 +29,8 @@ pub struct FileDiff {
     pub hunks: Vec<DiffHunk>,
     pub is_binary: bool,
     pub total_lines: u32,
+    #[serde(default)]
+    pub is_conflicted: bool,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -57,6 +59,12 @@ pub enum LineType {
     Addition,
     Deletion,
     Header,
+    #[serde(rename = "conflict_marker")]
+    ConflictMarker,
+    #[serde(rename = "conflict_ours")]
+    ConflictOurs,
+    #[serde(rename = "conflict_theirs")]
+    ConflictTheirs,
 }
 
 struct DiffPrintCollector {
@@ -76,6 +84,7 @@ impl DiffPrintCollector {
                 hunks: Vec::new(),
                 is_binary: false,
                 total_lines: 0,
+                is_conflicted: false,
             },
             current_hunk: None,
             current_hunk_header: None,
@@ -226,6 +235,7 @@ pub fn get_untracked_file_diff_with_config(
                         hunks: Vec::new(),
                         is_binary: true,
                         total_lines: 0,
+                        is_conflicted: false,
                     });
                 }
             };
@@ -261,6 +271,7 @@ pub fn get_untracked_file_diff_with_config(
             hunks: vec![hunk],
             is_binary: false,
             total_lines: total_line_count,
+            is_conflicted: false,
         });
     }
 
@@ -274,6 +285,7 @@ pub fn get_untracked_file_diff_with_config(
             hunks: Vec::new(),
             is_binary: true,
             total_lines: 0,
+            is_conflicted: false,
         });
     }
 
@@ -287,6 +299,7 @@ pub fn get_untracked_file_diff_with_config(
             hunks: Vec::new(),
             is_binary: false,
             total_lines: 0,
+            is_conflicted: false,
         });
     }
 
@@ -319,7 +332,196 @@ pub fn get_untracked_file_diff_with_config(
         hunks: vec![hunk],
         is_binary: false,
         total_lines,
+        is_conflicted: false,
     })
+}
+
+/// State machine for parsing conflict markers in a file.
+#[derive(PartialEq)]
+enum ConflictParseState {
+    Normal,
+    InOurs,
+    InTheirs,
+}
+
+/// Number of context lines to show around each conflict region.
+const CONFLICT_CONTEXT_LINES: usize = 3;
+
+/// Get diff for a conflicted file by reading the workdir copy and parsing conflict markers.
+/// Returns one hunk per conflict region with surrounding context lines.
+pub fn get_conflicted_file_diff(repo: &Repository, path: &str) -> Result<FileDiff, AppError> {
+    let workdir = repo
+        .workdir()
+        .ok_or(AppError::InvalidPath("No working directory".into()))?;
+    let file_path = workdir.join(path);
+
+    // Check if file is binary by looking for null bytes in first 8KB
+    let content = fs::read(&file_path)?;
+    let is_binary = content.iter().take(8192).any(|&b| b == 0);
+
+    if is_binary {
+        return Ok(FileDiff {
+            path: path.to_string(),
+            hunks: Vec::new(),
+            is_binary: true,
+            total_lines: 0,
+            is_conflicted: true,
+        });
+    }
+
+    let text = String::from_utf8_lossy(&content);
+    let lines: Vec<&str> = text.lines().collect();
+
+    if lines.is_empty() {
+        return Ok(FileDiff {
+            path: path.to_string(),
+            hunks: Vec::new(),
+            is_binary: false,
+            total_lines: 0,
+            is_conflicted: true,
+        });
+    }
+
+    let total_lines = lines.len();
+
+    // First pass: find conflict region ranges (start_idx of <<<<<<< to end_idx of >>>>>>>)
+    let mut regions: Vec<(usize, usize)> = Vec::new();
+    let mut conflict_start: Option<usize> = None;
+    let mut in_ours = false;
+    for (i, line) in lines.iter().enumerate() {
+        if line.starts_with("<<<<<<<") {
+            conflict_start = Some(i);
+            in_ours = true;
+        } else if line.starts_with("=======") && in_ours {
+            // still inside the same conflict
+        } else if line.starts_with(">>>>>>>") && in_ours {
+            if let Some(start) = conflict_start {
+                regions.push((start, i));
+            }
+            conflict_start = None;
+            in_ours = false;
+        }
+    }
+
+    if regions.is_empty() {
+        // No conflict markers found — return empty
+        return Ok(FileDiff {
+            path: path.to_string(),
+            hunks: Vec::new(),
+            is_binary: false,
+            total_lines: total_lines as u32,
+            is_conflicted: true,
+        });
+    }
+
+    // Second pass: compute windows with context, merge overlapping
+    let mut windows: Vec<(usize, usize)> = Vec::new();
+    for &(start, end) in &regions {
+        let win_start = start.saturating_sub(CONFLICT_CONTEXT_LINES);
+        let win_end = (end + CONFLICT_CONTEXT_LINES).min(total_lines - 1);
+        if let Some(last) = windows.last_mut() {
+            if win_start <= last.1 + 1 {
+                // Merge overlapping/adjacent windows
+                last.1 = win_end;
+                continue;
+            }
+        }
+        windows.push((win_start, win_end));
+    }
+
+    let num_conflicts = regions.len();
+
+    // Build one hunk per window
+    let mut hunks: Vec<DiffHunk> = Vec::new();
+    let mut conflict_idx = 0;
+    for (win_start, win_end) in &windows {
+        // Count how many conflict regions are in this window
+        let mut conflicts_in_window = 0;
+        let first_conflict_idx = conflict_idx;
+        while conflict_idx < regions.len() && regions[conflict_idx].0 <= *win_end {
+            conflicts_in_window += 1;
+            conflict_idx += 1;
+        }
+
+        // Build header showing conflict range
+        let header = if conflicts_in_window == 1 {
+            format!(
+                "@@ Conflict {}/{} @@\n",
+                first_conflict_idx + 1,
+                num_conflicts
+            )
+        } else {
+            format!(
+                "@@ Conflicts {}–{}/{} @@\n",
+                first_conflict_idx + 1,
+                first_conflict_idx + conflicts_in_window,
+                num_conflicts
+            )
+        };
+
+        // Parse lines within the window
+        let mut state = ConflictParseState::Normal;
+        let mut diff_lines: Vec<DiffLine> = Vec::new();
+        for (offset, line) in lines[*win_start..=*win_end].iter().enumerate() {
+            let lineno = (*win_start + offset + 1) as u32;
+            let line_type = if line.starts_with("<<<<<<<") {
+                state = ConflictParseState::InOurs;
+                LineType::ConflictMarker
+            } else if line.starts_with("=======") && state == ConflictParseState::InOurs {
+                state = ConflictParseState::InTheirs;
+                LineType::ConflictMarker
+            } else if line.starts_with(">>>>>>>") && state == ConflictParseState::InTheirs {
+                state = ConflictParseState::Normal;
+                LineType::ConflictMarker
+            } else {
+                match state {
+                    ConflictParseState::InOurs => LineType::ConflictOurs,
+                    ConflictParseState::InTheirs => LineType::ConflictTheirs,
+                    ConflictParseState::Normal => LineType::Context,
+                }
+            };
+            diff_lines.push(DiffLine {
+                content: format!("{}\n", line),
+                line_type,
+                old_lineno: None,
+                new_lineno: Some(lineno),
+            });
+        }
+
+        let new_lines = diff_lines.len() as u32;
+        hunks.push(DiffHunk {
+            header,
+            old_start: 0,
+            old_lines: 0,
+            new_start: (*win_start + 1) as u32,
+            new_lines,
+            lines: diff_lines,
+            is_loaded: true,
+        });
+    }
+
+    Ok(FileDiff {
+        path: path.to_string(),
+        hunks,
+        is_binary: false,
+        total_lines: total_lines as u32,
+        is_conflicted: true,
+    })
+}
+
+/// Load a single hunk for a conflicted file by index.
+pub fn get_conflicted_diff_hunk(
+    repo: &Repository,
+    path: &str,
+    hunk_index: usize,
+) -> Result<DiffHunk, AppError> {
+    let file_diff = get_conflicted_file_diff(repo, path)?;
+
+    file_diff
+        .hunks
+        .into_iter()
+        .nth(hunk_index)
+        .ok_or_else(|| AppError::InvalidPath(format!("Hunk index {} out of range", hunk_index)))
 }
 
 pub fn get_commit_file_diff(
@@ -691,7 +893,10 @@ mod tests {
                 LineType::Deletion => {
                     assert!(line.old_lineno.is_some());
                 }
-                LineType::Header => {}
+                LineType::Header
+                | LineType::ConflictMarker
+                | LineType::ConflictOurs
+                | LineType::ConflictTheirs => {}
             }
         }
     }
@@ -929,5 +1134,292 @@ mod tests {
 
         assert!(hunk.is_loaded);
         assert!(!hunk.lines.is_empty());
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_basic() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "file.txt", "base\n", "Initial");
+
+        // Write a file with conflict markers (simulates a merge conflict)
+        let file_path = temp_dir.path().join("file.txt");
+        let conflict_content = "\
+line before
+<<<<<<< HEAD
+ours line 1
+ours line 2
+=======
+theirs line 1
+theirs line 2
+>>>>>>> branch
+line after
+";
+        fs::write(&file_path, conflict_content).unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "file.txt").unwrap();
+
+        assert_eq!(diff.path, "file.txt");
+        assert!(diff.is_conflicted);
+        assert!(!diff.is_binary);
+        // Small file: context windows cover entire file, so 1 hunk
+        assert_eq!(diff.hunks.len(), 1);
+
+        let hunk = &diff.hunks[0];
+        assert!(hunk.is_loaded);
+        assert!(hunk.header.contains("Conflict 1/1"));
+
+        // Verify line types
+        let types: Vec<&LineType> = hunk.lines.iter().map(|l| &l.line_type).collect();
+        assert_eq!(types[0], &LineType::Context); // "line before"
+        assert_eq!(types[1], &LineType::ConflictMarker); // "<<<<<<<..."
+        assert_eq!(types[2], &LineType::ConflictOurs); // "ours line 1"
+        assert_eq!(types[3], &LineType::ConflictOurs); // "ours line 2"
+        assert_eq!(types[4], &LineType::ConflictMarker); // "======="
+        assert_eq!(types[5], &LineType::ConflictTheirs); // "theirs line 1"
+        assert_eq!(types[6], &LineType::ConflictTheirs); // "theirs line 2"
+        assert_eq!(types[7], &LineType::ConflictMarker); // ">>>>>>>..."
+        assert_eq!(types[8], &LineType::Context); // "line after"
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_multiple_regions_merged() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "file.txt", "base\n", "Initial");
+
+        // Two conflicts close together — context windows merge into 1 hunk
+        let file_path = temp_dir.path().join("file.txt");
+        let content = "\
+<<<<<<< HEAD
+A
+=======
+B
+>>>>>>> branch
+middle
+<<<<<<< HEAD
+C
+=======
+D
+>>>>>>> branch
+";
+        fs::write(&file_path, content).unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "file.txt").unwrap();
+
+        assert!(diff.is_conflicted);
+        // Close together — windows overlap, so merged into 1 hunk
+        assert_eq!(diff.hunks.len(), 1);
+
+        let all_lines: Vec<&DiffLine> = diff.hunks.iter().flat_map(|h| &h.lines).collect();
+
+        let marker_count = all_lines
+            .iter()
+            .filter(|l| l.line_type == LineType::ConflictMarker)
+            .count();
+        assert_eq!(marker_count, 6); // 3 per conflict region x 2
+
+        let ours_count = all_lines
+            .iter()
+            .filter(|l| l.line_type == LineType::ConflictOurs)
+            .count();
+        assert_eq!(ours_count, 2); // "A" and "C"
+
+        let theirs_count = all_lines
+            .iter()
+            .filter(|l| l.line_type == LineType::ConflictTheirs)
+            .count();
+        assert_eq!(theirs_count, 2); // "B" and "D"
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_separate_hunks() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "file.txt", "base\n", "Initial");
+
+        // Two conflicts far apart — should produce 2 separate hunks
+        let file_path = temp_dir.path().join("file.txt");
+        let mut content = String::new();
+        content.push_str("<<<<<<< HEAD\nA\n=======\nB\n>>>>>>> branch\n");
+        // Add 10 lines of padding (more than 2*CONFLICT_CONTEXT_LINES)
+        for i in 0..10 {
+            content.push_str(&format!("padding line {}\n", i));
+        }
+        content.push_str("<<<<<<< HEAD\nC\n=======\nD\n>>>>>>> branch\n");
+        fs::write(&file_path, content).unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "file.txt").unwrap();
+
+        assert!(diff.is_conflicted);
+        assert_eq!(diff.hunks.len(), 2);
+
+        // First hunk: conflict 1 + context
+        assert!(diff.hunks[0].header.contains("Conflict 1/2"));
+        assert!(diff.hunks[0]
+            .lines
+            .iter()
+            .any(|l| l.line_type == LineType::ConflictOurs));
+
+        // Second hunk: conflict 2 + context
+        assert!(diff.hunks[1].header.contains("Conflict 2/2"));
+        assert!(diff.hunks[1]
+            .lines
+            .iter()
+            .any(|l| l.line_type == LineType::ConflictOurs));
+
+        // Each hunk should have much fewer lines than the full file
+        assert!(diff.hunks[0].lines.len() < 12);
+        assert!(diff.hunks[1].lines.len() < 12);
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_binary() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "bin.dat", "base\n", "Initial");
+
+        let file_path = temp_dir.path().join("bin.dat");
+        fs::write(&file_path, b"some\x00binary\x00content").unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "bin.dat").unwrap();
+
+        assert!(diff.is_binary);
+        assert!(diff.is_conflicted);
+        assert!(diff.hunks.is_empty());
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_empty() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "empty.txt", "base\n", "Initial");
+
+        let file_path = temp_dir.path().join("empty.txt");
+        fs::write(&file_path, "").unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "empty.txt").unwrap();
+
+        assert!(diff.is_conflicted);
+        assert!(diff.hunks.is_empty());
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_large_file_efficient() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "big.txt", "base\n", "Initial");
+
+        // Create a large file with 1 conflict region buried in the middle
+        let mut content = String::new();
+        for i in 0..3000 {
+            content.push_str(&format!("prefix line {}\n", i));
+        }
+        content.push_str("<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> branch\n");
+        for i in 0..3000 {
+            content.push_str(&format!("suffix line {}\n", i));
+        }
+
+        let file_path = temp_dir.path().join("big.txt");
+        fs::write(&file_path, &content).unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "big.txt").unwrap();
+
+        assert!(diff.is_conflicted);
+        assert_eq!(diff.hunks.len(), 1);
+        assert!(diff.total_lines > 6000);
+
+        // The hunk should contain only ~11 lines (3 context + 5 conflict + 3 context)
+        let hunk = &diff.hunks[0];
+        assert_eq!(hunk.lines.len(), 11);
+        assert!(hunk
+            .lines
+            .iter()
+            .any(|l| l.line_type == LineType::ConflictMarker));
+        // First line should be context near line 2998
+        assert!(hunk.new_start >= 2998);
+    }
+
+    #[test]
+    fn test_get_conflicted_diff_hunk_loads() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "file.txt", "base\n", "Initial");
+
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(
+            &file_path,
+            "<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> branch\n",
+        )
+        .unwrap();
+
+        let hunk = get_conflicted_diff_hunk(&repo, "file.txt", 0).unwrap();
+
+        assert!(hunk.is_loaded);
+        assert!(!hunk.lines.is_empty());
+        assert!(hunk
+            .lines
+            .iter()
+            .any(|l| l.line_type == LineType::ConflictMarker));
+    }
+
+    #[test]
+    fn test_get_conflicted_file_diff_line_numbers() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "file.txt", "base\n", "Initial");
+
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(
+            &file_path,
+            "line1\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> branch\nline7\n",
+        )
+        .unwrap();
+
+        let diff = get_conflicted_file_diff(&repo, "file.txt").unwrap();
+
+        let hunk = &diff.hunks[0];
+        // All lines should have correct new_lineno based on file position
+        // Small file — context covers everything, so starts at line 1
+        assert_eq!(hunk.new_start, 1);
+        for (i, line) in hunk.lines.iter().enumerate() {
+            assert_eq!(line.new_lineno, Some(hunk.new_start + i as u32));
+            assert!(line.old_lineno.is_none());
+        }
+    }
+
+    #[test]
+    fn test_conflicted_file_diff_serialization() {
+        // Verify serde rename works correctly
+        let line = DiffLine {
+            content: "test".to_string(),
+            line_type: LineType::ConflictMarker,
+            old_lineno: None,
+            new_lineno: Some(1),
+        };
+        let json = serde_json::to_string(&line).unwrap();
+        assert!(json.contains("\"conflict_marker\""));
+
+        let line_ours = DiffLine {
+            content: "test".to_string(),
+            line_type: LineType::ConflictOurs,
+            old_lineno: None,
+            new_lineno: Some(1),
+        };
+        let json = serde_json::to_string(&line_ours).unwrap();
+        assert!(json.contains("\"conflict_ours\""));
+
+        let line_theirs = DiffLine {
+            content: "test".to_string(),
+            line_type: LineType::ConflictTheirs,
+            old_lineno: None,
+            new_lineno: Some(1),
+        };
+        let json = serde_json::to_string(&line_theirs).unwrap();
+        assert!(json.contains("\"conflict_theirs\""));
+    }
+
+    #[test]
+    fn test_file_diff_is_conflicted_default_false() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "file.txt", "line1\n", "Initial");
+
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(&file_path, "modified\n").unwrap();
+
+        let diff = get_file_diff(&repo, "file.txt", false).unwrap();
+        assert!(!diff.is_conflicted);
     }
 }

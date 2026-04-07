@@ -51,6 +51,7 @@ pub fn run() {
             commands::revert_commit_file,
             commands::revert_commit_file_lines,
             commands::delete_file,
+            commands::resolve_conflict,
             commands::install_cli,
             commands::uninstall_cli,
             commands::check_cli_installed,

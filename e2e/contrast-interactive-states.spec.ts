@@ -659,4 +659,50 @@ test.describe("Contrast - Interactive States", () => {
       expect(violations).toEqual([]);
     });
   });
+
+  // ===== 10. Conflict Diff View =====
+  test.describe("Conflict Diff View", () => {
+    test.beforeEach(async ({ page }) => {
+      await switchToStatusView(page);
+      // Click the conflicted file to load the conflict diff
+      const conflictFile = page.locator(".file-item", {
+        hasText: "conflict-file.ts",
+      });
+      await conflictFile.click();
+      await page.waitForSelector(".diff-view-panel", { timeout: 10000 });
+    });
+
+    test("conflict diff lines have sufficient contrast", async ({ page }) => {
+      const { violations } = await scanForContrastViolations(
+        page,
+        ".diff-view-panel",
+      );
+      expect(violations).toEqual([]);
+    });
+
+    test("conflict resolution buttons have sufficient contrast", async ({
+      page,
+    }) => {
+      const { violations } = await scanForContrastViolations(
+        page,
+        ".hunk-header",
+      );
+      expect(violations).toEqual([]);
+    });
+
+    test("hovered conflict resolution button has sufficient contrast", async ({
+      page,
+    }) => {
+      const oursButton = page.locator(".hunk-actions button", {
+        hasText: "Accept Ours",
+      });
+      await oursButton.hover();
+      await page.waitForTimeout(200);
+      const { violations } = await scanForContrastViolations(
+        page,
+        ".hunk-header",
+      );
+      expect(violations).toEqual([]);
+    });
+  });
 });

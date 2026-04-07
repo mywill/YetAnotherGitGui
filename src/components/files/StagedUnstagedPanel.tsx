@@ -19,6 +19,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
   const loadFileDiff = useRepositoryStore((s) => s.loadFileDiff);
   const revertFile = useRepositoryStore((s) => s.revertFile);
   const deleteFile = useRepositoryStore((s) => s.deleteFile);
+  const resolveConflict = useRepositoryStore((s) => s.resolveConflict);
 
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
@@ -40,13 +41,22 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
     [allUnstagedPaths, selectedFilePaths]
   );
 
-  const handleSelectWithModifiers = useCallback(
-    (sectionPaths: string[], isStaged: boolean) =>
-      (path: string, isCtrl: boolean, isShift: boolean) => {
-        toggleFileSelection(path, isStaged, isCtrl, isShift, sectionPaths);
-        loadFileDiff(path, isStaged);
-      },
-    [toggleFileSelection, loadFileDiff]
+  const handleStagedSelectWithModifiers = useCallback(
+    (path: string, isCtrl: boolean, isShift: boolean) => {
+      toggleFileSelection(path, true, isCtrl, isShift, allStagedPaths);
+      loadFileDiff(path, true);
+    },
+    [toggleFileSelection, loadFileDiff, allStagedPaths]
+  );
+
+  const handleUnstagedSelectWithModifiers = useCallback(
+    (path: string, isCtrl: boolean, isShift: boolean) => {
+      toggleFileSelection(path, false, isCtrl, isShift, allUnstagedPaths);
+      const file = unstaged.find((f) => f.path === path);
+      const isConflicted = file?.status === "conflicted";
+      loadFileDiff(path, false, undefined, isConflicted || undefined);
+    },
+    [toggleFileSelection, loadFileDiff, allUnstagedPaths, unstaged]
   );
 
   if (loading && !statuses) {
@@ -169,7 +179,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
                     isSelected={selectedFilePaths.has(makeSelectionKey(file.path, true))}
                     onToggleStage={() => unstageFile(file.path)}
                     onSelect={() => loadFileDiff(file.path, true)}
-                    onSelectWithModifiers={handleSelectWithModifiers(allStagedPaths, true)}
+                    onSelectWithModifiers={handleStagedSelectWithModifiers}
                     onDoubleClick={() => unstageFile(file.path)}
                     extraMenuItems={[{ label: "Unstage", onClick: () => unstageFile(file.path) }]}
                   />
@@ -235,29 +245,56 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
                 } else {
                   selectSingleFile(unstaged[i].path, false);
                 }
-                loadFileDiff(unstaged[i].path, false);
+                const isConflicted = unstaged[i].status === "conflicted";
+                loadFileDiff(unstaged[i].path, false, undefined, isConflicted || undefined);
               }}
               onActivate={(i) => stageFile(unstaged[i].path)}
               onSecondaryActivate={(i) => stageFile(unstaged[i].path)}
               onDelete={(i) => revertFile(unstaged[i].path)}
             >
-              {unstaged.map((file, i) => (
-                <KeyboardList.Item key={file.path} index={i}>
-                  <FileItem
-                    file={file}
-                    isStaged={false}
-                    isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
-                    onToggleStage={() => stageFile(file.path)}
-                    onSelect={() => loadFileDiff(file.path, false)}
-                    onSelectWithModifiers={handleSelectWithModifiers(allUnstagedPaths, false)}
-                    onDoubleClick={() => stageFile(file.path)}
-                    extraMenuItems={[
-                      { label: "Discard changes", onClick: () => revertFile(file.path) },
-                      { label: "Delete file", onClick: () => deleteFile(file.path) },
-                    ]}
-                  />
-                </KeyboardList.Item>
-              ))}
+              {unstaged.map((file, i) => {
+                const isConflicted = file.status === "conflicted";
+                return (
+                  <KeyboardList.Item key={file.path} index={i}>
+                    <FileItem
+                      file={file}
+                      isStaged={false}
+                      isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
+                      onToggleStage={() => stageFile(file.path)}
+                      onSelect={() =>
+                        loadFileDiff(file.path, false, undefined, isConflicted || undefined)
+                      }
+                      onSelectWithModifiers={handleUnstagedSelectWithModifiers}
+                      onDoubleClick={() => stageFile(file.path)}
+                      extraMenuItems={
+                        isConflicted
+                          ? [
+                              {
+                                label: "Accept Ours",
+                                onClick: () => resolveConflict(file.path, "ours"),
+                              },
+                              {
+                                label: "Accept Theirs",
+                                onClick: () => resolveConflict(file.path, "theirs"),
+                              },
+                              {
+                                label: "Accept Both",
+                                onClick: () => resolveConflict(file.path, "both"),
+                              },
+                              {
+                                label: "Mark Resolved (stage)",
+                                onClick: () => stageFile(file.path),
+                              },
+                            ]
+                          : [
+                              { label: "Discard changes", onClick: () => revertFile(file.path) },
+                              { label: "Delete file", onClick: () => deleteFile(file.path) },
+                            ]
+                      }
+                    />
+                  </KeyboardList.Item>
+                );
+              })}
             </KeyboardList>
           )}
         </div>

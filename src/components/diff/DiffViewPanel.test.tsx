@@ -25,11 +25,13 @@ vi.mock("./DiffHunk", () => ({
     actionLabel,
     onDiscardHunk,
     onDiscardLines,
+    onResolveConflict,
   }: {
     onAction: () => void;
     actionLabel: string;
     onDiscardHunk?: () => void;
     onDiscardLines?: (lineIndices: number[]) => void;
+    onResolveConflict?: (strategy: string) => void;
   }) => (
     <div data-testid="diff-hunk">
       <button onClick={onAction}>{actionLabel}</button>
@@ -42,6 +44,13 @@ vi.mock("./DiffHunk", () => ({
         <button data-testid="discard-lines-btn" onClick={() => onDiscardLines([1, 2])}>
           Discard lines
         </button>
+      )}
+      {onResolveConflict && (
+        <>
+          <button onClick={() => onResolveConflict("ours")}>Accept Ours</button>
+          <button onClick={() => onResolveConflict("theirs")}>Accept Theirs</button>
+          <button onClick={() => onResolveConflict("both")}>Both</button>
+        </>
       )}
     </div>
   ),
@@ -560,7 +569,13 @@ describe("DiffViewPanel", () => {
 
       fireEvent.click(screen.getByText("Load hunk"));
 
-      expect(mockLoadDiffHunk).toHaveBeenCalledWith("large-file.ts", false, 0, undefined);
+      expect(mockLoadDiffHunk).toHaveBeenCalledWith(
+        "large-file.ts",
+        false,
+        0,
+        undefined,
+        undefined
+      );
     });
 
     it("calls loadDiffHunk for all collapsed hunks on Load All", async () => {
@@ -605,8 +620,20 @@ describe("DiffViewPanel", () => {
 
       await vi.waitFor(() => {
         expect(mockLoadDiffHunk).toHaveBeenCalledTimes(2);
-        expect(mockLoadDiffHunk).toHaveBeenCalledWith("large-file.ts", false, 1, undefined);
-        expect(mockLoadDiffHunk).toHaveBeenCalledWith("large-file.ts", false, 2, undefined);
+        expect(mockLoadDiffHunk).toHaveBeenCalledWith(
+          "large-file.ts",
+          false,
+          1,
+          undefined,
+          undefined
+        );
+        expect(mockLoadDiffHunk).toHaveBeenCalledWith(
+          "large-file.ts",
+          false,
+          2,
+          undefined,
+          undefined
+        );
       });
     });
 
@@ -631,6 +658,111 @@ describe("DiffViewPanel", () => {
       const { container } = render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
 
       expect(container.querySelector(".truncation-bar")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("conflict mode", () => {
+    const conflictDiff: FileDiff = {
+      path: "conflict.txt",
+      hunks: [
+        {
+          header: "@@ Conflict 1/1 @@",
+          old_start: 0,
+          old_lines: 0,
+          new_start: 1,
+          new_lines: 5,
+          is_loaded: true,
+          lines: [
+            {
+              content: "<<<<<<< HEAD",
+              line_type: "conflict_marker",
+              old_lineno: null,
+              new_lineno: 1,
+            },
+            { content: "ours", line_type: "conflict_ours", old_lineno: null, new_lineno: 2 },
+            { content: "=======", line_type: "conflict_marker", old_lineno: null, new_lineno: 3 },
+            {
+              content: "theirs",
+              line_type: "conflict_theirs",
+              old_lineno: null,
+              new_lineno: 4,
+            },
+            {
+              content: ">>>>>>> branch",
+              line_type: "conflict_marker",
+              old_lineno: null,
+              new_lineno: 5,
+            },
+          ],
+        },
+      ],
+      is_binary: false,
+      total_lines: 5,
+      is_conflicted: true,
+    };
+
+    const mockResolveConflict = vi.fn();
+    const mockStageFile = vi.fn();
+
+    beforeEach(() => {
+      mockStore(useRepositoryStore, {
+        stageHunk: mockStageHunk,
+        unstageHunk: mockUnstageHunk,
+        stageLines: mockStageLines,
+        discardHunk: mockDiscardHunk,
+        discardLines: mockDiscardLines,
+        currentDiffPath: "conflict.txt",
+        currentDiffIsUntracked: false,
+        currentDiffIsConflicted: true,
+        loadDiffHunk: vi.fn(),
+        resolveConflict: mockResolveConflict,
+        stageFile: mockStageFile,
+      });
+    });
+
+    it("shows conflicted status with count instead of (staged)/(unstaged)", () => {
+      render(<DiffViewPanel diff={conflictDiff} loading={false} staged={false} />);
+
+      expect(screen.getByText("(conflicted — 1 conflict)")).toBeInTheDocument();
+      expect(screen.queryByText("(unstaged)")).not.toBeInTheDocument();
+    });
+
+    it("shows conflict resolution buttons in hunk header", () => {
+      render(<DiffViewPanel diff={conflictDiff} loading={false} staged={false} />);
+
+      expect(screen.getByText("Accept Ours")).toBeInTheDocument();
+      expect(screen.getByText("Accept Theirs")).toBeInTheDocument();
+      expect(screen.getByText("Both")).toBeInTheDocument();
+    });
+
+    it("shows Mark Resolved button in diff header", () => {
+      render(<DiffViewPanel diff={conflictDiff} loading={false} staged={false} />);
+
+      expect(screen.getByText("Mark Resolved")).toBeInTheDocument();
+    });
+
+    it("calls resolveConflict with ours strategy when Accept Ours is clicked", () => {
+      render(<DiffViewPanel diff={conflictDiff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByText("Accept Ours"));
+
+      expect(mockResolveConflict).toHaveBeenCalledWith("conflict.txt", "ours");
+    });
+
+    it("calls resolveConflict with theirs strategy when Accept Theirs is clicked", () => {
+      render(<DiffViewPanel diff={conflictDiff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByText("Accept Theirs"));
+
+      expect(mockResolveConflict).toHaveBeenCalledWith("conflict.txt", "theirs");
+    });
+
+    it("calls resolveConflict with both strategy when Both is clicked", () => {
+      render(<DiffViewPanel diff={conflictDiff} loading={false} staged={false} />);
+
+      fireEvent.click(screen.getByText("Both"));
+
+      expect(mockResolveConflict).toHaveBeenCalledWith("conflict.txt", "both");
     });
   });
 });

@@ -34,6 +34,7 @@ interface RepositoryState {
   currentDiffPath: string | null;
   currentDiffStaged: boolean;
   currentDiffIsUntracked: boolean;
+  currentDiffIsConflicted: boolean;
   diffLoading: boolean;
 
   // History view - selected commit details
@@ -58,8 +59,14 @@ interface RepositoryState {
   refreshRepository: () => Promise<void>;
   loadAllCommits: () => Promise<void>;
   loadFileStatuses: () => Promise<void>;
-  loadFileDiff: (path: string, staged: boolean, isUntracked?: boolean) => Promise<void>;
+  loadFileDiff: (
+    path: string,
+    staged: boolean,
+    isUntracked?: boolean,
+    isConflicted?: boolean
+  ) => Promise<void>;
   clearDiff: () => void;
+  resolveConflict: (path: string, strategy: string) => Promise<void>;
   stageFile: (path: string) => Promise<void>;
   unstageFile: (path: string) => Promise<void>;
   stageFiles: (paths: string[]) => Promise<void>;
@@ -79,7 +86,8 @@ interface RepositoryState {
     path: string,
     staged: boolean,
     hunkIndex: number,
-    isUntracked?: boolean
+    isUntracked?: boolean,
+    isConflicted?: boolean
   ) => Promise<void>;
   loadCommitDiffHunk: (hash: string, filePath: string, hunkIndex: number) => Promise<void>;
 
@@ -163,6 +171,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   currentDiffPath: null,
   currentDiffStaged: false,
   currentDiffIsUntracked: false,
+  currentDiffIsConflicted: false,
   diffLoading: false,
 
   selectedCommitDetails: null,
@@ -255,19 +264,25 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     }
   },
 
-  loadFileDiff: async (path: string, staged: boolean, isUntracked?: boolean) => {
+  loadFileDiff: async (
+    path: string,
+    staged: boolean,
+    isUntracked?: boolean,
+    isConflicted?: boolean
+  ) => {
     // Clear stash selection when viewing a file diff
     set({
       diffLoading: true,
       currentDiffPath: path,
       currentDiffStaged: staged,
       currentDiffIsUntracked: isUntracked ?? false,
+      currentDiffIsConflicted: isConflicted ?? false,
       selectedStashDetails: null,
       expandedStashFiles: new Set(),
       stashFileDiffs: new Map(),
     });
     try {
-      const diff = await git.getFileDiff(path, staged, isUntracked);
+      const diff = await git.getFileDiff(path, staged, isUntracked, isConflicted);
       set({ currentDiff: diff, diffLoading: false });
     } catch (err) {
       set({ diffLoading: false });
@@ -275,9 +290,26 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     }
   },
 
-  loadDiffHunk: async (path: string, staged: boolean, hunkIndex: number, isUntracked?: boolean) => {
+  resolveConflict: async (path: string, strategy: string) => {
     try {
-      const loadedHunk = await git.getDiffHunk(path, staged, hunkIndex, isUntracked);
+      await git.resolveConflict(path, strategy);
+      await get().loadFileStatuses();
+      // Clear the conflict diff since the file is now resolved
+      set({ currentDiff: null, currentDiffPath: null, currentDiffIsConflicted: false });
+    } catch (err) {
+      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+    }
+  },
+
+  loadDiffHunk: async (
+    path: string,
+    staged: boolean,
+    hunkIndex: number,
+    isUntracked?: boolean,
+    isConflicted?: boolean
+  ) => {
+    try {
+      const loadedHunk = await git.getDiffHunk(path, staged, hunkIndex, isUntracked, isConflicted);
       const { currentDiff } = get();
       if (!currentDiff || currentDiff.path !== path) return;
       const newHunks = [...currentDiff.hunks];
@@ -305,7 +337,11 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   },
 
   clearDiff: () => {
-    set({ currentDiff: null, currentDiffPath: null });
+    set({
+      currentDiff: null,
+      currentDiffPath: null,
+      currentDiffIsConflicted: false,
+    });
   },
 
   stageFile: async (path: string) => {

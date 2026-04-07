@@ -459,6 +459,100 @@ describe("DiffHunk", () => {
     });
   });
 
+  describe("conflict line types", () => {
+    const conflictHunk: DiffHunkType = {
+      header: "@@ Conflict 1/1 @@",
+      old_start: 0,
+      old_lines: 0,
+      new_start: 1,
+      new_lines: 7,
+      lines: [
+        { content: "context line", line_type: "context", old_lineno: null, new_lineno: 1 },
+        {
+          content: "<<<<<<< HEAD",
+          line_type: "conflict_marker",
+          old_lineno: null,
+          new_lineno: 2,
+        },
+        { content: "ours line", line_type: "conflict_ours", old_lineno: null, new_lineno: 3 },
+        { content: "=======", line_type: "conflict_marker", old_lineno: null, new_lineno: 4 },
+        {
+          content: "theirs line",
+          line_type: "conflict_theirs",
+          old_lineno: null,
+          new_lineno: 5,
+        },
+        {
+          content: ">>>>>>> branch",
+          line_type: "conflict_marker",
+          old_lineno: null,
+          new_lineno: 6,
+        },
+        { content: "after", line_type: "context", old_lineno: null, new_lineno: 7 },
+      ],
+    };
+
+    it("renders conflict line types with correct CSS classes", () => {
+      const { container } = render(<DiffHunk {...defaultProps} hunk={conflictHunk} />);
+
+      expect(container.querySelector(".line-conflict_marker")).toBeInTheDocument();
+      expect(container.querySelector(".line-conflict_ours")).toBeInTheDocument();
+      expect(container.querySelector(".line-conflict_theirs")).toBeInTheDocument();
+    });
+
+    it("renders conflict marker lines with | prefix", () => {
+      const { container } = render(<DiffHunk {...defaultProps} hunk={conflictHunk} />);
+
+      const markerLines = container.querySelectorAll(".line-conflict_marker");
+      for (const line of markerLines) {
+        const prefix = line.querySelector(".line-prefix");
+        expect(prefix).toHaveTextContent("|");
+      }
+    });
+
+    it("does not allow selecting conflict lines", () => {
+      const { container } = render(<DiffHunk {...defaultProps} hunk={conflictHunk} />);
+
+      const oursLine = container.querySelector(".line-conflict_ours");
+      fireEvent.mouseDown(oursLine!);
+
+      expect(oursLine).not.toHaveClass("selected");
+    });
+
+    it("renders all conflict lines as visible", () => {
+      const { container } = render(<DiffHunk {...defaultProps} hunk={conflictHunk} />);
+
+      const allLines = container.querySelectorAll(".diff-line");
+      // All 7 lines should be visible (none filtered)
+      expect(allLines.length).toBe(7);
+    });
+
+    it("shows resolution buttons when onResolveConflict is provided", () => {
+      const mockResolve = vi.fn();
+      render(<DiffHunk {...defaultProps} hunk={conflictHunk} onResolveConflict={mockResolve} />);
+
+      expect(screen.getByText("Accept Ours")).toBeInTheDocument();
+      expect(screen.getByText("Accept Theirs")).toBeInTheDocument();
+      expect(screen.getByText("Both")).toBeInTheDocument();
+      // Normal action button should not be shown
+      expect(screen.queryByText("Stage hunk")).not.toBeInTheDocument();
+    });
+
+    it("calls onResolveConflict with correct strategy", () => {
+      const mockResolve = vi.fn();
+      render(<DiffHunk {...defaultProps} hunk={conflictHunk} onResolveConflict={mockResolve} />);
+
+      fireEvent.click(screen.getByText("Accept Ours"));
+      expect(mockResolve).toHaveBeenCalledWith("ours");
+
+      fireEvent.click(screen.getByText("Accept Theirs"));
+      expect(mockResolve).toHaveBeenCalledWith("theirs");
+
+      fireEvent.click(screen.getByText("Both"));
+      expect(mockResolve).toHaveBeenCalledWith("both");
+    });
+  });
+
   describe("header lines", () => {
     it("filters out header lines from display", () => {
       const hunkWithHeader: DiffHunkType = {
