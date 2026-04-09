@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.9.0...v1.10.0) (2026-04-09)
+
+
+### Features
+
+* added a view for merge conflicts so you can see some information ([3e3a15b](https://github.com/mywill/YetAnotherGitGui/commit/3e3a15bc3bc29a92f08c64623188348c7d5bc766))
+
 # [1.9.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.8.2...v1.9.0) (2026-03-29)
 
 
