@@ -291,7 +291,10 @@ fn apply_hunk_to_content(content: &str, hunk: &super::diff::DiffHunk) -> Result<
                 // Deletion: skip this line from original content
                 content_pos += 1;
             }
-            super::diff::LineType::Header => {}
+            super::diff::LineType::Header
+            | super::diff::LineType::ConflictMarker
+            | super::diff::LineType::ConflictOurs
+            | super::diff::LineType::ConflictTheirs => {}
         }
     }
 
@@ -356,7 +359,10 @@ fn reverse_apply_hunk(
                     }
                 }
             }
-            super::diff::LineType::Header => {}
+            super::diff::LineType::Header
+            | super::diff::LineType::ConflictMarker
+            | super::diff::LineType::ConflictOurs
+            | super::diff::LineType::ConflictTheirs => {}
         }
     }
 
@@ -486,7 +492,10 @@ fn apply_selected_lines_to_content(
                     }
                 }
             }
-            super::diff::LineType::Header => {}
+            super::diff::LineType::Header
+            | super::diff::LineType::ConflictMarker
+            | super::diff::LineType::ConflictOurs
+            | super::diff::LineType::ConflictTheirs => {}
         }
     }
 
@@ -610,7 +619,10 @@ pub fn revert_commit_file_lines(
             super::diff::LineType::Deletion => {
                 // Deletion lines don't exist in current file
             }
-            super::diff::LineType::Header => {}
+            super::diff::LineType::Header
+            | super::diff::LineType::ConflictMarker
+            | super::diff::LineType::ConflictOurs
+            | super::diff::LineType::ConflictTheirs => {}
         }
     }
 
@@ -625,6 +637,91 @@ pub fn revert_commit_file_lines(
     index.write()?;
 
     Ok(())
+}
+
+/// Resolve a conflicted file by applying a strategy: "ours", "theirs", or "both".
+/// Reads the workdir file, strips conflict markers keeping the chosen content,
+/// writes the resolved file back, and stages it.
+pub fn resolve_conflict(repo: &Repository, path: &str, strategy: &str) -> Result<(), AppError> {
+    let workdir = repo
+        .workdir()
+        .ok_or(AppError::InvalidPath("No working directory".into()))?;
+    let file_path = workdir.join(path);
+    let content = std::fs::read_to_string(&file_path)?;
+
+    let resolved = resolve_conflict_content(&content, strategy)?;
+
+    std::fs::write(&file_path, &resolved)?;
+
+    let mut index = repo.index()?;
+    index.add_path(Path::new(path))?;
+    index.write()?;
+
+    Ok(())
+}
+
+/// Parse conflict markers and reconstruct the file with the chosen strategy.
+fn resolve_conflict_content(content: &str, strategy: &str) -> Result<String, AppError> {
+    let mut result = Vec::new();
+
+    enum State {
+        Normal,
+        InOurs,
+        InTheirs,
+    }
+
+    let mut state = State::Normal;
+    let mut ours_lines: Vec<&str> = Vec::new();
+    let mut theirs_lines: Vec<&str> = Vec::new();
+
+    for line in content.lines() {
+        match state {
+            State::Normal => {
+                if line.starts_with("<<<<<<<") {
+                    state = State::InOurs;
+                    ours_lines.clear();
+                    theirs_lines.clear();
+                } else {
+                    result.push(line);
+                }
+            }
+            State::InOurs => {
+                if line.starts_with("=======") {
+                    state = State::InTheirs;
+                } else {
+                    ours_lines.push(line);
+                }
+            }
+            State::InTheirs => {
+                if line.starts_with(">>>>>>>") {
+                    match strategy {
+                        "ours" => result.extend_from_slice(&ours_lines),
+                        "theirs" => result.extend_from_slice(&theirs_lines),
+                        "both" => {
+                            result.extend_from_slice(&ours_lines);
+                            result.extend_from_slice(&theirs_lines);
+                        }
+                        _ => {
+                            return Err(AppError::InvalidPath(format!(
+                                "Unknown conflict resolution strategy: {}",
+                                strategy
+                            )));
+                        }
+                    }
+                    state = State::Normal;
+                } else {
+                    theirs_lines.push(line);
+                }
+            }
+        }
+    }
+
+    let mut output = result.join("\n");
+    // Preserve trailing newline if original had one
+    if content.ends_with('\n') {
+        output.push('\n');
+    }
+    Ok(output)
 }
 
 fn index_status_to_type(status: Status) -> FileStatusType {
@@ -2092,5 +2189,118 @@ mod tests {
         let statuses = get_file_statuses(&repo).unwrap();
         assert!(statuses.staged.is_empty());
         assert!(statuses.untracked.iter().any(|s| s.path == "new.txt"));
+    }
+
+    #[test]
+    fn test_resolve_conflict_content_ours() {
+        let content = "\
+line before
+<<<<<<< HEAD
+ours line
+=======
+theirs line
+>>>>>>> branch
+line after
+";
+        let result = super::resolve_conflict_content(content, "ours").unwrap();
+        assert_eq!(result, "line before\nours line\nline after\n");
+    }
+
+    #[test]
+    fn test_resolve_conflict_content_theirs() {
+        let content = "\
+line before
+<<<<<<< HEAD
+ours line
+=======
+theirs line
+>>>>>>> branch
+line after
+";
+        let result = super::resolve_conflict_content(content, "theirs").unwrap();
+        assert_eq!(result, "line before\ntheirs line\nline after\n");
+    }
+
+    #[test]
+    fn test_resolve_conflict_content_both() {
+        let content = "\
+line before
+<<<<<<< HEAD
+ours line
+=======
+theirs line
+>>>>>>> branch
+line after
+";
+        let result = super::resolve_conflict_content(content, "both").unwrap();
+        assert_eq!(result, "line before\nours line\ntheirs line\nline after\n");
+    }
+
+    #[test]
+    fn test_resolve_conflict_content_multiple_regions() {
+        let content = "\
+<<<<<<< HEAD
+A
+=======
+B
+>>>>>>> branch
+middle
+<<<<<<< HEAD
+C
+=======
+D
+>>>>>>> branch
+";
+        let result = super::resolve_conflict_content(content, "ours").unwrap();
+        assert_eq!(result, "A\nmiddle\nC\n");
+
+        let result = super::resolve_conflict_content(content, "theirs").unwrap();
+        assert_eq!(result, "B\nmiddle\nD\n");
+    }
+
+    #[test]
+    fn test_resolve_conflict_content_invalid_strategy() {
+        let content = "<<<<<<< HEAD\nA\n=======\nB\n>>>>>>> branch\n";
+        let result = super::resolve_conflict_content(content, "invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resolve_conflict_content_no_trailing_newline() {
+        let content = "<<<<<<< HEAD\nA\n=======\nB\n>>>>>>> branch";
+        let result = super::resolve_conflict_content(content, "ours").unwrap();
+        // No trailing newline since original didn't have one
+        assert_eq!(result, "A");
+    }
+
+    #[test]
+    fn test_resolve_conflict_stages_file() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(
+            &repo,
+            &temp_dir,
+            "conflict.txt",
+            "base content\n",
+            "Initial",
+        );
+
+        // Write conflict markers to file
+        let file_path = temp_dir.path().join("conflict.txt");
+        std::fs::write(
+            &file_path,
+            "<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> branch\n",
+        )
+        .unwrap();
+
+        resolve_conflict(&repo, "conflict.txt", "ours").unwrap();
+
+        // Verify file was rewritten without markers
+        let resolved = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(resolved, "ours\n");
+
+        // Verify file was staged
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.iter().any(|s| s.path == "conflict.txt"));
+        assert!(!statuses.unstaged.iter().any(|s| s.path == "conflict.txt"));
     }
 }

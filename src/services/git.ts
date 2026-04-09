@@ -95,9 +95,10 @@ export async function discardHunk(
 export async function getFileDiff(
   path: string,
   staged: boolean,
-  isUntracked?: boolean
+  isUntracked?: boolean,
+  isConflicted?: boolean
 ): Promise<FileDiff> {
-  return invoke("get_file_diff", { path, staged, isUntracked });
+  return invoke("get_file_diff", { path, staged, isUntracked, isConflicted });
 }
 
 export async function createCommit(message: string): Promise<string> {
@@ -110,6 +111,10 @@ export async function revertFile(path: string): Promise<void> {
 
 export async function deleteFile(path: string): Promise<void> {
   return invoke("delete_file", { path });
+}
+
+export async function resolveConflict(path: string, strategy: string): Promise<void> {
+  return invoke("resolve_conflict", { path, strategy });
 }
 
 export async function revertCommit(hash: string): Promise<void> {
@@ -161,9 +166,10 @@ export async function getDiffHunk(
   path: string,
   staged: boolean,
   hunkIndex: number,
-  isUntracked?: boolean
+  isUntracked?: boolean,
+  isConflicted?: boolean
 ): Promise<DiffHunk> {
-  return invoke("get_diff_hunk", { path, staged, hunkIndex, isUntracked });
+  return invoke("get_diff_hunk", { path, staged, hunkIndex, isUntracked, isConflicted });
 }
 
 export async function getCommitDiffHunk(

@@ -81,6 +81,7 @@ export interface FileDiff {
   hunks: DiffHunk[];
   is_binary: boolean;
   total_lines: number;
+  is_conflicted?: boolean;
 }
 
 export interface DiffHunk {
@@ -93,9 +94,18 @@ export interface DiffHunk {
   is_loaded: boolean;
 }
 
+export type LineType =
+  | "context"
+  | "addition"
+  | "deletion"
+  | "header"
+  | "conflict_marker"
+  | "conflict_ours"
+  | "conflict_theirs";
+
 export interface DiffLine {
   content: string;
-  line_type: "context" | "addition" | "deletion" | "header";
+  line_type: LineType;
   old_lineno: number | null;
   new_lineno: number | null;
 }

@@ -26,6 +26,11 @@
   --color-addition: #4caf50;
   --color-deletion: #f44336;
 
+  /* Conflict colors */
+  --color-conflict-ours: #2ea043;
+  --color-conflict-theirs: #388bfd;
+  --color-conflict-marker: #6e7681;
+
   /* Branch line colors (graph) */
   --color-branch-1: #4fc3f7;
   --color-branch-2: #81c784;

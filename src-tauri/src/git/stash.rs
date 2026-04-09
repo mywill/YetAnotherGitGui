@@ -217,6 +217,7 @@ pub fn get_stash_file_diff(
         hunks: Vec::new(),
         is_binary: false,
         total_lines: 0,
+        is_conflicted: false,
     };
 
     let mut current_hunk: Option<DiffHunk> = None;

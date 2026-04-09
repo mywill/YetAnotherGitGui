@@ -137,8 +137,8 @@ test.describe("File Staging Workflow", () => {
       .locator(".section-header")
       .filter({ has: page.getByText("Unstaged", { exact: true }) });
     const unstagedCount = unstagedSection.locator(".section-count");
-    // Mock data has 3 unstaged files
-    await expect(unstagedCount).toHaveText("3");
+    // Mock data has 4 unstaged files (3 modified + 1 conflicted)
+    await expect(unstagedCount).toHaveText("4");
 
     const untrackedSection = page
       .locator(".section-header")
@@ -1336,7 +1336,7 @@ test.describe("Stage All Button - All Files", () => {
   });
 
   test("shows correct file counts in section headers", async ({ page }) => {
-    // Mock has 3 unstaged files and 2 untracked files
+    // Mock has 4 unstaged files (3 modified + 1 conflicted) and 2 untracked files
     const unstagedSection = page
       .locator(".section-header")
       .filter({ has: page.getByText("Unstaged", { exact: true }) });
@@ -1344,7 +1344,7 @@ test.describe("Stage All Button - All Files", () => {
       .locator(".section-header")
       .filter({ has: page.getByText("Untracked", { exact: true }) });
 
-    await expect(unstagedSection.locator(".section-count")).toHaveText("3");
+    await expect(unstagedSection.locator(".section-count")).toHaveText("4");
     await expect(untrackedSection.locator(".section-count")).toHaveText("2");
   });
 

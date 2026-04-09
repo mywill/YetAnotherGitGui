@@ -20,10 +20,14 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   const discardLines = useRepositoryStore((s) => s.discardLines);
   const currentDiffPath = useRepositoryStore((s) => s.currentDiffPath);
   const currentDiffIsUntracked = useRepositoryStore((s) => s.currentDiffIsUntracked);
+  const currentDiffIsConflicted = useRepositoryStore((s) => s.currentDiffIsConflicted);
   const loadDiffHunk = useRepositoryStore((s) => s.loadDiffHunk);
+  const resolveConflict = useRepositoryStore((s) => s.resolveConflict);
+  const stageFile = useRepositoryStore((s) => s.stageFile);
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
+  const isConflicted = diff?.is_conflicted ?? false;
   const selectedCount = selectedFilePaths.size;
 
   const collapsedHunks = useMemo(
@@ -41,17 +45,58 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   const handleLoadHunk = useCallback(
     async (hunkIndex: number) => {
       if (!currentDiffPath) return;
-      await loadDiffHunk(currentDiffPath, staged, hunkIndex, currentDiffIsUntracked || undefined);
+      await loadDiffHunk(
+        currentDiffPath,
+        staged,
+        hunkIndex,
+        currentDiffIsUntracked || undefined,
+        currentDiffIsConflicted || undefined
+      );
     },
-    [currentDiffPath, staged, currentDiffIsUntracked, loadDiffHunk]
+    [currentDiffPath, staged, currentDiffIsUntracked, currentDiffIsConflicted, loadDiffHunk]
   );
 
   const handleLoadAll = useCallback(async () => {
     if (!currentDiffPath || !diff) return;
     for (const idx of collapsedHunks) {
-      await loadDiffHunk(currentDiffPath, staged, idx, currentDiffIsUntracked || undefined);
+      await loadDiffHunk(
+        currentDiffPath,
+        staged,
+        idx,
+        currentDiffIsUntracked || undefined,
+        currentDiffIsConflicted || undefined
+      );
     }
-  }, [currentDiffPath, diff, collapsedHunks, staged, currentDiffIsUntracked, loadDiffHunk]);
+  }, [
+    currentDiffPath,
+    diff,
+    collapsedHunks,
+    staged,
+    currentDiffIsUntracked,
+    currentDiffIsConflicted,
+    loadDiffHunk,
+  ]);
+
+  const handleResolve = useCallback(
+    async (strategy: string) => {
+      if (!currentDiffPath) return;
+      await resolveConflict(currentDiffPath, strategy);
+    },
+    [currentDiffPath, resolveConflict]
+  );
+
+  const handleMarkResolved = useCallback(async () => {
+    if (!currentDiffPath) return;
+    const confirmed = await showConfirm({
+      title: "Mark as resolved?",
+      message:
+        "This will stage the file as-is. Make sure all conflict markers have been resolved before staging.",
+      confirmLabel: "Mark Resolved",
+    });
+    if (confirmed) {
+      await stageFile(currentDiffPath);
+    }
+  }, [currentDiffPath, showConfirm, stageFile]);
 
   if (loading) {
     return (
@@ -150,14 +195,27 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   };
 
   const loadedLines = diff.hunks.reduce((sum, h) => sum + h.lines.length, 0);
+  const conflictCount = isConflicted ? diff.hunks.length : 0;
 
   return (
     <div className="diff-view-panel flex h-full flex-col overflow-hidden">
-      <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
+      <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <span className="diff-path text-xs font-medium">{diff.path}</span>
-        <span className="diff-status text-text-secondary ml-2 text-xs">
-          {staged ? "(staged)" : "(unstaged)"}
+        <span className="diff-status text-text-secondary text-xs">
+          {isConflicted
+            ? `(conflicted — ${conflictCount} conflict${conflictCount !== 1 ? "s" : ""})`
+            : staged
+              ? "(staged)"
+              : "(unstaged)"}
         </span>
+        {isConflicted && (
+          <YaggButton
+            className="bg-bg-secondary hover:bg-bg-hover ml-auto rounded px-2 py-0.5 text-xs"
+            onClick={handleMarkResolved}
+          >
+            Mark Resolved
+          </YaggButton>
+        )}
       </div>
       {hasCollapsedHunks && (
         <div className="truncation-bar bg-bg-selected/30 text-text-secondary flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs">
@@ -173,18 +231,29 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
       <div className="diff-content flex-1 overflow-y-auto font-mono text-xs leading-normal">
         {diff.hunks.map((hunk, index) =>
           hunk.is_loaded ? (
-            <DiffHunk
-              key={index}
-              hunk={hunk}
-              onAction={() => handleHunkAction(index)}
-              onStageLines={(lineIndices) => handleStageLines(index, lineIndices)}
-              actionLabel={staged ? "Unstage hunk" : "Stage hunk"}
-              canSelectLines={!staged}
-              onDiscardHunk={!staged ? () => handleDiscardHunk(index) : undefined}
-              onDiscardLines={
-                !staged ? (lineIndices) => handleDiscardLines(index, lineIndices) : undefined
-              }
-            />
+            isConflicted ? (
+              <DiffHunk
+                key={index}
+                hunk={hunk}
+                onAction={handleMarkResolved}
+                actionLabel=""
+                canSelectLines={false}
+                onResolveConflict={handleResolve}
+              />
+            ) : (
+              <DiffHunk
+                key={index}
+                hunk={hunk}
+                onAction={() => handleHunkAction(index)}
+                onStageLines={(lineIndices) => handleStageLines(index, lineIndices)}
+                actionLabel={staged ? "Unstage hunk" : "Stage hunk"}
+                canSelectLines={!staged}
+                onDiscardHunk={!staged ? () => handleDiscardHunk(index) : undefined}
+                onDiscardLines={
+                  !staged ? (lineIndices) => handleDiscardLines(index, lineIndices) : undefined
+                }
+              />
+            )
           ) : (
             <div
               key={index}

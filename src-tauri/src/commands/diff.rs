@@ -9,9 +9,14 @@ pub fn get_file_diff(
     path: String,
     staged: bool,
     is_untracked: Option<bool>,
+    is_conflicted: Option<bool>,
     state: State<AppState>,
 ) -> Result<git::FileDiff, AppError> {
     let repo = state.get_repo()?;
+
+    if is_conflicted.unwrap_or(false) {
+        return git::get_conflicted_file_diff(&repo, &path);
+    }
 
     // For untracked files, read the file directly
     if is_untracked.unwrap_or(false) {
@@ -27,9 +32,14 @@ pub fn get_diff_hunk(
     staged: bool,
     hunk_index: usize,
     is_untracked: Option<bool>,
+    is_conflicted: Option<bool>,
     state: State<AppState>,
 ) -> Result<git::DiffHunk, AppError> {
     let repo = state.get_repo()?;
+
+    if is_conflicted.unwrap_or(false) {
+        return git::get_conflicted_diff_hunk(&repo, &path, hunk_index);
+    }
 
     if is_untracked.unwrap_or(false) {
         return git::get_untracked_diff_hunk(&repo, &path, hunk_index);

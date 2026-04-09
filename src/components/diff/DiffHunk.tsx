@@ -3,6 +3,10 @@ import clsx from "clsx";
 import type { DiffHunk as DiffHunkType } from "../../types";
 import { YaggButton } from "../common/YaggButton";
 
+function isSelectableLineType(lineType: string): boolean {
+  return lineType === "addition" || lineType === "deletion";
+}
+
 interface DiffHunkProps {
   hunk: DiffHunkType;
   onAction: () => void;
@@ -11,6 +15,7 @@ interface DiffHunkProps {
   canSelectLines: boolean;
   onDiscardHunk?: () => void;
   onDiscardLines?: (lineIndices: number[]) => void;
+  onResolveConflict?: (strategy: string) => void;
 }
 
 export function DiffHunk({
@@ -21,6 +26,7 @@ export function DiffHunk({
   canSelectLines,
   onDiscardHunk,
   onDiscardLines,
+  onResolveConflict,
 }: DiffHunkProps) {
   const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
@@ -34,7 +40,7 @@ export function DiffHunk({
   const handleMouseDown = useCallback(
     (originalIndex: number, lineType: string, e: React.MouseEvent) => {
       if (!canSelectLines) return;
-      if (lineType === "context") return;
+      if (!isSelectableLineType(lineType)) return;
 
       if (e.shiftKey && lastClickedRef.current !== null) {
         const start = Math.min(lastClickedRef.current, originalIndex);
@@ -43,7 +49,7 @@ export function DiffHunk({
         const newSelection = new Set<number>();
         for (let i = start; i <= end; i++) {
           const line = hunk.lines[i];
-          if (line && line.line_type !== "context" && line.line_type !== "header") {
+          if (line && isSelectableLineType(line.line_type)) {
             newSelection.add(i);
           }
         }
@@ -68,7 +74,7 @@ export function DiffHunk({
   const handleMouseEnter = useCallback(
     (originalIndex: number, lineType: string) => {
       if (!isSelecting || !canSelectLines) return;
-      if (lineType === "context") return;
+      if (!isSelectableLineType(lineType)) return;
       if (selectionStartRef.current === null) return;
 
       const start = Math.min(selectionStartRef.current, originalIndex);
@@ -77,7 +83,7 @@ export function DiffHunk({
       const newSelection = new Set<number>();
       for (let i = start; i <= end; i++) {
         const line = hunk.lines[i];
-        if (line && line.line_type !== "context" && line.line_type !== "header") {
+        if (line && isSelectableLineType(line.line_type)) {
           newSelection.add(i);
         }
       }
@@ -125,51 +131,75 @@ export function DiffHunk({
       <div className="hunk-header border-border bg-bg-tertiary flex items-center justify-between border-b px-2 py-1 text-xs">
         <span className="hunk-info text-text-muted font-mono">{hunkInfo.trim()}</span>
         <div className="hunk-actions flex gap-1">
-          {selectedLines.size > 0 && canSelectLines && (
-            <YaggButton
-              className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
-              onClick={handleStageSelected}
-            >
-              Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
-            </YaggButton>
-          )}
-          <YaggButton
-            className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
-            onClick={onAction}
-          >
-            {actionLabel}
-          </YaggButton>
-          {selectedLines.size > 0 && canSelectLines && onDiscardLines && (
-            <YaggButton
-              className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
-              onClick={handleDiscardSelected}
-            >
-              Discard {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
-            </YaggButton>
-          )}
-          {onDiscardHunk && (
-            <YaggButton
-              className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
-              onClick={onDiscardHunk}
-            >
-              Discard hunk
-            </YaggButton>
-          )}
-          {selectedLines.size > 0 && canSelectLines && (
-            <YaggButton
-              variant="outline"
-              className="hunk-action secondary hover:bg-bg-hover bg-transparent px-2 py-px text-xs"
-              onClick={clearSelection}
-            >
-              Clear
-            </YaggButton>
+          {onResolveConflict ? (
+            <>
+              <YaggButton
+                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                onClick={() => onResolveConflict("ours")}
+              >
+                Accept Ours
+              </YaggButton>
+              <YaggButton
+                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                onClick={() => onResolveConflict("theirs")}
+              >
+                Accept Theirs
+              </YaggButton>
+              <YaggButton
+                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                onClick={() => onResolveConflict("both")}
+              >
+                Both
+              </YaggButton>
+            </>
+          ) : (
+            <>
+              {selectedLines.size > 0 && canSelectLines && (
+                <YaggButton
+                  className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                  onClick={handleStageSelected}
+                >
+                  Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
+                </YaggButton>
+              )}
+              <YaggButton
+                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                onClick={onAction}
+              >
+                {actionLabel}
+              </YaggButton>
+              {selectedLines.size > 0 && canSelectLines && onDiscardLines && (
+                <YaggButton
+                  className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                  onClick={handleDiscardSelected}
+                >
+                  Discard {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
+                </YaggButton>
+              )}
+              {onDiscardHunk && (
+                <YaggButton
+                  className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                  onClick={onDiscardHunk}
+                >
+                  Discard hunk
+                </YaggButton>
+              )}
+              {selectedLines.size > 0 && canSelectLines && (
+                <YaggButton
+                  variant="outline"
+                  className="hunk-action secondary hover:bg-bg-hover bg-transparent px-2 py-px text-xs"
+                  onClick={clearSelection}
+                >
+                  Clear
+                </YaggButton>
+              )}
+            </>
           )}
         </div>
       </div>
       <div className="hunk-lines bg-bg-primary table w-full min-w-max">
         {visibleLines.map((line, visibleIdx) => {
-          const isSelectable =
-            canSelectLines && (line.line_type === "addition" || line.line_type === "deletion");
+          const isSelectable = canSelectLines && isSelectableLineType(line.line_type);
           const isSelected = selectedLines.has(line.originalIndex);
 
           const prevVisible = visibleLines[visibleIdx - 1];
@@ -188,6 +218,9 @@ export function DiffHunk({
                 line.line_type === "addition" && "bg-addition/15",
                 line.line_type === "deletion" && "bg-deletion/15",
                 line.line_type === "context" && "bg-transparent",
+                line.line_type === "conflict_marker" && "bg-conflict-marker/20 italic",
+                line.line_type === "conflict_ours" && "bg-conflict-ours/20",
+                line.line_type === "conflict_theirs" && "bg-conflict-theirs/20",
                 isSelectable && "selectable cursor-pointer hover:brightness-110",
                 isSelected && "selected",
                 isSelected && isFirst && "selected-first",
@@ -208,10 +241,17 @@ export function DiffHunk({
                 className={clsx(
                   "line-prefix table-cell w-5 min-w-5 text-center select-none",
                   line.line_type === "addition" && "text-addition",
-                  line.line_type === "deletion" && "text-deletion"
+                  line.line_type === "deletion" && "text-deletion",
+                  line.line_type === "conflict_marker" && "text-conflict-marker"
                 )}
               >
-                {line.line_type === "addition" ? "+" : line.line_type === "deletion" ? "-" : " "}
+                {line.line_type === "addition"
+                  ? "+"
+                  : line.line_type === "deletion"
+                    ? "-"
+                    : line.line_type === "conflict_marker"
+                      ? "|"
+                      : " "}
               </span>
               <span className="line-content table-cell pr-2 whitespace-pre">{line.content}</span>
             </div>

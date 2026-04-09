@@ -13,6 +13,7 @@ const STATE_CONFIG: Record<string, { label: string; hint: string }> = {
 
 export function RepoStateBanner() {
   const repoState = useRepositoryStore((s) => s.repositoryInfo?.repo_state);
+  const fileStatuses = useRepositoryStore((s) => s.fileStatuses);
 
   if (!repoState || repoState === "clean") {
     return null;
@@ -23,6 +24,8 @@ export function RepoStateBanner() {
     return null;
   }
 
+  const conflictCount = fileStatuses?.unstaged.filter((f) => f.status === "conflicted").length ?? 0;
+
   return (
     <div
       className="repo-state-banner bg-warning-bg text-warning-text flex items-center gap-2 px-3 py-1.5 text-xs"
@@ -31,6 +34,11 @@ export function RepoStateBanner() {
     >
       <WarningIcon />
       <span className="font-semibold">{config.label}</span>
+      {conflictCount > 0 && (
+        <span className="text-warning-text/90">
+          — {conflictCount} conflicted file{conflictCount > 1 ? "s" : ""}
+        </span>
+      )}
       <span className="text-warning-text/70">
         — resolve or run{" "}
         <code className="bg-warning-bg rounded px-1 font-mono brightness-125">{config.hint}</code>

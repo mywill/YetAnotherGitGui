@@ -194,7 +194,8 @@ export const tauriMocks = `
             unstaged: [
               { path: 'unstaged-file1.ts', status: 'modified', is_staged: false },
               { path: 'unstaged-file2.ts', status: 'modified', is_staged: false },
-              { path: 'unstaged-file3.ts', status: 'modified', is_staged: false }
+              { path: 'unstaged-file3.ts', status: 'modified', is_staged: false },
+              { path: 'conflict-file.ts', status: 'conflicted', is_staged: false }
             ],
             untracked: [
               { path: 'new-file1.ts', status: 'untracked', is_staged: false },
@@ -203,6 +204,33 @@ export const tauriMocks = `
           };
 
         case 'get_file_diff':
+          if (args?.isConflicted) {
+            return {
+              path: args?.path || 'conflict-file.ts',
+              hunks: [
+                {
+                  header: '@@ Conflict 1/1 @@',
+                  old_start: 0,
+                  old_lines: 0,
+                  new_start: 1,
+                  new_lines: 7,
+                  is_loaded: true,
+                  lines: [
+                    { content: 'import { foo } from "bar";', line_type: 'context', old_lineno: null, new_lineno: 1 },
+                    { content: '<<<<<<< HEAD', line_type: 'conflict_marker', old_lineno: null, new_lineno: 2 },
+                    { content: 'const x = "ours";', line_type: 'conflict_ours', old_lineno: null, new_lineno: 3 },
+                    { content: '=======', line_type: 'conflict_marker', old_lineno: null, new_lineno: 4 },
+                    { content: 'const x = "theirs";', line_type: 'conflict_theirs', old_lineno: null, new_lineno: 5 },
+                    { content: '>>>>>>> feature-branch', line_type: 'conflict_marker', old_lineno: null, new_lineno: 6 },
+                    { content: 'export { x };', line_type: 'context', old_lineno: null, new_lineno: 7 }
+                  ]
+                }
+              ],
+              is_binary: false,
+              total_lines: 7,
+              is_conflicted: true
+            };
+          }
           return {
             path: args?.path || 'test.ts',
             hunks: [
@@ -222,7 +250,8 @@ export const tauriMocks = `
               }
             ],
             is_binary: false,
-            total_lines: 4
+            total_lines: 4,
+            is_conflicted: false
           };
 
         case 'get_diff_hunk':
@@ -257,6 +286,7 @@ export const tauriMocks = `
         case 'unstage_file':
         case 'revert_file':
         case 'delete_file':
+        case 'resolve_conflict':
         case 'stage_hunk':
         case 'unstage_hunk':
         case 'stage_lines':

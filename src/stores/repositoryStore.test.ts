@@ -204,7 +204,7 @@ describe("repositoryStore", () => {
       const { stageFile } = useRepositoryStore.getState();
       await stageFile("test.ts");
 
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", true, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", true, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
@@ -255,7 +255,7 @@ describe("repositoryStore", () => {
       const { unstageFile } = useRepositoryStore.getState();
       await unstageFile("test.ts");
 
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined, undefined);
     });
   });
 
@@ -1138,7 +1138,7 @@ describe("repositoryStore", () => {
       const { refreshRepository } = useRepositoryStore.getState();
       await refreshRepository();
 
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
@@ -1183,7 +1183,7 @@ describe("repositoryStore", () => {
 
       expect(git.stageHunk).toHaveBeenCalledWith("test.ts", 0);
       expect(git.getFileStatuses).toHaveBeenCalled();
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
@@ -1216,7 +1216,7 @@ describe("repositoryStore", () => {
 
       expect(git.unstageHunk).toHaveBeenCalledWith("test.ts", 0);
       expect(git.getFileStatuses).toHaveBeenCalled();
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", true, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", true, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
@@ -1249,7 +1249,7 @@ describe("repositoryStore", () => {
 
       expect(git.stageLines).toHaveBeenCalledWith("test.ts", 0, [1, 2, 3]);
       expect(git.getFileStatuses).toHaveBeenCalled();
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
@@ -1282,7 +1282,7 @@ describe("repositoryStore", () => {
 
       expect(git.discardHunk).toHaveBeenCalledWith("test.ts", 0);
       expect(git.getFileStatuses).toHaveBeenCalled();
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
@@ -1315,7 +1315,7 @@ describe("repositoryStore", () => {
 
       expect(git.discardHunk).toHaveBeenCalledWith("test.ts", 0, [1, 2]);
       expect(git.getFileStatuses).toHaveBeenCalled();
-      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined);
+      expect(git.getFileDiff).toHaveBeenCalledWith("test.ts", false, undefined, undefined);
     });
 
     it("sets error state on failure", async () => {
