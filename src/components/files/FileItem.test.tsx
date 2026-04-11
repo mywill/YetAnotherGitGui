@@ -10,11 +10,14 @@ vi.mock("../../services/clipboard", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("../../stores/repositoryStore", () => ({
-  useRepositoryStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ repositoryInfo: { path: "/mock/repo/path" } })
-  ),
-}));
+vi.mock("../../stores/repositoryStore", () => {
+  const state = { repositoryInfo: { path: "/mock/repo/path" } };
+  const hook = vi.fn((selector: (state: Record<string, unknown>) => unknown) => selector(state));
+  // FileItem now reads repositoryInfo lazily via getState() in the context menu
+  // callback to avoid subscribing to it, so the mock needs getState too.
+  (hook as unknown as { getState: () => Record<string, unknown> }).getState = () => state;
+  return { useRepositoryStore: hook };
+});
 
 describe("FileItem", () => {
   const mockOnToggleStage = vi.fn();

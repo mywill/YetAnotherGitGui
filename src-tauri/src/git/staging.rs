@@ -192,6 +192,67 @@ pub fn unstage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Stage multiple files in a single index write.
+///
+/// Equivalent to calling `stage_file` for each path, but writes the index
+/// only once at the end — avoiding N IPC calls and N disk writes when the
+/// user stages many files at once.
+pub fn stage_files(repo: &Repository, paths: &[String]) -> Result<(), AppError> {
+    let mut index = repo.index()?;
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| AppError::InvalidPath("No workdir".into()))?;
+
+    for path in paths {
+        let full_path = workdir.join(path);
+        if full_path.exists() {
+            index.add_path(Path::new(path))?;
+        } else {
+            // File was deleted
+            index.remove_path(Path::new(path))?;
+        }
+    }
+
+    index.write()?;
+    Ok(())
+}
+
+/// Unstage multiple files in a single index write.
+///
+/// Equivalent to calling `unstage_file` for each path, but writes the index
+/// only once at the end.
+pub fn unstage_files(repo: &Repository, paths: &[String]) -> Result<(), AppError> {
+    let head_tree = repo
+        .head()
+        .ok()
+        .and_then(|h| h.peel_to_commit().ok())
+        .and_then(|c| c.tree().ok());
+
+    let mut index = repo.index()?;
+
+    for path in paths {
+        match &head_tree {
+            Some(tree) => {
+                if let Ok(entry) = tree.get_path(Path::new(path)) {
+                    let entry_oid = entry.id();
+                    index.add_frombuffer(
+                        &create_index_entry(path, entry.filemode() as u32, 0, entry_oid),
+                        repo.find_blob(entry_oid)?.content(),
+                    )?;
+                } else {
+                    index.remove_path(Path::new(path))?;
+                }
+            }
+            None => {
+                index.remove_path(Path::new(path))?;
+            }
+        }
+    }
+
+    index.write()?;
+    Ok(())
+}
+
 pub fn stage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<(), AppError> {
     // Get the current diff hunks
     let diff = super::diff::get_file_diff(repo, path, false)?;
@@ -2302,5 +2363,82 @@ D
         let statuses = get_file_statuses(&repo).unwrap();
         assert!(statuses.staged.iter().any(|s| s.path == "conflict.txt"));
         assert!(!statuses.unstaged.iter().any(|s| s.path == "conflict.txt"));
+    }
+
+    #[test]
+    fn test_stage_files_batch_stages_multiple_files() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        fs::write(temp_dir.path().join("a.txt"), "a").unwrap();
+        fs::write(temp_dir.path().join("b.txt"), "b").unwrap();
+        fs::write(temp_dir.path().join("c.txt"), "c").unwrap();
+
+        let paths = vec![
+            "a.txt".to_string(),
+            "b.txt".to_string(),
+            "c.txt".to_string(),
+        ];
+        stage_files(&repo, &paths).unwrap();
+
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.iter().any(|s| s.path == "a.txt"));
+        assert!(statuses.staged.iter().any(|s| s.path == "b.txt"));
+        assert!(statuses.staged.iter().any(|s| s.path == "c.txt"));
+        assert_eq!(statuses.staged.len(), 3);
+    }
+
+    #[test]
+    fn test_stage_files_handles_deleted_files() {
+        let (temp_dir, repo) = create_test_repo();
+        create_commit_with_file(&repo, &temp_dir, "keep.txt", "keep\n", "Initial");
+        create_commit_with_file(&repo, &temp_dir, "delete.txt", "delete\n", "Add delete");
+
+        // Delete the file from workdir
+        fs::remove_file(temp_dir.path().join("delete.txt")).unwrap();
+
+        let paths = vec!["delete.txt".to_string()];
+        stage_files(&repo, &paths).unwrap();
+
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses
+            .staged
+            .iter()
+            .any(|s| s.path == "delete.txt" && matches!(s.status, FileStatusType::Deleted)));
+    }
+
+    #[test]
+    fn test_unstage_files_batch_unstages_multiple_files() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        fs::write(temp_dir.path().join("a.txt"), "a").unwrap();
+        fs::write(temp_dir.path().join("b.txt"), "b").unwrap();
+
+        // First stage them
+        let paths = vec!["a.txt".to_string(), "b.txt".to_string()];
+        stage_files(&repo, &paths).unwrap();
+
+        // Verify they're staged
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert_eq!(statuses.staged.len(), 2);
+
+        // Now unstage them in batch
+        unstage_files(&repo, &paths).unwrap();
+
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.is_empty());
+        assert_eq!(statuses.untracked.len(), 2);
+    }
+
+    #[test]
+    fn test_stage_files_empty_list_is_noop() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        stage_files(&repo, &[]).unwrap();
+
+        let statuses = get_file_statuses(&repo).unwrap();
+        assert!(statuses.staged.is_empty());
     }
 }

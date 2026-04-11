@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { memo, useState, useCallback, useMemo, useRef } from "react";
 import clsx from "clsx";
 import type { DiffHunk as DiffHunkType } from "../../types";
 import { YaggButton } from "../common/YaggButton";
@@ -18,7 +18,7 @@ interface DiffHunkProps {
   onResolveConflict?: (strategy: string) => void;
 }
 
-export function DiffHunk({
+export const DiffHunk = memo(function DiffHunk({
   hunk,
   onAction,
   onStageLines,
@@ -33,9 +33,13 @@ export function DiffHunk({
   const lastClickedRef = useRef<number | null>(null);
   const selectionStartRef = useRef<number | null>(null);
 
-  const visibleLines = hunk.lines
-    .map((line, idx) => ({ ...line, originalIndex: idx }))
-    .filter((line) => line.line_type !== "header");
+  const visibleLines = useMemo(
+    () =>
+      hunk.lines
+        .map((line, idx) => ({ ...line, originalIndex: idx }))
+        .filter((line) => line.line_type !== "header"),
+    [hunk.lines]
+  );
 
   const handleMouseDown = useCallback(
     (originalIndex: number, lineType: string, e: React.MouseEvent) => {
@@ -260,4 +264,4 @@ export function DiffHunk({
       </div>
     </div>
   );
-}
+});

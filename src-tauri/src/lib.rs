@@ -39,6 +39,8 @@ pub fn run() {
             commands::get_file_statuses,
             commands::stage_file,
             commands::unstage_file,
+            commands::stage_files,
+            commands::unstage_files,
             commands::stage_hunk,
             commands::unstage_hunk,
             commands::stage_lines,

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import clsx from "clsx";
 import { formatDistanceToNow } from "date-fns";
@@ -40,7 +40,7 @@ const REF_BADGE_STYLES: Record<string, { bg: string; color: string; border: stri
   },
 };
 
-export function CommitRow({
+export const CommitRow = memo(function CommitRow({
   index,
   style,
   commit,
@@ -82,8 +82,10 @@ export function CommitRow({
     }
   }, [commit.hash, commit.message, closeContextMenu, revertCommit, setActiveView, showConfirm]);
 
-  const date = new Date(commit.timestamp * 1000);
-  const timeAgo = formatDistanceToNow(date, { addSuffix: true });
+  const { date, timeAgo } = useMemo(() => {
+    const d = new Date(commit.timestamp * 1000);
+    return { date: d, timeAgo: formatDistanceToNow(d, { addSuffix: true }) };
+  }, [commit.timestamp]);
 
   return (
     <>
@@ -187,4 +189,4 @@ export function CommitRow({
       )}
     </>
   );
-}
+});

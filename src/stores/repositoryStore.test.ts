@@ -353,8 +353,8 @@ describe("repositoryStore", () => {
   });
 
   describe("stageFiles", () => {
-    it("stages multiple files in a single batch", async () => {
-      vi.mocked(git.stageFile).mockResolvedValue(undefined);
+    it("stages multiple files in a single batch IPC call", async () => {
+      vi.mocked(git.stageFiles).mockResolvedValue(undefined);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [
           { path: "file1.ts", status: "modified", is_staged: true },
@@ -368,14 +368,13 @@ describe("repositoryStore", () => {
       const { stageFiles } = useRepositoryStore.getState();
       await stageFiles(["file1.ts", "file2.ts", "file3.ts"]);
 
-      expect(git.stageFile).toHaveBeenCalledTimes(3);
-      expect(git.stageFile).toHaveBeenCalledWith("file1.ts");
-      expect(git.stageFile).toHaveBeenCalledWith("file2.ts");
-      expect(git.stageFile).toHaveBeenCalledWith("file3.ts");
+      // One batch call, not N sequential calls
+      expect(git.stageFiles).toHaveBeenCalledTimes(1);
+      expect(git.stageFiles).toHaveBeenCalledWith(["file1.ts", "file2.ts", "file3.ts"]);
     });
 
     it("only refreshes file statuses once after all files are staged", async () => {
-      vi.mocked(git.stageFile).mockResolvedValue(undefined);
+      vi.mocked(git.stageFiles).mockResolvedValue(undefined);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -389,7 +388,7 @@ describe("repositoryStore", () => {
     });
 
     it("sets error state on failure", async () => {
-      vi.mocked(git.stageFile).mockRejectedValue(new Error("Stage failed"));
+      vi.mocked(git.stageFiles).mockRejectedValue(new Error("Stage failed"));
 
       const { stageFiles } = useRepositoryStore.getState();
       await stageFiles(["file1.ts"]);
@@ -399,8 +398,8 @@ describe("repositoryStore", () => {
   });
 
   describe("unstageFiles", () => {
-    it("unstages multiple files in a single batch", async () => {
-      vi.mocked(git.unstageFile).mockResolvedValue(undefined);
+    it("unstages multiple files in a single batch IPC call", async () => {
+      vi.mocked(git.unstageFiles).mockResolvedValue(undefined);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [
@@ -413,13 +412,12 @@ describe("repositoryStore", () => {
       const { unstageFiles } = useRepositoryStore.getState();
       await unstageFiles(["file1.ts", "file2.ts"]);
 
-      expect(git.unstageFile).toHaveBeenCalledTimes(2);
-      expect(git.unstageFile).toHaveBeenCalledWith("file1.ts");
-      expect(git.unstageFile).toHaveBeenCalledWith("file2.ts");
+      expect(git.unstageFiles).toHaveBeenCalledTimes(1);
+      expect(git.unstageFiles).toHaveBeenCalledWith(["file1.ts", "file2.ts"]);
     });
 
     it("only refreshes file statuses once after all files are unstaged", async () => {
-      vi.mocked(git.unstageFile).mockResolvedValue(undefined);
+      vi.mocked(git.unstageFiles).mockResolvedValue(undefined);
       vi.mocked(git.getFileStatuses).mockResolvedValue({
         staged: [],
         unstaged: [],
@@ -433,7 +431,7 @@ describe("repositoryStore", () => {
     });
 
     it("sets error state on failure", async () => {
-      vi.mocked(git.unstageFile).mockRejectedValue(new Error("Unstage failed"));
+      vi.mocked(git.unstageFiles).mockRejectedValue(new Error("Unstage failed"));
 
       const { unstageFiles } = useRepositoryStore.getState();
       await unstageFiles(["file1.ts"]);
@@ -1576,7 +1574,7 @@ describe("repositoryStore", () => {
   });
 
   describe("deleteBranch", () => {
-    it("calls git.deleteBranch and refreshes repository and branches", async () => {
+    it("calls git.deleteBranch and refreshes repository", async () => {
       useRepositoryStore.setState({
         repositoryInfo: {
           path: "/test/repo",
@@ -1611,7 +1609,9 @@ describe("repositoryStore", () => {
       await deleteBranch("feature", false);
 
       expect(git.deleteBranch).toHaveBeenCalledWith("feature", false);
-      expect(git.listBranches).toHaveBeenCalled();
+      // Sidebar refresh (listBranches/listTags) happens via App.tsx useEffect
+      // on repositoryInfo change — triggered in real app, not in store tests.
+      expect(git.getRepositoryInfo).toHaveBeenCalled();
     });
 
     it("can delete remote branches", async () => {
@@ -1662,7 +1662,7 @@ describe("repositoryStore", () => {
   });
 
   describe("deleteTag", () => {
-    it("calls git.deleteTag and refreshes repository and tags", async () => {
+    it("calls git.deleteTag and refreshes repository", async () => {
       useRepositoryStore.setState({
         repositoryInfo: {
           path: "/test/repo",
@@ -1697,7 +1697,8 @@ describe("repositoryStore", () => {
       await deleteTag("v1.0.0");
 
       expect(git.deleteTag).toHaveBeenCalledWith("v1.0.0");
-      expect(git.listTags).toHaveBeenCalled();
+      // Sidebar refresh happens via App.tsx useEffect on repositoryInfo change.
+      expect(git.getRepositoryInfo).toHaveBeenCalled();
     });
 
     it("sets error state on failure", async () => {

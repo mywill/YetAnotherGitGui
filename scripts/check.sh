@@ -38,7 +38,7 @@ run_step "Rust fmt"            cargo fmt --manifest-path src-tauri/Cargo.toml --
 run_step "Rust clippy"         cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
 # Tests
-run_step "Frontend tests"     pnpm test -- --run
+run_step "Frontend tests"     pnpm test --run
 run_step "E2E tests"          pnpm test:e2e
 run_step "Rust tests"         cargo test --manifest-path src-tauri/Cargo.toml
 

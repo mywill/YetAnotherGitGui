@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use git2::Repository;
 use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 
@@ -5,14 +7,17 @@ use crate::error::AppError;
 use crate::terminal::TerminalManager;
 
 pub struct AppState {
-    pub repository: Mutex<Option<Repository>>,
+    /// `Arc<Mutex<...>>` so async commands can `clone()` the handle and move
+    /// it into `tokio::task::spawn_blocking`, keeping blocking git work off
+    /// the async runtime without holding the mutex across `.await`.
+    pub repository: Arc<Mutex<Option<Repository>>>,
     pub terminal_manager: TerminalManager,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
-            repository: Mutex::new(None),
+            repository: Arc::new(Mutex::new(None)),
             terminal_manager: TerminalManager::new(),
         }
     }

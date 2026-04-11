@@ -58,15 +58,19 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
 
   const handleLoadAll = useCallback(async () => {
     if (!currentDiffPath || !diff) return;
-    for (const idx of collapsedHunks) {
-      await loadDiffHunk(
-        currentDiffPath,
-        staged,
-        idx,
-        currentDiffIsUntracked || undefined,
-        currentDiffIsConflicted || undefined
-      );
-    }
+    // Load all collapsed hunks in parallel — each call loads an independent
+    // hunk index and merges into the diff by index, so order does not matter.
+    await Promise.all(
+      collapsedHunks.map((idx) =>
+        loadDiffHunk(
+          currentDiffPath,
+          staged,
+          idx,
+          currentDiffIsUntracked || undefined,
+          currentDiffIsConflicted || undefined
+        )
+      )
+    );
   }, [
     currentDiffPath,
     diff,

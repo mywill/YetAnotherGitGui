@@ -68,6 +68,14 @@ export async function unstageFile(path: string): Promise<void> {
   return invoke("unstage_file", { path });
 }
 
+export async function stageFiles(paths: string[]): Promise<void> {
+  return invoke("stage_files", { paths });
+}
+
+export async function unstageFiles(paths: string[]): Promise<void> {
+  return invoke("unstage_files", { paths });
+}
+
 export async function stageHunk(path: string, hunkIndex: number): Promise<void> {
   return invoke("stage_hunk", { path, hunkIndex });
 }

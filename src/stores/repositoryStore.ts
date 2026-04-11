@@ -15,6 +15,12 @@ import * as git from "../services/git";
 import { useNotificationStore } from "./notificationStore";
 import { cleanErrorMessage } from "../utils/errorMessages";
 
+// Monotonic request counters used to discard stale async responses.
+// When a user rapidly clicks through files/commits, we want to keep only
+// the latest request and ignore any earlier responses that complete late.
+let diffRequestId = 0;
+let commitDetailsRequestId = 0;
+
 interface RepositoryState {
   // Repository info
   repositoryInfo: RepositoryInfo | null;
@@ -216,12 +222,12 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     const { repositoryInfo } = get();
     if (!repositoryInfo) return;
 
-    set({ commits: [], hasMoreCommits: false });
-
     try {
       const info = await git.getRepositoryInfo();
       set({ repositoryInfo: info });
 
+      // loadAllCommits atomically replaces the commits array when the new
+      // data arrives — no need to pre-clear it, which would cause a flash.
       await Promise.all([get().loadAllCommits(), get().loadFileStatuses()]);
 
       // Refresh current diff if one is selected
@@ -270,6 +276,9 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     isUntracked?: boolean,
     isConflicted?: boolean
   ) => {
+    // Capture a local request ID to detect stale responses.
+    const requestId = ++diffRequestId;
+
     // Clear stash selection when viewing a file diff
     set({
       diffLoading: true,
@@ -283,8 +292,11 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     });
     try {
       const diff = await git.getFileDiff(path, staged, isUntracked, isConflicted);
+      // Discard response if a newer request has superseded this one.
+      if (requestId !== diffRequestId) return;
       set({ currentDiff: diff, diffLoading: false });
     } catch (err) {
+      if (requestId !== diffRequestId) return;
       set({ diffLoading: false });
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -359,19 +371,12 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   },
 
   stageFiles: async (paths: string[]) => {
-    await withStagingRefresh(async () => {
-      for (const path of paths) {
-        await git.stageFile(path);
-      }
-    }, get);
+    // Single batch IPC call + single index.write() instead of N sequential calls.
+    await withStagingRefresh(() => git.stageFiles(paths), get);
   },
 
   unstageFiles: async (paths: string[]) => {
-    await withStagingRefresh(async () => {
-      for (const path of paths) {
-        await git.unstageFile(path);
-      }
-    }, get);
+    await withStagingRefresh(() => git.unstageFiles(paths), get);
   },
 
   stageHunk: async (path: string, hunkIndex: number) => {
@@ -414,7 +419,12 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await git.createCommit(message);
       // Clear diff view since the committed file is no longer in the staging area
       get().clearDiff();
-      await get().refreshRepository();
+      // Refresh only the data that actually changed: new commit in history and
+      // empty/updated staging area. Repository info (branch name, remotes,
+      // repo state) does not change on a plain commit.
+      const info = await git.getRepositoryInfo();
+      set({ repositoryInfo: info });
+      await Promise.all([get().loadAllCommits(), get().loadFileStatuses()]);
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -468,11 +478,14 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   },
 
   loadCommitDetails: async (hash: string) => {
+    const requestId = ++commitDetailsRequestId;
     set({ commitDetailsLoading: true, expandedCommitFiles: new Set(), commitFileDiffs: new Map() });
     try {
       const details = await git.getCommitDetails(hash);
+      if (requestId !== commitDetailsRequestId) return;
       set({ selectedCommitDetails: details, commitDetailsLoading: false });
     } catch (err) {
+      if (requestId !== commitDetailsRequestId) return;
       set({ commitDetailsLoading: false });
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -571,8 +584,10 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   deleteBranch: async (branchName: string, isRemote: boolean) => {
     try {
       await git.deleteBranch(branchName, isRemote);
+      // refreshRepository() sets a new repositoryInfo reference, which triggers
+      // the App.tsx useEffect that calls loadBranchesAndTags — no need to call
+      // it again here.
       await get().refreshRepository();
-      await get().loadBranchesAndTags();
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -582,7 +597,6 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     try {
       await git.deleteTag(tagName);
       await get().refreshRepository();
-      await get().loadBranchesAndTags();
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -624,7 +638,6 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     try {
       await git.applyStash(index);
       await get().refreshRepository();
-      await get().loadBranchesAndTags();
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }

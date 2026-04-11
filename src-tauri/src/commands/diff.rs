@@ -5,25 +5,31 @@ use crate::git;
 use crate::state::AppState;
 
 #[tauri::command]
-pub fn get_file_diff(
+pub async fn get_file_diff(
     path: String,
     staged: bool,
     is_untracked: Option<bool>,
     is_conflicted: Option<bool>,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<git::FileDiff, AppError> {
-    let repo = state.get_repo()?;
+    let repository = state.repository.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = repository.lock();
+        let repo = guard.as_ref().ok_or(AppError::NoRepository)?;
 
-    if is_conflicted.unwrap_or(false) {
-        return git::get_conflicted_file_diff(&repo, &path);
-    }
+        if is_conflicted.unwrap_or(false) {
+            return git::get_conflicted_file_diff(repo, &path);
+        }
 
-    // For untracked files, read the file directly
-    if is_untracked.unwrap_or(false) {
-        return git::get_untracked_file_diff(&repo, &path);
-    }
+        // For untracked files, read the file directly
+        if is_untracked.unwrap_or(false) {
+            return git::get_untracked_file_diff(repo, &path);
+        }
 
-    git::get_file_diff(&repo, &path, staged)
+        git::get_file_diff(repo, &path, staged)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("spawn_blocking join error: {e}")))?
 }
 
 #[tauri::command]

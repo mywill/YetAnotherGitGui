@@ -208,6 +208,26 @@ describe("git service", () => {
     });
   });
 
+  describe("stageFiles", () => {
+    it("invokes stage_files command with an array of paths", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.stageFiles(["a.ts", "b.ts"]);
+
+      expect(invoke).toHaveBeenCalledWith("stage_files", { paths: ["a.ts", "b.ts"] });
+    });
+  });
+
+  describe("unstageFiles", () => {
+    it("invokes unstage_files command with an array of paths", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.unstageFiles(["a.ts", "b.ts"]);
+
+      expect(invoke).toHaveBeenCalledWith("unstage_files", { paths: ["a.ts", "b.ts"] });
+    });
+  });
+
   describe("stageHunk", () => {
     it("invokes stage_hunk command with path and hunkIndex", async () => {
       vi.mocked(invoke).mockResolvedValue(undefined);

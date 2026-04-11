@@ -20,6 +20,9 @@ pub enum AppError {
 
     #[error("Terminal error: {0}")]
     Terminal(String),
+
+    #[error("Internal error: {0}")]
+    Internal(String),
 }
 
 impl Serialize for AppError {

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { GraphCommit } from "../../types";
 
 const BRANCH_COLORS = [
@@ -18,7 +19,7 @@ interface BranchLinesProps {
   commit: GraphCommit;
 }
 
-export function BranchLines({ commit }: BranchLinesProps) {
+export const BranchLines = memo(function BranchLines({ commit }: BranchLinesProps) {
   const height = 28;
   const nodeX = COLUMN_WIDTH + commit.column * COLUMN_WIDTH;
   const nodeY = height / 2;
@@ -107,4 +108,4 @@ export function BranchLines({ commit }: BranchLinesProps) {
       />
     </svg>
   );
-}
+});

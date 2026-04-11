@@ -5,10 +5,15 @@ use crate::git;
 use crate::state::AppState;
 
 #[tauri::command]
-pub fn get_file_statuses(state: State<AppState>) -> Result<git::FileStatuses, AppError> {
-    let repo = state.get_repo()?;
-
-    git::get_file_statuses(&repo)
+pub async fn get_file_statuses(state: State<'_, AppState>) -> Result<git::FileStatuses, AppError> {
+    let repository = state.repository.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = repository.lock();
+        let repo = guard.as_ref().ok_or(AppError::NoRepository)?;
+        git::get_file_statuses(repo)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("spawn_blocking join error: {e}")))?
 }
 
 #[tauri::command]
@@ -23,6 +28,20 @@ pub fn unstage_file(path: String, state: State<AppState>) -> Result<(), AppError
     let repo = state.get_repo()?;
 
     git::unstage_file(&repo, &path)
+}
+
+#[tauri::command]
+pub fn stage_files(paths: Vec<String>, state: State<AppState>) -> Result<(), AppError> {
+    let repo = state.get_repo()?;
+
+    git::stage_files(&repo, &paths)
+}
+
+#[tauri::command]
+pub fn unstage_files(paths: Vec<String>, state: State<AppState>) -> Result<(), AppError> {
+    let repo = state.get_repo()?;
+
+    git::unstage_files(&repo, &paths)
 }
 
 #[tauri::command]

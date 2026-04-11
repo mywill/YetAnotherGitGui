@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { memo, useCallback } from "react";
 import clsx from "clsx";
 import type { FileStatus, FileStatusType } from "../../types";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
@@ -37,7 +37,7 @@ const STATUS_STYLE: Record<string, string> = {
   conflicted: "text-status-conflicted bg-status-conflicted/20",
 };
 
-export function FileItem({
+export const FileItem = memo(function FileItem({
   file,
   isStaged,
   isUntracked,
@@ -48,7 +48,9 @@ export function FileItem({
   onDoubleClick,
   extraMenuItems,
 }: FileItemProps) {
-  const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
+  // Avoid subscribing to repositoryInfo here — it would re-render every
+  // FileItem whenever any repository state changes. Read it lazily inside
+  // the context menu callback instead.
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(
@@ -77,8 +79,6 @@ export function FileItem({
   const fileName = file.path.split("/").pop() || file.path;
   const dirPath = file.path.includes("/") ? file.path.substring(0, file.path.lastIndexOf("/")) : "";
 
-  const repoPath = repositoryInfo?.path ?? "";
-
   const menuItems: ContextMenuItem[] = [
     {
       label: "Copy",
@@ -92,6 +92,8 @@ export function FileItem({
         {
           label: "Absolute path",
           onClick: () => {
+            // Read repositoryInfo lazily so this component does not subscribe to it.
+            const repoPath = useRepositoryStore.getState().repositoryInfo?.path ?? "";
             copyToClipboard(repoPath ? `${repoPath}/${file.path}` : file.path);
           },
         },
@@ -177,4 +179,4 @@ export function FileItem({
       )}
     </>
   );
-}
+});

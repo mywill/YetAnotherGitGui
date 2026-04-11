@@ -20,14 +20,24 @@ pub fn get_commit_graph(
 }
 
 #[tauri::command]
-pub fn get_all_commit_graph(state: State<AppState>) -> Result<Vec<git::GraphCommit>, AppError> {
-    let repo = state.get_repo()?;
+pub async fn get_all_commit_graph(
+    state: State<'_, AppState>,
+) -> Result<Vec<git::GraphCommit>, AppError> {
+    // Clone the Arc so the blocking work can own the handle and run off the
+    // async runtime without holding the mutex across an .await point.
+    let repository = state.repository.clone();
+    tokio::task::spawn_blocking(move || {
+        let guard = repository.lock();
+        let repo = guard.as_ref().ok_or(AppError::NoRepository)?;
 
-    let commits = git::get_all_commits(&repo)?;
-    let refs = git::collect_refs(&repo)?;
-    let graph = git::build_commit_graph(commits, refs);
+        let commits = git::get_all_commits(repo)?;
+        let refs = git::collect_refs(repo)?;
+        let graph = git::build_commit_graph(commits, refs);
 
-    Ok(graph)
+        Ok(graph)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("spawn_blocking join error: {e}")))?
 }
 
 #[tauri::command]
