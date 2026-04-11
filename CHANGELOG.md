@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.10.0...v1.10.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* updated to fix some performance issues with larger files and repos should just generally run a bit faster now ([9864b92](https://github.com/mywill/YetAnotherGitGui/commit/9864b92a0ba76245db30915508c2f5e81f4eb077))
+
 # [1.10.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.9.0...v1.10.0) (2026-04-09)
 
 
