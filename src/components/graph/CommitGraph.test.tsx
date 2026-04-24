@@ -4,6 +4,7 @@ import { CommitGraph } from "./CommitGraph";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { mockStore } from "../../test/mockStores";
 import type { GraphCommit } from "../../types";
 
@@ -28,6 +29,12 @@ vi.mock("../../stores/dialogStore", () => ({
   useDialogStore: vi.fn(),
 }));
 
+vi.mock("../../stores/settingsStore", () => ({
+  useSettingsStore: Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({ layoutSizes: {} })),
+  }),
+}));
+
 // Mock BranchLines component to simplify testing
 vi.mock("./BranchLines", () => ({
   BranchLines: ({ commit }: { commit: GraphCommit }) => (
@@ -35,41 +42,67 @@ vi.mock("./BranchLines", () => ({
   ),
 }));
 
-// Mock ColumnResizer
+// Mock ColumnResizer — expose onResize as a clickable button for test triggers
 vi.mock("./ColumnResizer", () => ({
-  ColumnResizer: () => <div data-testid="column-resizer" />,
+  ColumnResizer: ({
+    onResize,
+    ariaLabel,
+  }: {
+    onResize: (delta: number) => void;
+    ariaLabel: string;
+  }) => (
+    <button
+      type="button"
+      data-testid="column-resizer"
+      aria-label={ariaLabel}
+      onClick={() => onResize(10)}
+    />
+  ),
 }));
 
-// Mock react-window v2 List to render all rows directly in jsdom
+// Mock react-window v2 List to render all rows directly in jsdom, and assign listRef
 vi.mock("react-window", () => ({
   List: ({
     rowComponent: RowComponent,
     rowCount,
     rowProps,
+    listRef,
   }: {
     rowComponent: React.ComponentType<Record<string, unknown>>;
     rowCount: number;
     rowHeight: number;
     rowProps: Record<string, unknown>;
-    listRef?: unknown;
+    listRef?: { current: unknown };
     style?: React.CSSProperties;
-  }) => (
-    <div data-testid="virtual-list">
-      {Array.from({ length: rowCount }, (_, index) => (
-        <RowComponent
-          key={index}
-          index={index}
-          style={{ position: "absolute", top: index * 28, height: 28, width: "100%" }}
-          ariaAttributes={{
-            "aria-posinset": index + 1,
-            "aria-setsize": rowCount,
-            role: "listitem" as const,
-          }}
-          {...rowProps}
-        />
-      ))}
-    </div>
-  ),
+  }) => {
+    const el = typeof document !== "undefined" ? document.createElement("div") : null;
+    if (el) {
+      Object.defineProperty(el, "clientHeight", { configurable: true, get: () => 200 });
+    }
+    if (listRef) {
+      listRef.current = {
+        element: el,
+        scrollToRow: () => {},
+      };
+    }
+    return (
+      <div data-testid="virtual-list">
+        {Array.from({ length: rowCount }, (_, index) => (
+          <RowComponent
+            key={index}
+            index={index}
+            style={{ position: "absolute", top: index * 28, height: 28, width: "100%" }}
+            ariaAttributes={{
+              "aria-posinset": index + 1,
+              "aria-setsize": rowCount,
+              role: "listitem" as const,
+            }}
+            {...rowProps}
+          />
+        ))}
+      </div>
+    );
+  },
 }));
 
 const mockSelectCommit = vi.fn();
@@ -118,6 +151,7 @@ describe("CommitGraph", () => {
     });
 
     mockStore(useDialogStore, { showConfirm: mockShowConfirm });
+    mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize: vi.fn() });
   });
 
   it("renders with no commits", () => {
@@ -292,6 +326,102 @@ describe("CommitGraph", () => {
     expect(resizers).toHaveLength(3);
   });
 
+  describe("column resize callbacks", () => {
+    it("handleGraphResize persists new width via setLayoutSize", () => {
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: { "graph.col.graph": 120 }, setLayoutSize });
+      (useSettingsStore as unknown as { getState: () => unknown }).getState = () => ({
+        layoutSizes: { "graph.col.graph": 120, "graph.col.author": 150, "graph.col.date": 120 },
+      });
+
+      render(<CommitGraph commits={[]} />);
+      const graphResizer = screen.getByRole("button", { name: "Resize graph column" });
+      fireEvent.click(graphResizer);
+
+      expect(setLayoutSize).toHaveBeenCalledWith("graph.col.graph", 130);
+    });
+
+    it("handleMessageResize persists new author width via setLayoutSize", () => {
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+      (useSettingsStore as unknown as { getState: () => unknown }).getState = () => ({
+        layoutSizes: { "graph.col.author": 150 },
+      });
+
+      render(<CommitGraph commits={[]} />);
+      const messageResizer = screen.getByRole("button", { name: "Resize message column" });
+      fireEvent.click(messageResizer);
+
+      expect(setLayoutSize).toHaveBeenCalledWith("graph.col.author", 140);
+    });
+
+    it("handleAuthorResize persists new date width via setLayoutSize", () => {
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+      (useSettingsStore as unknown as { getState: () => unknown }).getState = () => ({
+        layoutSizes: {},
+      });
+
+      render(<CommitGraph commits={[]} />);
+      const authorResizer = screen.getByRole("button", { name: "Resize author column" });
+      fireEvent.click(authorResizer);
+
+      expect(setLayoutSize).toHaveBeenCalledWith("graph.col.date", 110);
+    });
+  });
+
+  describe("keyboard navigation", () => {
+    it("Enter on the commits listbox calls handleDoubleClick for focused commit", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+      const commits = [
+        createMockCommit({ hash: "kb-commit-1", message: "First" }),
+        createMockCommit({ hash: "kb-commit-2", message: "Second" }),
+      ];
+
+      render(<CommitGraph commits={commits} />);
+      const listbox = screen.getByRole("listbox", { name: "Commit history" });
+
+      // Focus to initialize focusedIndex to 0
+      fireEvent.focus(listbox);
+      // Press Enter on the focused commit
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalled();
+      });
+    });
+
+    it("ArrowDown on the listbox triggers onFocusChange which calls handleSelect", () => {
+      const commits = [
+        createMockCommit({ hash: "kb-commit-1", message: "First" }),
+        createMockCommit({ hash: "kb-commit-2", message: "Second" }),
+      ];
+
+      render(<CommitGraph commits={commits} />);
+      const listbox = screen.getByRole("listbox", { name: "Commit history" });
+
+      fireEvent.focus(listbox);
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+
+      expect(mockSelectCommit).toHaveBeenCalledWith("kb-commit-2");
+    });
+
+    it("Space on the listbox invokes secondary activate", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+      const commits = [createMockCommit({ hash: "space-commit", message: "Space" })];
+
+      render(<CommitGraph commits={commits} />);
+      const listbox = screen.getByRole("listbox", { name: "Commit history" });
+
+      fireEvent.focus(listbox);
+      fireEvent.keyDown(listbox, { key: " " });
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalled();
+      });
+    });
+  });
+
   it("renders header with column names", () => {
     render(<CommitGraph commits={[]} />);
 
@@ -299,5 +429,63 @@ describe("CommitGraph", () => {
     expect(screen.getByText("Message")).toBeInTheDocument();
     expect(screen.getByText("Author")).toBeInTheDocument();
     expect(screen.getByText("Date")).toBeInTheDocument();
+  });
+
+  describe("scrollToCommit behavior", () => {
+    it("does not clear scrollToCommit while commits are still empty (loading)", () => {
+      mockStore(useSelectionStore, {
+        selectedCommitHash: null,
+        selectCommit: mockSelectCommit,
+        scrollToCommit: "target-hash",
+        clearScrollToCommit: mockClearScrollToCommit,
+      });
+
+      render(<CommitGraph commits={[]} />);
+
+      // Bug fix: previously we'd call clearScrollToCommit() as soon as the
+      // effect ran and commits.findIndex returned -1. That killed the request
+      // before the commits prop had a chance to populate after a view switch.
+      expect(mockClearScrollToCommit).not.toHaveBeenCalled();
+    });
+
+    it("does not clear scrollToCommit when target hash is not (yet) in loaded commits", () => {
+      mockStore(useSelectionStore, {
+        selectedCommitHash: null,
+        selectCommit: mockSelectCommit,
+        scrollToCommit: "not-in-history",
+        clearScrollToCommit: mockClearScrollToCommit,
+      });
+
+      render(
+        <CommitGraph
+          commits={[createMockCommit({ hash: "other1" }), createMockCommit({ hash: "other2" })]}
+        />
+      );
+
+      // We keep scrollToCommit armed: when commits are refetched with a wider
+      // range the target may appear and we'll scroll then.
+      expect(mockClearScrollToCommit).not.toHaveBeenCalled();
+    });
+
+    it("scrolls to target commit and clears the request when target is in history", () => {
+      mockStore(useSelectionStore, {
+        selectedCommitHash: null,
+        selectCommit: mockSelectCommit,
+        scrollToCommit: "target-here",
+        clearScrollToCommit: mockClearScrollToCommit,
+      });
+
+      render(
+        <CommitGraph
+          commits={[
+            createMockCommit({ hash: "other1" }),
+            createMockCommit({ hash: "target-here" }),
+          ]}
+        />
+      );
+
+      expect(mockLoadCommitDetails).toHaveBeenCalledWith("target-here");
+      expect(mockClearScrollToCommit).toHaveBeenCalled();
+    });
   });
 });

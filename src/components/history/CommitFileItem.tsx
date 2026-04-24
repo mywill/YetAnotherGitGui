@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import clsx from "clsx";
+import { IconArrowBackUp } from "@tabler/icons-react";
 import type { CommitFileChange } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
@@ -13,23 +14,23 @@ interface CommitFileItemProps {
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   added: {
-    bg: "color-mix(in srgb, var(--color-status-added) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-status-added) var(--badge-bg-mix), transparent)",
     color: "var(--color-status-added)",
   },
   deleted: {
-    bg: "color-mix(in srgb, var(--color-status-deleted) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-status-deleted) var(--badge-bg-mix), transparent)",
     color: "var(--color-status-deleted)",
   },
   modified: {
-    bg: "color-mix(in srgb, var(--color-status-modified) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
     color: "var(--color-status-modified)",
   },
   renamed: {
-    bg: "color-mix(in srgb, var(--color-badge-branch) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-badge-branch) var(--badge-bg-mix), transparent)",
     color: "var(--color-badge-branch)",
   },
   copied: {
-    bg: "color-mix(in srgb, var(--color-badge-remote) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-badge-remote) var(--badge-bg-mix), transparent)",
     color: "var(--color-badge-remote)",
   },
 };
@@ -85,7 +86,7 @@ export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
       <div
         className={clsx(
           "file-header group hover:bg-bg-hover flex cursor-pointer items-center gap-2 px-3 py-2 text-xs transition-colors duration-150",
-          isExpanded && "bg-bg-tertiary"
+          isExpanded && "bg-bg-well"
         )}
         onClick={handleClick}
       >
@@ -101,20 +102,22 @@ export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
         >
           {statusIcon}
         </span>
-        <span className="file-path text-text-primary flex-1 truncate" title={displayPath}>
+        <span className="file-path text-text-primary flex-1 truncate font-mono" title={displayPath}>
           {displayPath}
         </span>
         <YaggButton
           variant="outline"
-          className="revert-file-btn text-text-primary shrink-0 px-1.5 py-px text-xs opacity-0 transition-all duration-150 group-hover:opacity-100"
+          className="revert-file-btn text-text-primary inline-flex shrink-0 items-center gap-1 px-1.5 py-px text-xs opacity-0 transition-all duration-150 group-hover:opacity-100 focus-visible:opacity-100"
           onClick={handleRevertFile}
+          tabIndex={-1}
           title="Revert this file"
+          aria-label="Revert this file"
         >
-          Revert
+          <IconArrowBackUp size={12} stroke={2} aria-hidden />
         </YaggButton>
       </div>
       {isExpanded && (
-        <div className="file-diff-container border-border bg-bg-primary overflow-hidden border-t">
+        <div className="file-diff-container bg-bg-canvas overflow-hidden">
           {diff ? (
             <CommitFileDiff diff={diff} commitHash={commitHash} filePath={file.path} />
           ) : (

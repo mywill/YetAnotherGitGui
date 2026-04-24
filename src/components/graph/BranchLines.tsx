@@ -17,10 +17,11 @@ const NODE_RADIUS = 4;
 
 interface BranchLinesProps {
   commit: GraphCommit;
+  rowHeight?: number;
 }
 
-export const BranchLines = memo(function BranchLines({ commit }: BranchLinesProps) {
-  const height = 28;
+export const BranchLines = memo(function BranchLines({ commit, rowHeight }: BranchLinesProps) {
+  const height = rowHeight ?? 28;
   const nodeX = COLUMN_WIDTH + commit.column * COLUMN_WIDTH;
   const nodeY = height / 2;
 
@@ -102,7 +103,7 @@ export const BranchLines = memo(function BranchLines({ commit }: BranchLinesProp
         cx={nodeX}
         cy={nodeY}
         r={NODE_RADIUS}
-        fill={commit.is_tip ? getColor(commit.column) : "var(--color-bg-primary)"}
+        fill={commit.is_tip ? getColor(commit.column) : "var(--color-bg-canvas)"}
         stroke={getColor(commit.column)}
         strokeWidth={commit.is_tip ? 1 : 2}
       />

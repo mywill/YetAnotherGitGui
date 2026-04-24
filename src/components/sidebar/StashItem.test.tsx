@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { StashItem } from "./StashItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { mockStore } from "../../test/mockStores";
 import { copyToClipboard } from "../../services/clipboard";
@@ -11,10 +10,6 @@ import type { StashInfo, StashDetails } from "../../types";
 // Mock the stores
 vi.mock("../../stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
-}));
-
-vi.mock("../../stores/selectionStore", () => ({
-  useSelectionStore: vi.fn(),
 }));
 
 vi.mock("../../stores/dialogStore", () => ({
@@ -28,7 +23,6 @@ vi.mock("../../services/clipboard", () => ({
 const mockLoadStashDetails = vi.fn();
 const mockApplyStash = vi.fn();
 const mockDropStash = vi.fn();
-const mockSetActiveView = vi.fn();
 const mockShowConfirm = vi.fn();
 
 let mockSelectedStashDetails: StashDetails | null = null;
@@ -45,7 +39,6 @@ describe("StashItem", () => {
       dropStash: mockDropStash,
       selectedStashDetails: mockSelectedStashDetails,
     });
-    mockStore(useSelectionStore, { setActiveView: mockSetActiveView });
     mockStore(useDialogStore, { showConfirm: mockShowConfirm });
   });
 
@@ -105,22 +98,6 @@ describe("StashItem", () => {
     fireEvent.click(item!);
 
     expect(mockLoadStashDetails).toHaveBeenCalledWith(2);
-  });
-
-  it("switches to status view on click", () => {
-    const stash: StashInfo = {
-      index: 0,
-      message: "WIP on main: abc123 Test stash",
-      commit_hash: "abc123def456",
-      timestamp: 1700000000,
-      branch_name: "main",
-    };
-    render(<StashItem stash={stash} />);
-
-    const item = screen.getByText("stash@{0}").closest(".stash-item");
-    fireEvent.click(item!);
-
-    expect(mockSetActiveView).toHaveBeenCalledWith("status");
   });
 
   it("has is-selected class when stash is selected", () => {

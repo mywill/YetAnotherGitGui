@@ -1,3 +1,4 @@
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 
 const STATE_CONFIG: Record<string, { label: string; hint: string }> = {
@@ -32,7 +33,7 @@ export function RepoStateBanner() {
       role="status"
       aria-live="polite"
     >
-      <WarningIcon />
+      <IconAlertTriangle size={14} stroke={2} className="text-warning shrink-0" aria-hidden />
       <span className="font-semibold">{config.label}</span>
       {conflictCount > 0 && (
         <span className="text-warning-text/90">
@@ -44,19 +45,5 @@ export function RepoStateBanner() {
         <code className="bg-warning-bg rounded px-1 font-mono brightness-125">{config.hint}</code>
       </span>
     </div>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <svg
-      className="text-warning shrink-0"
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-    >
-      <path d="M7.56 1.44a.5.5 0 0 1 .88 0l6.5 12A.5.5 0 0 1 14.5 14h-13a.5.5 0 0 1-.44-.56l6.5-12zM8 5a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 8 5zm0 7.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5z" />
-    </svg>
   );
 }

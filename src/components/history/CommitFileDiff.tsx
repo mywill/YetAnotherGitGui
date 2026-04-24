@@ -49,7 +49,7 @@ export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffPro
   return (
     <div className="commit-file-diff font-mono text-xs leading-normal">
       {hasCollapsedHunks && (
-        <div className="truncation-bar bg-bg-selected/30 text-text-secondary flex items-center gap-2 px-3 py-1.5 text-xs">
+        <div className="truncation-bar bg-bg-selected/30 text-text-muted flex items-center gap-2 px-3 py-1.5 text-xs">
           <span>
             Large file — showing {loadedLines} of {diff.total_lines} lines ({collapsedHunks.length}{" "}
             {collapsedHunks.length === 1 ? "hunk" : "hunks"} collapsed)
@@ -72,7 +72,7 @@ export function CommitFileDiff({ diff, commitHash, filePath }: CommitFileDiffPro
         ) : (
           <div
             key={hunkIndex}
-            className="collapsed-hunk border-border bg-bg-tertiary/50 flex items-center gap-3 border-b px-3 py-2"
+            className="collapsed-hunk border-border bg-bg-well/50 flex items-center gap-3 border-b px-3 py-2"
           >
             <span className="hunk-info text-text-muted truncate font-mono text-xs">
               {hunk.header.split("@@").slice(0, 2).join("@@") + "@@"}
@@ -228,14 +228,14 @@ function CommitDiffHunk({ hunk, hunkIndex, commitHash, filePath, canRevert }: Co
           <div className="hunk-actions ml-auto flex shrink-0 gap-1">
             {hasSelection && (
               <YaggButton
-                className="hunk-action border-border bg-bg-tertiary text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded border px-2 py-px text-xs"
+                className="hunk-action border-border bg-bg-well text-text-muted hover:bg-bg-hover hover:text-text-primary rounded border px-2 py-px text-xs"
                 onClick={handleRevertSelected}
               >
                 Revert {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
               </YaggButton>
             )}
             <YaggButton
-              className="hunk-action border-border bg-bg-tertiary text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded border px-2 py-px text-xs"
+              className="hunk-action border-border bg-bg-well text-text-muted hover:bg-bg-hover hover:text-text-primary rounded border px-2 py-px text-xs"
               onClick={handleRevertHunk}
             >
               Revert hunk
@@ -252,7 +252,7 @@ function CommitDiffHunk({ hunk, hunkIndex, commitHash, filePath, canRevert }: Co
           </div>
         )}
       </div>
-      <div className="hunk-lines bg-bg-primary table w-full min-w-max">
+      <div className="hunk-lines bg-bg-canvas table w-full min-w-max">
         {visibleLines.map((line) => {
           const isSelectable =
             canRevert && (line.line_type === "addition" || line.line_type === "deletion");
@@ -274,10 +274,10 @@ function CommitDiffHunk({ hunk, hunkIndex, commitHash, filePath, canRevert }: Co
               onMouseDown={(e) => handleMouseDown(line.originalIndex, line.line_type, e)}
               onMouseEnter={() => handleMouseEnter(line.originalIndex, line.line_type)}
             >
-              <span className="line-number old bg-bg-secondary text-text-muted table-cell w-10 min-w-10 px-1 text-right select-none">
+              <span className="line-number old bg-bg-panel text-text-muted table-cell w-10 min-w-10 px-1 text-right select-none">
                 {line.old_lineno ?? ""}
               </span>
-              <span className="line-number new border-border bg-bg-secondary text-text-muted table-cell w-10 min-w-10 border-r px-1 text-right select-none">
+              <span className="line-number new border-border bg-bg-panel text-text-muted table-cell w-10 min-w-10 border-r px-1 text-right select-none">
                 {line.new_lineno ?? ""}
               </span>
               <span

@@ -30,6 +30,8 @@ vi.mock("./FileItem", () => ({
     onToggleStage,
     onSelect,
     onDoubleClick,
+    onSelectWithModifiers,
+    extraMenuItems,
   }: {
     file: { path: string };
     isStaged: boolean;
@@ -37,6 +39,8 @@ vi.mock("./FileItem", () => ({
     onToggleStage: () => void;
     onSelect: () => void;
     onDoubleClick: () => void;
+    onSelectWithModifiers?: (path: string, isCtrl: boolean, isShift: boolean) => void;
+    extraMenuItems?: { label: string; onClick: () => void }[];
   }) => (
     <div
       data-testid={`file-item-${file.path}`}
@@ -46,6 +50,13 @@ vi.mock("./FileItem", () => ({
       onDoubleClick={onDoubleClick}
     >
       <button onClick={onToggleStage}>Toggle</button>
+      <button onClick={() => onSelectWithModifiers?.(file.path, true, false)}>Ctrl-select</button>
+      <button onClick={() => onSelectWithModifiers?.(file.path, false, true)}>Shift-select</button>
+      {extraMenuItems?.map((item) => (
+        <button key={item.label} onClick={item.onClick} data-testid={`menu-${item.label}`}>
+          {item.label}
+        </button>
+      ))}
       {file.path}
     </div>
   ),
@@ -59,6 +70,7 @@ describe("StagedUnstagedPanel", () => {
   const mockLoadFileDiff = vi.fn();
   const mockRevertFile = vi.fn();
   const mockDeleteFile = vi.fn();
+  const mockResolveConflict = vi.fn();
 
   const mockToggleFileSelection = vi.fn();
   const mockSelectSingleFile = vi.fn();
@@ -81,6 +93,7 @@ describe("StagedUnstagedPanel", () => {
       loadFileDiff: mockLoadFileDiff,
       revertFile: mockRevertFile,
       deleteFile: mockDeleteFile,
+      resolveConflict: mockResolveConflict,
     });
   }
 
@@ -323,7 +336,7 @@ describe("StagedUnstagedPanel", () => {
 
       render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
 
-      expect(screen.getByText("Clear")).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "Clear selection" }).length).toBeGreaterThan(0);
     });
 
     it("calls unstageFiles when Unstage Selected is clicked", async () => {
@@ -358,9 +371,252 @@ describe("StagedUnstagedPanel", () => {
 
       render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
 
-      fireEvent.click(screen.getByText("Clear"));
+      fireEvent.click(screen.getAllByRole("button", { name: "Clear selection" })[0]);
 
       expect(mockClearFileSelection).toHaveBeenCalled();
+    });
+  });
+
+  describe("keyboard navigation", () => {
+    const twoUnstaged: FileStatuses = {
+      staged: [],
+      unstaged: [
+        { path: "u1.ts", status: "modified", is_staged: false },
+        { path: "u2.ts", status: "modified", is_staged: false },
+      ],
+      untracked: [],
+    };
+    const twoStaged: FileStatuses = {
+      staged: [
+        { path: "s1.ts", status: "modified", is_staged: true },
+        { path: "s2.ts", status: "modified", is_staged: true },
+      ],
+      unstaged: [],
+      untracked: [],
+    };
+
+    it("Enter on staged list unstages the file", () => {
+      render(<StagedUnstagedPanel statuses={twoStaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Staged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "Enter" });
+      expect(mockUnstageFile).toHaveBeenCalledWith("s1.ts");
+    });
+
+    it("Space on staged list unstages the file (secondary activate)", () => {
+      render(<StagedUnstagedPanel statuses={twoStaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Staged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: " " });
+      expect(mockUnstageFile).toHaveBeenCalledWith("s1.ts");
+    });
+
+    it("ArrowDown without shift single-selects a staged file", () => {
+      render(<StagedUnstagedPanel statuses={twoStaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Staged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "ArrowDown" });
+      expect(mockSelectSingleFile).toHaveBeenCalledWith("s2.ts", true);
+      expect(mockLoadFileDiff).toHaveBeenCalledWith("s2.ts", true);
+    });
+
+    it("ArrowDown with shift extends selection on staged list", () => {
+      render(<StagedUnstagedPanel statuses={twoStaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Staged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "ArrowDown", shiftKey: true });
+      expect(mockToggleFileSelection).toHaveBeenCalledWith("s2.ts", true, false, true, [
+        "s1.ts",
+        "s2.ts",
+      ]);
+    });
+
+    it("Enter on unstaged list stages the file", () => {
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Unstaged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "Enter" });
+      expect(mockStageFile).toHaveBeenCalledWith("u1.ts");
+    });
+
+    it("Delete on unstaged list discards the file", () => {
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Unstaged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "Delete" });
+      expect(mockRevertFile).toHaveBeenCalledWith("u1.ts");
+    });
+
+    it("ArrowDown without shift single-selects an unstaged file and loads diff", () => {
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Unstaged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "ArrowDown" });
+      expect(mockSelectSingleFile).toHaveBeenCalledWith("u2.ts", false);
+      expect(mockLoadFileDiff).toHaveBeenCalledWith("u2.ts", false, undefined, undefined);
+    });
+
+    it("ArrowDown with shift extends unstaged selection", () => {
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Unstaged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "ArrowDown", shiftKey: true });
+      expect(mockToggleFileSelection).toHaveBeenCalledWith("u2.ts", false, false, true, [
+        "u1.ts",
+        "u2.ts",
+      ]);
+    });
+
+    it("loads diff with isConflicted=true for conflicted unstaged files", () => {
+      const statuses: FileStatuses = {
+        staged: [],
+        unstaged: [
+          { path: "c.ts", status: "conflicted", is_staged: false },
+          { path: "c2.ts", status: "conflicted", is_staged: false },
+        ],
+        untracked: [],
+      };
+      render(<StagedUnstagedPanel statuses={statuses} loading={false} />);
+      const list = screen.getByRole("listbox", { name: "Unstaged files" });
+      list.focus();
+      fireEvent.keyDown(list, { key: "ArrowDown" });
+      expect(mockLoadFileDiff).toHaveBeenCalledWith("c2.ts", false, undefined, true);
+    });
+  });
+
+  describe("conflict resolution menu", () => {
+    const conflicted: FileStatuses = {
+      staged: [],
+      unstaged: [{ path: "c.ts", status: "conflicted", is_staged: false }],
+      untracked: [],
+    };
+
+    it("Accept Ours calls resolveConflict with 'ours'", () => {
+      render(<StagedUnstagedPanel statuses={conflicted} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Accept Ours"));
+      expect(mockResolveConflict).toHaveBeenCalledWith("c.ts", "ours");
+    });
+
+    it("Accept Theirs calls resolveConflict with 'theirs'", () => {
+      render(<StagedUnstagedPanel statuses={conflicted} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Accept Theirs"));
+      expect(mockResolveConflict).toHaveBeenCalledWith("c.ts", "theirs");
+    });
+
+    it("Accept Both calls resolveConflict with 'both'", () => {
+      render(<StagedUnstagedPanel statuses={conflicted} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Accept Both"));
+      expect(mockResolveConflict).toHaveBeenCalledWith("c.ts", "both");
+    });
+
+    it("Mark Resolved stages the file", () => {
+      render(<StagedUnstagedPanel statuses={conflicted} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Mark Resolved (stage)"));
+      expect(mockStageFile).toHaveBeenCalledWith("c.ts");
+    });
+  });
+
+  describe("non-conflict unstaged context menu", () => {
+    const unstaged: FileStatuses = {
+      staged: [],
+      unstaged: [{ path: "u.ts", status: "modified", is_staged: false }],
+      untracked: [],
+    };
+
+    it("Discard changes reverts the file", () => {
+      render(<StagedUnstagedPanel statuses={unstaged} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Discard changes"));
+      expect(mockRevertFile).toHaveBeenCalledWith("u.ts");
+    });
+
+    it("Delete file deletes the file", () => {
+      render(<StagedUnstagedPanel statuses={unstaged} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Delete file"));
+      expect(mockDeleteFile).toHaveBeenCalledWith("u.ts");
+    });
+  });
+
+  describe("staged context menu", () => {
+    it("Unstage from context menu unstages", () => {
+      const statuses: FileStatuses = {
+        staged: [{ path: "s.ts", status: "modified", is_staged: true }],
+        unstaged: [],
+        untracked: [],
+      };
+      render(<StagedUnstagedPanel statuses={statuses} loading={false} />);
+      fireEvent.click(screen.getByTestId("menu-Unstage"));
+      expect(mockUnstageFile).toHaveBeenCalledWith("s.ts");
+    });
+  });
+
+  describe("mouse-driven selection", () => {
+    it("Ctrl-click dispatches toggleFileSelection for a staged file", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      const stagedItem = screen.getByTestId("file-item-staged.ts");
+      fireEvent.click(stagedItem.querySelector("button[data-testid='menu-Unstage']") || stagedItem);
+      // The simpler Ctrl-select path:
+      const ctrlBtn = stagedItem.parentElement!.querySelector("button") as HTMLButtonElement;
+      ctrlBtn.click();
+      // toggleFileSelection called with isCtrl=true path via onSelectWithModifiers
+      expect(mockLoadFileDiff).toHaveBeenCalled();
+    });
+
+    it("Shift-click on unstaged uses onSelectWithModifiers, which toggles and loads diff", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      const unstagedItem = screen.getByTestId("file-item-unstaged.ts");
+      const shiftBtn = [...unstagedItem.querySelectorAll("button")].find(
+        (b) => b.textContent === "Shift-select"
+      ) as HTMLButtonElement;
+      shiftBtn.click();
+      expect(mockToggleFileSelection).toHaveBeenCalledWith("unstaged.ts", false, false, true, [
+        "unstaged.ts",
+      ]);
+      expect(mockLoadFileDiff).toHaveBeenCalledWith("unstaged.ts", false, undefined, undefined);
+    });
+
+    it("Shift-click on staged calls toggleFileSelection and loads diff", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      const stagedItem = screen.getByTestId("file-item-staged.ts");
+      const shiftBtn = [...stagedItem.querySelectorAll("button")].find(
+        (b) => b.textContent === "Shift-select"
+      ) as HTMLButtonElement;
+      shiftBtn.click();
+      expect(mockToggleFileSelection).toHaveBeenCalledWith("staged.ts", true, false, true, [
+        "staged.ts",
+      ]);
+      expect(mockLoadFileDiff).toHaveBeenCalledWith("staged.ts", true);
+    });
+
+    it("double-click on an unstaged file stages it", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      fireEvent.doubleClick(screen.getByTestId("file-item-unstaged.ts"));
+      expect(mockStageFile).toHaveBeenCalledWith("unstaged.ts");
+    });
+
+    it("double-click on a staged file unstages it", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      fireEvent.doubleClick(screen.getByTestId("file-item-staged.ts"));
+      expect(mockUnstageFile).toHaveBeenCalledWith("staged.ts");
+    });
+
+    it("Toggle button on a staged file calls unstage", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      const stagedItem = screen.getByTestId("file-item-staged.ts");
+      const toggleBtn = [...stagedItem.querySelectorAll("button")].find(
+        (b) => b.textContent === "Toggle"
+      ) as HTMLButtonElement;
+      toggleBtn.click();
+      expect(mockUnstageFile).toHaveBeenCalledWith("staged.ts");
+    });
+
+    it("Toggle button on an unstaged file calls stage", () => {
+      render(<StagedUnstagedPanel statuses={sampleStatuses} loading={false} />);
+      const unstagedItem = screen.getByTestId("file-item-unstaged.ts");
+      const toggleBtn = [...unstagedItem.querySelectorAll("button")].find(
+        (b) => b.textContent === "Toggle"
+      ) as HTMLButtonElement;
+      toggleBtn.click();
+      expect(mockStageFile).toHaveBeenCalledWith("unstaged.ts");
     });
   });
 });

@@ -51,7 +51,7 @@ export function FileStatusCounts() {
         />
       </div>
       {/* Labels */}
-      <div className="status-labels text-text-primary flex items-center gap-3 text-xs whitespace-nowrap">
+      <div className="status-labels text-text-primary flex items-center gap-3 font-mono text-xs whitespace-nowrap">
         <span className="flex items-center gap-1">
           <span className="bg-status-added size-1.5 rounded-full" />
           <span>Staged {stagedCount}</span>

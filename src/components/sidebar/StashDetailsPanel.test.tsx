@@ -1,7 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { StashDetailsPanel } from "./StashDetailsPanel";
+import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import type { StashDetails } from "../../types";
+
+vi.mock("../../services/settings", () => ({
+  readSettings: vi.fn().mockResolvedValue({}),
+  writeSettings: vi.fn().mockResolvedValue(undefined),
+}));
 
 const mockStashDetails: StashDetails = {
   index: 0,
@@ -16,7 +23,24 @@ const mockStashDetails: StashDetails = {
   ],
 };
 
+// jsdom reports clientHeight as 0, which breaks resizer max-height math.
+// Force a realistic container height for these tests.
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get: () => 600,
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get: () => 800,
+  });
+});
+
 describe("StashDetailsPanel", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ layoutSizes: {}, sectionExpanded: {} });
+  });
+
   it("shows empty state when no stash is selected", () => {
     render(<StashDetailsPanel details={null} loading={false} />);
 
@@ -129,5 +153,93 @@ describe("StashDetailsPanel", () => {
     render(<StashDetailsPanel details={stashIndex5} loading={false} />);
 
     expect(screen.getByText("stash@{5}")).toBeInTheDocument();
+  });
+
+  describe("info/files resizer", () => {
+    it("renders a horizontal separator labelled 'Resize stash info'", () => {
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const separator = screen.getByRole("separator", { name: "Resize stash info" });
+      expect(separator).toHaveAttribute("aria-orientation", "horizontal");
+    });
+
+    it("reflects the stored stash.infoHeight from settingsStore", () => {
+      useSettingsStore.setState({ layoutSizes: { "stash.infoHeight": 220 } });
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const separator = screen.getByRole("separator", { name: "Resize stash info" });
+      expect(separator).toHaveAttribute("aria-valuenow", "220");
+    });
+
+    it("clamps stored height below the minimum to the minimum", () => {
+      useSettingsStore.setState({ layoutSizes: { "stash.infoHeight": 10 } });
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const separator = screen.getByRole("separator", { name: "Resize stash info" });
+      expect(Number(separator.getAttribute("aria-valuenow"))).toBeGreaterThanOrEqual(80);
+    });
+
+    it("persists a keyboard resize to settingsStore", () => {
+      useSettingsStore.setState({ layoutSizes: { "stash.infoHeight": 200 } });
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const separator = screen.getByRole("separator", { name: "Resize stash info" });
+
+      fireEvent.keyDown(separator, { key: "ArrowDown" });
+      expect(useSettingsStore.getState().layoutSizes["stash.infoHeight"]).toBe(208);
+    });
+  });
+
+  describe("file activation", () => {
+    beforeEach(() => {
+      useRepositoryStore.setState({
+        expandedStashFiles: new Set<string>(),
+        stashFileDiffs: new Map(),
+      });
+    });
+
+    it("Enter on files list toggles expand and loads diff for un-cached file", () => {
+      const toggleSpy = vi.spyOn(useRepositoryStore.getState(), "toggleStashFileExpanded");
+      const loadSpy = vi.spyOn(useRepositoryStore.getState(), "loadStashFileDiff");
+
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(toggleSpy).toHaveBeenCalledWith("src/main.ts");
+      expect(loadSpy).toHaveBeenCalledWith(0, "src/main.ts");
+    });
+
+    it("Space on files list also toggles expand", () => {
+      const toggleSpy = vi.spyOn(useRepositoryStore.getState(), "toggleStashFileExpanded");
+
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: " " });
+
+      expect(toggleSpy).toHaveBeenCalledWith("src/main.ts");
+    });
+
+    it("does not re-fetch diff for a file whose diff is cached", () => {
+      useRepositoryStore.setState({
+        stashFileDiffs: new Map([["src/main.ts", { hunks: [] } as never]]),
+      });
+      const loadSpy = vi.spyOn(useRepositoryStore.getState(), "loadStashFileDiff");
+
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(loadSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not re-fetch diff for an already-expanded file", () => {
+      useRepositoryStore.setState({
+        expandedStashFiles: new Set(["src/main.ts"]),
+      });
+      const loadSpy = vi.spyOn(useRepositoryStore.getState(), "loadStashFileDiff");
+
+      render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(loadSpy).not.toHaveBeenCalled();
+    });
   });
 });

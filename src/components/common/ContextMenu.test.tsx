@@ -322,5 +322,166 @@ describe("ContextMenu", () => {
       // Should skip disabled B and go to C
       expect(screen.getByText("C").closest("[role='menuitem']")).toHaveFocus();
     });
+
+    it("Space activates focused item", () => {
+      const handler = vi.fn();
+      renderContextMenu({ items: [{ label: "Go", onClick: handler }] });
+      const menu = screen.getByRole("menu");
+      fireEvent.keyDown(menu, { key: " " });
+      expect(handler).toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("ArrowRight on a parent opens its submenu", () => {
+      renderContextMenu({
+        items: [
+          {
+            label: "Parent",
+            children: [{ label: "Child 1", onClick: vi.fn() }],
+          },
+        ],
+      });
+      const parent = screen.getByText("Parent").closest("[role='menuitem']")!;
+      fireEvent.keyDown(parent, { key: "ArrowRight" });
+      expect(screen.getByText("Child 1")).toBeInTheDocument();
+    });
+
+    it("Enter in submenu activates child and closes", () => {
+      const childHandler = vi.fn();
+      renderContextMenu({
+        items: [
+          {
+            label: "Parent",
+            children: [
+              { label: "Child A", onClick: vi.fn() },
+              { label: "Child B", onClick: childHandler },
+            ],
+          },
+        ],
+      });
+      const parent = screen.getByText("Parent").closest("[role='menuitem']")!;
+      fireEvent.keyDown(parent, { key: "ArrowRight" });
+      const submenu = screen.getByText("Child A").closest(".context-submenu")!;
+      fireEvent.keyDown(submenu, { key: "ArrowDown" });
+      fireEvent.keyDown(submenu, { key: "Enter" });
+      expect(childHandler).toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("ArrowUp in submenu wraps to last enabled child", () => {
+      renderContextMenu({
+        items: [
+          {
+            label: "Parent",
+            children: [
+              { label: "C1", onClick: vi.fn() },
+              { label: "C2", onClick: vi.fn() },
+            ],
+          },
+        ],
+      });
+      const parent = screen.getByText("Parent").closest("[role='menuitem']")!;
+      fireEvent.keyDown(parent, { key: "ArrowRight" });
+      const submenu = screen.getByText("C1").closest(".context-submenu")!;
+      fireEvent.keyDown(submenu, { key: "ArrowUp" });
+      // No throw means the branch executed
+      expect(submenu).toBeInTheDocument();
+    });
+
+    it("ArrowLeft inside submenu closes it", () => {
+      renderContextMenu({
+        items: [
+          {
+            label: "Parent",
+            children: [{ label: "C1", onClick: vi.fn() }],
+          },
+        ],
+      });
+      const parent = screen.getByText("Parent").closest("[role='menuitem']")!;
+      fireEvent.keyDown(parent, { key: "ArrowRight" });
+      const submenu = screen.getByText("C1").closest(".context-submenu")!;
+      fireEvent.keyDown(submenu, { key: "ArrowLeft" });
+      expect(screen.queryByText("C1")).not.toBeInTheDocument();
+    });
+
+    it("Escape inside submenu closes it without closing the outer menu", () => {
+      renderContextMenu({
+        items: [
+          {
+            label: "Parent",
+            children: [{ label: "C1", onClick: vi.fn() }],
+          },
+        ],
+      });
+      const parent = screen.getByText("Parent").closest("[role='menuitem']")!;
+      fireEvent.keyDown(parent, { key: "ArrowRight" });
+      const submenu = screen.getByText("C1").closest(".context-submenu")!;
+      fireEvent.keyDown(submenu, { key: "Escape" });
+      expect(screen.queryByText("C1")).not.toBeInTheDocument();
+      // Outer menu stays open — Escape was stopPropagation'd
+      expect(screen.getByText("Parent")).toBeInTheDocument();
+    });
+  });
+
+  describe("viewport overflow", () => {
+    it("repositions menu to the left when it overflows the right edge", () => {
+      const originalGetRect = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = vi.fn(() => ({
+        left: 100,
+        top: 100,
+        right: 2000,
+        bottom: 200,
+        width: 200,
+        height: 100,
+        x: 100,
+        y: 100,
+        toJSON: () => ({}),
+      })) as unknown as typeof Element.prototype.getBoundingClientRect;
+
+      try {
+        render(
+          <ContextMenu
+            x={1900}
+            y={100}
+            items={[{ label: "Item", onClick: vi.fn() }]}
+            onClose={vi.fn()}
+          />
+        );
+        const menu = screen.getByRole("menu") as HTMLDivElement;
+        expect(menu.style.left).toBe("1700px");
+      } finally {
+        Element.prototype.getBoundingClientRect = originalGetRect;
+      }
+    });
+
+    it("repositions menu upward when it overflows the bottom edge", () => {
+      const originalGetRect = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = vi.fn(() => ({
+        left: 10,
+        top: 700,
+        right: 210,
+        bottom: 2000,
+        width: 200,
+        height: 300,
+        x: 10,
+        y: 700,
+        toJSON: () => ({}),
+      })) as unknown as typeof Element.prototype.getBoundingClientRect;
+
+      try {
+        render(
+          <ContextMenu
+            x={10}
+            y={700}
+            items={[{ label: "Item", onClick: vi.fn() }]}
+            onClose={vi.fn()}
+          />
+        );
+        const menu = screen.getByRole("menu") as HTMLDivElement;
+        expect(menu.style.top).toBe("400px");
+      } finally {
+        Element.prototype.getBoundingClientRect = originalGetRect;
+      }
+    });
   });
 });

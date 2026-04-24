@@ -283,7 +283,7 @@ describe("UntrackedPanel", () => {
 
       render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
 
-      expect(screen.getByText("Clear")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Clear selection" })).toBeInTheDocument();
     });
 
     it("calls stageFiles when Stage Selected is clicked", async () => {
@@ -305,7 +305,7 @@ describe("UntrackedPanel", () => {
 
       render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
 
-      fireEvent.click(screen.getByText("Clear"));
+      fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
 
       expect(mockClearFileSelection).toHaveBeenCalled();
     });

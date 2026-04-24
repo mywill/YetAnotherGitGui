@@ -104,7 +104,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
 
   if (loading) {
     return (
-      <div className="diff-view-panel loading text-text-secondary flex h-full flex-col items-center justify-center">
+      <div className="diff-view-panel loading text-text-muted flex h-full flex-col items-center justify-center">
         Loading diff...
       </div>
     );
@@ -112,9 +112,9 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
 
   if (selectedCount > 1) {
     return (
-      <div className="diff-view-panel multi-select text-text-secondary flex h-full flex-col items-center justify-center">
+      <div className="diff-view-panel multi-select text-text-muted flex h-full flex-col items-center justify-center">
         <div className="multi-select-message text-text-primary mb-2 text-lg font-medium">
-          <span className="multi-select-count text-primary font-semibold">{selectedCount}</span>{" "}
+          <span className="multi-select-count text-accent-cyan font-semibold">{selectedCount}</span>{" "}
           files selected
         </div>
         <div className="multi-select-hint text-text-muted text-xs">
@@ -126,7 +126,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
 
   if (!diff) {
     return (
-      <div className="diff-view-panel empty text-text-secondary flex h-full flex-col items-center justify-center">
+      <div className="diff-view-panel empty text-text-muted flex h-full flex-col items-center justify-center">
         Select a file to view its diff
       </div>
     );
@@ -135,10 +135,10 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   if (diff.is_binary) {
     return (
       <div className="diff-view-panel binary flex h-full flex-col">
-        <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
+        <div className="diff-header border-border bg-bg-well flex shrink-0 items-center border-b px-3 py-2">
           <span className="diff-path text-xs font-medium">{diff.path}</span>
         </div>
-        <div className="binary-message text-text-secondary flex flex-1 items-center justify-center">
+        <div className="binary-message text-text-muted flex flex-1 items-center justify-center">
           Binary file - cannot display diff
         </div>
       </div>
@@ -148,10 +148,10 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   if (diff.hunks.length === 0) {
     return (
       <div className="diff-view-panel empty flex h-full flex-col">
-        <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center border-b px-3 py-2">
+        <div className="diff-header border-border bg-bg-well flex shrink-0 items-center border-b px-3 py-2">
           <span className="diff-path text-xs font-medium">{diff.path}</span>
         </div>
-        <div className="no-changes text-text-secondary flex flex-1 items-center justify-center">
+        <div className="no-changes text-text-muted flex flex-1 items-center justify-center">
           No changes to display
         </div>
       </div>
@@ -203,9 +203,9 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
 
   return (
     <div className="diff-view-panel flex h-full flex-col overflow-hidden">
-      <div className="diff-header border-border bg-bg-tertiary flex shrink-0 items-center gap-2 border-b px-3 py-2">
+      <div className="diff-header border-border bg-bg-well flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <span className="diff-path text-xs font-medium">{diff.path}</span>
-        <span className="diff-status text-text-secondary text-xs">
+        <span className="diff-status text-text-muted text-xs">
           {isConflicted
             ? `(conflicted — ${conflictCount} conflict${conflictCount !== 1 ? "s" : ""})`
             : staged
@@ -214,7 +214,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
         </span>
         {isConflicted && (
           <YaggButton
-            className="bg-bg-secondary hover:bg-bg-hover ml-auto rounded px-2 py-0.5 text-xs"
+            className="bg-bg-panel hover:bg-bg-hover ml-auto rounded px-2 py-0.5 text-xs"
             onClick={handleMarkResolved}
           >
             Mark Resolved
@@ -222,7 +222,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
         )}
       </div>
       {hasCollapsedHunks && (
-        <div className="truncation-bar bg-bg-selected/30 text-text-secondary flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs">
+        <div className="truncation-bar bg-bg-selected/30 text-text-muted flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs">
           <span>
             Large file — showing {loadedLines} of {diff.total_lines} lines ({collapsedHunks.length}{" "}
             {collapsedHunks.length === 1 ? "hunk" : "hunks"} collapsed)
@@ -261,7 +261,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
           ) : (
             <div
               key={index}
-              className="collapsed-hunk border-border bg-bg-tertiary/50 flex items-center gap-3 border-b px-3 py-2"
+              className="collapsed-hunk border-border bg-bg-well/50 flex items-center gap-3 border-b px-3 py-2"
             >
               <span className="hunk-info text-text-muted truncate font-mono text-xs">
                 {hunk.header.split("@@").slice(0, 2).join("@@") + "@@"}

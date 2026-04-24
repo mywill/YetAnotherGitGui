@@ -15,6 +15,10 @@ vi.mock("../../stores/terminalStore", () => ({
   useTerminalStore: vi.fn(),
 }));
 
+vi.mock("../../stores/dialogStore", () => ({
+  useDialogStore: vi.fn((selector) => selector({ showConfirm: vi.fn() })),
+}));
+
 vi.mock("../../hooks/usePlatform", () => ({
   usePlatform: vi.fn(() => ({ modKey: "Ctrl", platform: "linux" })),
 }));
@@ -59,6 +63,8 @@ function setup(
   mockStore(useRepositoryStore, {
     repositoryInfo: repoInfo,
     fileStatuses,
+    branches: [],
+    checkoutBranch: vi.fn(),
   });
 
   mockStore(useTerminalStore, {

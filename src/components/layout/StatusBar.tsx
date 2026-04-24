@@ -1,6 +1,8 @@
+import { IconGitBranch, IconTerminal2 } from "@tabler/icons-react";
 import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
 import { useTerminalStore } from "../../stores/terminalStore";
 import { usePlatform } from "../../hooks/usePlatform";
+import { BranchSwitcher } from "./BranchSwitcher";
 
 const STATE_LABELS: Record<string, string> = {
   merge: "MERGING",
@@ -37,15 +39,13 @@ export function StatusBar() {
 
   return (
     <footer
-      className="status-bar bg-bg-tertiary border-border flex h-[22px] shrink-0 items-center justify-between border-t px-2 text-xs"
+      className="status-bar bg-bg-well border-border flex h-[22px] shrink-0 items-center justify-between border-t px-2 text-xs"
       role="status"
       aria-label="Status bar"
     >
       <div className="status-bar-left flex min-w-0 items-center gap-2">
-        <BranchIcon />
-        <span className="branch-indicator text-text-secondary truncate" title={branchName}>
-          {branchName}
-        </span>
+        <IconGitBranch size={12} stroke={1.75} className="text-badge-branch shrink-0" aria-hidden />
+        <BranchSwitcher branchName={branchName} isDetached={repositoryInfo.is_detached} />
         {shortHash && <span className="text-text-muted font-mono text-[10px]">{shortHash}</span>}
         {stateLabel && (
           <span className="repo-state-badge text-warning bg-warning-bg rounded px-1 py-px text-[10px] font-bold">
@@ -57,7 +57,7 @@ export function StatusBar() {
       <div className="status-bar-right flex items-center gap-3">
         {hasChanges && (
           <div
-            className="status-bar-counts text-text-muted flex items-center gap-2"
+            className="status-bar-counts text-text-muted flex items-center gap-2 font-mono"
             aria-label={`${stagedCount} staged, ${unstagedCount} unstaged, ${untrackedCount} untracked`}
           >
             {stagedCount > 0 && (
@@ -92,34 +92,10 @@ export function StatusBar() {
           aria-label={`Toggle terminal (${modKey}+\`)`}
           aria-expanded={terminalIsOpen}
         >
-          <TerminalIcon />
+          <IconTerminal2 size={12} stroke={1.75} className="shrink-0" aria-hidden />
           <span>Terminal</span>
         </button>
       </div>
     </footer>
-  );
-}
-
-function BranchIcon() {
-  return (
-    <svg
-      className="text-badge-branch shrink-0"
-      width="12"
-      height="12"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-    >
-      <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM4 5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm7 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM5 8v2.5a.5.5 0 0 0 .5.5h5.5V13h-5a1.5 1.5 0 0 1-1.5-1.5V8h.5z" />
-      <path d="M11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm1 2.5V10h-1V7.5h1z" />
-    </svg>
-  );
-}
-
-function TerminalIcon() {
-  return (
-    <svg className="shrink-0" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9zM3.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-9z" />
-      <path d="M5.146 5.146a.5.5 0 0 1 .708 0L8.207 7.5 5.854 9.854a.5.5 0 1 1-.708-.708L7.293 7.5 5.146 5.354a.5.5 0 0 1 0-.708zM8.5 10h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1 0-1z" />
-    </svg>
   );
 }

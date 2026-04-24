@@ -202,10 +202,10 @@ describe("SettingsMenu", () => {
         fireEvent.click(screen.getByTitle("Settings"));
       });
 
-      // Should have exactly one separator (before About), not the macOS CLI separator
+      // Should have exactly two separators (after density group + before About), not the macOS CLI separator
       await waitFor(() => {
         const separators = screen.getAllByRole("separator");
-        expect(separators).toHaveLength(1);
+        expect(separators).toHaveLength(2);
       });
     });
   });

@@ -1,42 +1,51 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
+import { IconChevronRight } from "@tabler/icons-react";
+import type { BranchInfo, TagInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import { YaggButton } from "../common/YaggButton";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { useBranchFilterStore } from "../../stores/branchFilterStore";
 import { KeyboardList } from "../common/KeyboardList";
 import { BranchItem } from "./BranchItem";
 import { TagItem } from "./TagItem";
-import { StashItem } from "./StashItem";
+import { matchesQuery, SEARCH_DEBOUNCE_MS } from "../../hooks/useCommandPaletteSearch";
+
+const SECTION_KEY_LOCAL = "sidebar.branches.local";
+const SECTION_KEY_REMOTE = "sidebar.branches.remote";
+const SECTION_KEY_TAGS = "sidebar.tags";
 
 export function BranchTagList() {
   const branches = useRepositoryStore((s) => s.branches);
   const tags = useRepositoryStore((s) => s.tags);
-  const stashes = useRepositoryStore((s) => s.stashes);
   const checkoutBranch = useRepositoryStore((s) => s.checkoutBranch);
   const checkoutCommit = useRepositoryStore((s) => s.checkoutCommit);
-  const loadStashDetails = useRepositoryStore((s) => s.loadStashDetails);
-  const applyStash = useRepositoryStore((s) => s.applyStash);
   const selectAndScrollToCommit = useSelectionStore((s) => s.selectAndScrollToCommit);
-  const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const [localExpanded, setLocalExpanded] = useState(true);
-  const [remoteExpanded, setRemoteExpanded] = useState(true);
-  const [tagsExpanded, setTagsExpanded] = useState(true);
-  const [stashesExpanded, setStashesExpanded] = useState(true);
+  const localExpanded = useSettingsStore((s) => s.sectionExpanded[SECTION_KEY_LOCAL] ?? false);
+  const remoteExpanded = useSettingsStore((s) => s.sectionExpanded[SECTION_KEY_REMOTE] ?? false);
+  const tagsExpanded = useSettingsStore((s) => s.sectionExpanded[SECTION_KEY_TAGS] ?? false);
+  const setSectionExpanded = useSettingsStore((s) => s.setSectionExpanded);
 
-  const localBranches = branches.filter((b) => !b.is_remote);
-  const remoteBranches = branches.filter((b) => b.is_remote);
+  const filterQuery = useBranchFilterStore((s) => s.query);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(filterQuery), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [filterQuery]);
+
+  const allLocals = useMemo(() => branches.filter((b) => !b.is_remote), [branches]);
+  const allRemotes = useMemo(() => branches.filter((b) => b.is_remote), [branches]);
 
   const handleBranchActivate = useCallback(
-    (branchList: typeof branches) => async (index: number) => {
+    (branchList: BranchInfo[]) => async (index: number) => {
       const branch = branchList[index];
       if (!branch) return;
       if (branch.target_hash) {
         selectAndScrollToCommit(branch.target_hash);
       }
-      // Also offer checkout (skip if already HEAD)
       if (branch.is_head) return;
       if (branch.is_remote) {
         await showConfirm({
@@ -61,7 +70,7 @@ export function BranchTagList() {
   );
 
   const handleBranchSecondaryActivate = useCallback(
-    (branchList: typeof branches) => async (index: number) => {
+    (branchList: BranchInfo[]) => async (index: number) => {
       const branch = branchList[index];
       if (!branch || branch.is_head) return;
       if (branch.is_remote) {
@@ -87,8 +96,8 @@ export function BranchTagList() {
   );
 
   const handleTagActivate = useCallback(
-    async (index: number) => {
-      const tag = tags[index];
+    (tagList: TagInfo[]) => async (index: number) => {
+      const tag = tagList[index];
       if (!tag) return;
       if (tag.target_hash) {
         selectAndScrollToCommit(tag.target_hash);
@@ -103,12 +112,12 @@ export function BranchTagList() {
         checkoutCommit(tag.target_hash);
       }
     },
-    [tags, selectAndScrollToCommit, checkoutCommit, showConfirm]
+    [selectAndScrollToCommit, checkoutCommit, showConfirm]
   );
 
   const handleTagSecondaryActivate = useCallback(
-    async (index: number) => {
-      const tag = tags[index];
+    (tagList: TagInfo[]) => async (index: number) => {
+      const tag = tagList[index];
       if (!tag) return;
       const confirmed = await showConfirm({
         title: "Checkout Tag",
@@ -120,164 +129,188 @@ export function BranchTagList() {
         checkoutCommit(tag.target_hash);
       }
     },
-    [tags, checkoutCommit, showConfirm]
-  );
-
-  const handleStashActivate = useCallback(
-    (index: number) => {
-      const stash = stashes[index];
-      if (stash) {
-        loadStashDetails(stash.index);
-        setActiveView("status");
-      }
-    },
-    [stashes, loadStashDetails, setActiveView]
-  );
-
-  const handleStashSecondaryActivate = useCallback(
-    async (index: number) => {
-      const stash = stashes[index];
-      if (!stash) return;
-      const stashName = `stash@{${stash.index}}`;
-      const confirmed = await showConfirm({
-        title: "Apply Stash",
-        message: `Apply "${stashName}"? This will restore the stashed changes to your working directory.`,
-        confirmLabel: "Apply",
-        cancelLabel: "Cancel",
-      });
-      if (confirmed) {
-        applyStash(stash.index);
-      }
-    },
-    [stashes, applyStash, showConfirm]
+    [checkoutCommit, showConfirm]
   );
 
   return (
     <div className="branch-tag-list flex flex-col">
-      <CollapsibleSection
+      <FilterableSection
         title="Local Branches"
-        count={localBranches.length}
+        items={allLocals}
         expanded={localExpanded}
-        onToggle={() => setLocalExpanded(!localExpanded)}
-      >
-        <KeyboardList
-          aria-label="Local Branches"
-          onActivate={handleBranchActivate(localBranches)}
-          onSecondaryActivate={handleBranchSecondaryActivate(localBranches)}
-        >
-          {localBranches.map((branch, i) => (
-            <KeyboardList.Item key={branch.name} index={i}>
-              <BranchItem branch={branch} />
-            </KeyboardList.Item>
-          ))}
-        </KeyboardList>
-      </CollapsibleSection>
+        onToggle={() => setSectionExpanded(SECTION_KEY_LOCAL, !localExpanded)}
+        getLabel={(b) => b.name}
+        renderItem={(b) => <BranchItem branch={b} />}
+        listAriaLabel="Local Branches"
+        onActivate={handleBranchActivate}
+        onSecondaryActivate={handleBranchSecondaryActivate}
+        filterQuery={debouncedQuery}
+      />
 
-      <CollapsibleSection
+      <FilterableSection
         title="Remote Branches"
-        count={remoteBranches.length}
+        items={allRemotes}
         expanded={remoteExpanded}
-        onToggle={() => setRemoteExpanded(!remoteExpanded)}
-      >
-        <KeyboardList
-          aria-label="Remote Branches"
-          onActivate={handleBranchActivate(remoteBranches)}
-          onSecondaryActivate={handleBranchSecondaryActivate(remoteBranches)}
-        >
-          {remoteBranches.map((branch, i) => (
-            <KeyboardList.Item key={branch.name} index={i}>
-              <BranchItem branch={branch} />
-            </KeyboardList.Item>
-          ))}
-        </KeyboardList>
-      </CollapsibleSection>
+        onToggle={() => setSectionExpanded(SECTION_KEY_REMOTE, !remoteExpanded)}
+        getLabel={(b) => b.name}
+        renderItem={(b) => <BranchItem branch={b} />}
+        listAriaLabel="Remote Branches"
+        onActivate={handleBranchActivate}
+        onSecondaryActivate={handleBranchSecondaryActivate}
+        filterQuery={debouncedQuery}
+      />
 
-      <CollapsibleSection
+      <FilterableSection
         title="Tags"
-        count={tags.length}
+        items={tags}
         expanded={tagsExpanded}
-        onToggle={() => setTagsExpanded(!tagsExpanded)}
-      >
-        <KeyboardList
-          aria-label="Tags"
-          onActivate={handleTagActivate}
-          onSecondaryActivate={handleTagSecondaryActivate}
-        >
-          {tags.map((tag, i) => (
-            <KeyboardList.Item key={tag.name} index={i}>
-              <TagItem tag={tag} />
-            </KeyboardList.Item>
-          ))}
-        </KeyboardList>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Stashes"
-        count={stashes.length}
-        expanded={stashesExpanded}
-        onToggle={() => setStashesExpanded(!stashesExpanded)}
-      >
-        <KeyboardList
-          aria-label="Stashes"
-          onActivate={handleStashActivate}
-          onSecondaryActivate={handleStashSecondaryActivate}
-        >
-          {stashes.map((stash, i) => (
-            <KeyboardList.Item key={stash.index} index={i}>
-              <StashItem stash={stash} />
-            </KeyboardList.Item>
-          ))}
-        </KeyboardList>
-      </CollapsibleSection>
+        onToggle={() => setSectionExpanded(SECTION_KEY_TAGS, !tagsExpanded)}
+        getLabel={(t) => t.name}
+        renderItem={(t) => <TagItem tag={t} />}
+        listAriaLabel="Tags"
+        onActivate={handleTagActivate}
+        onSecondaryActivate={handleTagSecondaryActivate}
+        filterQuery={debouncedQuery}
+      />
     </div>
   );
 }
 
-interface CollapsibleSectionProps {
+interface FilterableSectionProps<T extends { name: string }> {
   title: string;
-  count: number;
+  items: T[];
   expanded: boolean;
   onToggle: () => void;
-  children: React.ReactNode;
+  getLabel: (item: T) => string;
+  renderItem: (item: T) => React.ReactNode;
+  listAriaLabel: string;
+  onActivate: (list: T[]) => (index: number) => void;
+  onSecondaryActivate: (list: T[]) => (index: number) => void;
+  filterQuery: string;
 }
 
-function CollapsibleSection({
+function FilterableSection<T extends { name: string }>({
   title,
-  count,
+  items,
   expanded,
   onToggle,
-  children,
-}: CollapsibleSectionProps) {
+  getLabel,
+  renderItem,
+  listAriaLabel,
+  onActivate,
+  onSecondaryActivate,
+  filterQuery,
+}: FilterableSectionProps<T>) {
+  const isFiltering = filterQuery.trim().length > 0;
+  const filtered = useMemo(() => {
+    if (!isFiltering) return items;
+    const q = filterQuery.trim();
+    return items.filter((it) => matchesQuery(getLabel(it), q));
+  }, [items, filterQuery, isFiltering, getLabel]);
+
+  const effectiveExpanded = isFiltering ? true : expanded;
+  const count = isFiltering ? filtered.length : items.length;
+
   return (
-    <div className="collapsible-section border-border border-b">
-      <YaggButton
-        variant="menu-item"
-        className="section-header text-text-secondary hover:text-text-primary px-3 py-2 text-xs font-semibold tracking-wide uppercase"
-        onClick={onToggle}
-        aria-expanded={expanded}
+    <div className="collapsible-section filterable-section border-border border-b">
+      <div
+        className="section-header-row flex items-center gap-2 px-3 py-1.5"
+        role="group"
+        aria-label={`${title} section`}
       >
+        <button
+          type="button"
+          className="section-chevron text-text-muted hover:text-text-primary flex min-w-0 flex-1 shrink cursor-pointer items-center gap-1 bg-transparent"
+          onClick={onToggle}
+          aria-expanded={effectiveExpanded}
+          aria-label={`Toggle ${title}`}
+          disabled={isFiltering}
+        >
+          <span
+            className={clsx(
+              "expand-icon flex size-3 shrink-0 items-center justify-center transition-transform duration-150",
+              effectiveExpanded && "expanded rotate-90"
+            )}
+          >
+            <ChevronIcon />
+          </span>
+          <span className="section-title text-3xs truncate font-mono font-medium tracking-widest uppercase">
+            {title}
+          </span>
+        </button>
+
         <span
           className={clsx(
-            "expand-icon mr-1 flex size-4 items-center justify-center transition-transform duration-150",
-            expanded && "expanded rotate-90"
+            "section-count bg-bg-well text-2xs inline-flex w-8 shrink-0 items-center justify-center rounded-full px-1.5 py-px font-mono tabular-nums",
+            isFiltering && count === 0 && "text-text-muted opacity-60"
           )}
+          aria-label={`${count} ${isFiltering ? "matches" : "items"}`}
         >
-          <ChevronIcon />
-        </span>
-        <span className="section-title flex-1 text-left">{title}</span>
-        <span className="section-count bg-bg-tertiary text-2xs rounded-full px-1.5 py-px font-normal">
           {count}
         </span>
-      </YaggButton>
-      {expanded && <div className="section-content pb-1">{children}</div>}
+      </div>
+
+      {effectiveExpanded && (
+        <div className="section-content pb-1">
+          {filtered.length === 0 ? (
+            <div className="text-text-muted text-2xs px-3 py-2 font-mono italic">
+              {isFiltering ? "No matches" : `No ${title.toLowerCase()}`}
+            </div>
+          ) : (
+            <FilteredList
+              items={filtered}
+              ariaLabel={listAriaLabel}
+              onActivate={onActivate(filtered)}
+              onSecondaryActivate={onSecondaryActivate(filtered)}
+              renderItem={renderItem}
+            />
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+interface FilteredListProps<T extends { name: string }> {
+  items: T[];
+  ariaLabel: string;
+  onActivate: (index: number) => void;
+  onSecondaryActivate: (index: number) => void;
+  renderItem: (item: T) => React.ReactNode;
+}
+
+function FilteredList<T extends { name: string }>({
+  items,
+  ariaLabel,
+  onActivate,
+  onSecondaryActivate,
+  renderItem,
+}: FilteredListProps<T>) {
+  // Re-mount KeyboardList when the set of items changes so its internal
+  // activeIndex doesn't point past the end of a filtered list.
+  const keyRef = useRef(0);
+  const prevLen = useRef(items.length);
+  if (prevLen.current !== items.length) {
+    keyRef.current += 1;
+    prevLen.current = items.length;
+  }
+
+  return (
+    <KeyboardList
+      key={keyRef.current}
+      aria-label={ariaLabel}
+      onActivate={onActivate}
+      onSecondaryActivate={onSecondaryActivate}
+    >
+      {items.map((item, i) => (
+        <KeyboardList.Item key={item.name} index={i}>
+          {renderItem(item)}
+        </KeyboardList.Item>
+      ))}
+    </KeyboardList>
   );
 }
 
 function ChevronIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-      <path d="M4.5 2L8.5 6L4.5 10V2Z" />
-    </svg>
-  );
+  return <IconChevronRight size={10} stroke={2} aria-hidden />;
 }

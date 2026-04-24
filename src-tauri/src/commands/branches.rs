@@ -11,6 +11,12 @@ pub struct BranchInfo {
     pub is_remote: bool,
     pub is_head: bool,
     pub target_hash: String,
+    pub upstream: Option<String>,
+    pub ahead: u32,
+    pub behind: u32,
+    pub last_commit_summary: Option<String>,
+    pub last_commit_author: Option<String>,
+    pub last_commit_time: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -19,6 +25,9 @@ pub struct TagInfo {
     pub target_hash: String,
     pub is_annotated: bool,
     pub message: Option<String>,
+    pub tagger_name: Option<String>,
+    pub tagger_time: Option<i64>,
+    pub last_commit_summary: Option<String>,
 }
 
 #[tauri::command]
@@ -36,18 +45,45 @@ pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError
         let is_remote = matches!(branch_type, git2::BranchType::Remote);
         let is_head = head_name.as_ref() == Some(&name) && !is_remote;
 
-        // Get the target commit hash
-        let target_hash = branch
-            .get()
-            .peel_to_commit()
-            .map(|c| c.id().to_string())
-            .unwrap_or_default();
+        let tip = branch.get().peel_to_commit().ok();
+        let target_hash = tip.as_ref().map(|c| c.id().to_string()).unwrap_or_default();
+        let last_commit_summary = tip.as_ref().and_then(|c| c.summary().map(String::from));
+        let last_commit_author = tip
+            .as_ref()
+            .and_then(|c| c.author().name().map(String::from));
+        let last_commit_time = tip.as_ref().map(|c| c.time().seconds());
+
+        // Upstream tracking + ahead/behind (local branches only)
+        let mut upstream = None;
+        let mut ahead = 0u32;
+        let mut behind = 0u32;
+        if !is_remote {
+            if let Ok(up) = branch.upstream() {
+                if let Ok(Some(up_name)) = up.name() {
+                    upstream = Some(up_name.to_string());
+                }
+                if let (Some(local_oid), Ok(up_oid)) =
+                    (tip.as_ref().map(|c| c.id()), up.get().peel_to_commit())
+                {
+                    if let Ok((a, b)) = repo.graph_ahead_behind(local_oid, up_oid.id()) {
+                        ahead = a.min(u32::MAX as usize) as u32;
+                        behind = b.min(u32::MAX as usize) as u32;
+                    }
+                }
+            }
+        }
 
         branches.push(BranchInfo {
             name,
             is_remote,
             is_head,
             target_hash,
+            upstream,
+            ahead,
+            behind,
+            last_commit_summary,
+            last_commit_author,
+            last_commit_time,
         });
     }
 
@@ -82,23 +118,34 @@ pub fn list_tags(state: State<AppState>) -> Result<Vec<TagInfo>, AppError> {
             .trim_start_matches("refs/tags/")
             .to_string();
 
-        // Try to get the tag object (for annotated tags) or commit directly
         if let Ok(obj) = repo.find_object(oid, None) {
-            let (target_hash, is_annotated, message) = if let Some(tag) = obj.as_tag() {
-                // Annotated tag
-                let target = tag.target_id().to_string();
-                let msg = tag.message().map(|s: &str| s.to_string());
-                (target, true, msg)
-            } else {
-                // Lightweight tag pointing directly to commit
-                (oid.to_string(), false, None)
-            };
+            let (target_hash, is_annotated, message, tagger_name, tagger_time) =
+                if let Some(tag) = obj.as_tag() {
+                    let target = tag.target_id().to_string();
+                    let msg = tag.message().map(|s: &str| s.to_string());
+                    let (t_name, t_time) = tag
+                        .tagger()
+                        .map(|sig| (sig.name().map(String::from), Some(sig.when().seconds())))
+                        .unwrap_or((None, None));
+                    (target, true, msg, t_name, t_time)
+                } else {
+                    (oid.to_string(), false, None, None, None)
+                };
+
+            // Last commit summary for the commit the tag points to.
+            let last_commit_summary = Oid::from_str(&target_hash)
+                .ok()
+                .and_then(|o| repo.find_commit(o).ok())
+                .and_then(|c| c.summary().map(String::from));
 
             tags.push(TagInfo {
                 name,
                 target_hash,
                 is_annotated,
                 message,
+                tagger_name,
+                tagger_time,
+                last_commit_summary,
             });
         }
 
@@ -361,6 +408,89 @@ mod tests {
 
         let result = repo.tag_delete("nonexistent-tag");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_branch_upstream_ahead_behind() {
+        let (temp_dir, repo) = create_test_repo();
+        let oid = create_initial_commit(&repo, &temp_dir);
+        let commit = repo.find_commit(oid).unwrap();
+
+        let branch_name = repo.head().unwrap().shorthand().unwrap().to_string();
+
+        // git2's branch.upstream() requires the remote to actually exist
+        // in the config, not just remote-tracking refs.
+        repo.remote("origin", "https://example.com/origin.git")
+            .unwrap();
+
+        // Create a remote-tracking ref at the initial commit, matching the
+        // local branch name (could be "main" or "master" depending on git config).
+        repo.reference(
+            &format!("refs/remotes/origin/{}", branch_name),
+            oid,
+            true,
+            "set remote tracking ref for test",
+        )
+        .unwrap();
+
+        let mut config = repo.config().unwrap();
+        config
+            .set_str(&format!("branch.{}.remote", branch_name), "origin")
+            .unwrap();
+        config
+            .set_str(
+                &format!("branch.{}.merge", branch_name),
+                &format!("refs/heads/{}", branch_name),
+            )
+            .unwrap();
+
+        // Advance the local branch by one commit so ahead=1, behind=0.
+        let new_oid = create_commit_with_file(&repo, &temp_dir, "new.txt", "x", "advance");
+        assert_ne!(new_oid, oid);
+
+        let branch = repo.find_branch(&branch_name, BranchType::Local).unwrap();
+        let upstream = branch.upstream().expect("upstream configured");
+        let up_name = upstream.name().unwrap().unwrap().to_string();
+        assert_eq!(up_name, format!("origin/{}", branch_name));
+
+        let local_oid = branch.get().peel_to_commit().unwrap().id();
+        let up_oid = upstream.get().peel_to_commit().unwrap().id();
+        let (ahead, behind) = repo.graph_ahead_behind(local_oid, up_oid).unwrap();
+        assert_eq!(ahead, 1);
+        assert_eq!(behind, 0);
+
+        drop(commit);
+        drop(temp_dir);
+    }
+
+    #[test]
+    fn test_annotated_tag_tagger_extracted() {
+        let (temp_dir, repo) = create_test_repo();
+        let oid = create_initial_commit(&repo, &temp_dir);
+        let commit = repo.find_commit(oid).unwrap();
+
+        let sig = git2::Signature::now("Alice", "alice@example.com").unwrap();
+        repo.tag("v1.0.0", commit.as_object(), &sig, "First release", false)
+            .unwrap();
+
+        let mut found = false;
+        repo.tag_foreach(|tag_oid, _name| {
+            if let Ok(obj) = repo.find_object(tag_oid, None) {
+                if let Some(tag) = obj.as_tag() {
+                    if tag.name() == Some("v1.0.0") {
+                        let tagger = tag.tagger().expect("annotated tag has tagger");
+                        assert_eq!(tagger.name(), Some("Alice"));
+                        assert!(tagger.when().seconds() > 0);
+                        found = true;
+                    }
+                }
+            }
+            true
+        })
+        .unwrap();
+        assert!(found, "annotated tag not found");
+
+        drop(temp_dir);
     }
 
     #[test]

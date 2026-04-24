@@ -283,7 +283,13 @@ mod tests {
     use git2::Repository;
     use std::fs;
     use std::path::Path;
+    use std::sync::atomic::{AtomicI64, Ordering};
     use tempfile::TempDir;
+
+    /// Monotonically increasing timestamp so commits created in rapid
+    /// succession always have distinct times, giving deterministic
+    /// TOPOLOGICAL | TIME ordering.
+    static NEXT_TIMESTAMP: AtomicI64 = AtomicI64::new(1_700_000_000);
 
     fn create_commit_info(hash: &str, message: &str, parent_hashes: Vec<String>) -> CommitInfo {
         CommitInfo {
@@ -1031,6 +1037,8 @@ mod tests {
 
     /// Create a commit with explicit parents (not HEAD). Needed for building
     /// non-linear topologies where we control parent relationships directly.
+    /// Uses a monotonically increasing timestamp so commits always sort
+    /// deterministically under TOPOLOGICAL | TIME ordering.
     fn commit_with_parents(
         repo: &Repository,
         temp_dir: &TempDir,
@@ -1046,7 +1054,9 @@ mod tests {
         index.add_path(Path::new(filename)).unwrap();
         index.write().unwrap();
 
-        let sig = repo.signature().unwrap();
+        let ts = NEXT_TIMESTAMP.fetch_add(1, Ordering::Relaxed);
+        let time = git2::Time::new(ts, 0);
+        let sig = git2::Signature::new("Test User", "test@example.com", &time).unwrap();
         let tree_id = index.write_tree().unwrap();
         let tree = repo.find_tree(tree_id).unwrap();
 

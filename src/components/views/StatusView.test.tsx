@@ -1,12 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { StatusView } from "./StatusView";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { mockStore } from "../../test/mockStores";
 import type { FileStatuses, FileDiff } from "../../types";
 
 vi.mock("../../stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
+}));
+
+vi.mock("../../stores/settingsStore", () => ({
+  useSettingsStore: Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({ layoutSizes: {}, setLayoutSize: vi.fn() })),
+  }),
 }));
 
 vi.mock("../files/StagedUnstagedPanel", () => ({
@@ -55,13 +62,10 @@ vi.mock("../diff/DiffViewPanel", () => ({
   ),
 }));
 
-vi.mock("../sidebar/StashDetailsPanel", () => ({
-  StashDetailsPanel: () => <div data-testid="stash-details-panel">StashDetailsPanel</div>,
-}));
-
 describe("StatusView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize: vi.fn() });
   });
 
   function setupStore(
@@ -71,8 +75,6 @@ describe("StatusView", () => {
       currentDiff: FileDiff | null;
       currentDiffStaged: boolean;
       diffLoading: boolean;
-      selectedStashDetails: null;
-      stashDetailsLoading: boolean;
     }> = {}
   ) {
     const defaultState = {
@@ -81,8 +83,6 @@ describe("StatusView", () => {
       currentDiff: null,
       currentDiffStaged: false,
       diffLoading: false,
-      selectedStashDetails: null,
-      stashDetailsLoading: false,
       ...overrides,
     };
 
@@ -185,33 +185,14 @@ describe("StatusView", () => {
     expect(container.querySelector(".status-commit")).toBeInTheDocument();
   });
 
-  it("has a horizontal resizer", () => {
+  it("has a horizontal resizer between the file panel and the diff/commit panel", () => {
     setupStore();
 
     const { container } = render(<StatusView />);
 
-    expect(container.querySelector(".status-resizer-h")).toBeInTheDocument();
-  });
-
-  it("resizer responds to mouse events", () => {
-    setupStore();
-
-    const { container } = render(<StatusView />);
-
-    const resizer = container.querySelector(".status-resizer-h");
+    const resizer = container.querySelector('[role="separator"][aria-orientation="vertical"]');
     expect(resizer).toBeInTheDocument();
-
-    // Simulate mousedown on resizer
-    fireEvent.mouseDown(resizer!, { clientX: 300 });
-
-    // Should set cursor style on body during resize
-    expect(document.body.style.cursor).toBe("col-resize");
-
-    // Simulate mouseup to end resize
-    fireEvent.mouseUp(document);
-
-    // Cursor should be reset
-    expect(document.body.style.cursor).toBe("");
+    expect(resizer).toHaveAttribute("aria-label", "Resize file panel");
   });
 
   it("handles null file statuses", () => {

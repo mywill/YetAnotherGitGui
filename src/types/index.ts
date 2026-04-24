@@ -115,13 +115,22 @@ export interface BranchInfo {
   is_remote: boolean;
   is_head: boolean;
   target_hash: string;
+  upstream?: string | null;
+  ahead?: number;
+  behind?: number;
+  last_commit_summary?: string | null;
+  last_commit_author?: string | null;
+  last_commit_time?: number | null;
 }
 
 export interface TagInfo {
   name: string;
   target_hash: string;
   is_annotated: boolean;
-  message?: string;
+  message?: string | null;
+  tagger_name?: string | null;
+  tagger_time?: number | null;
+  last_commit_summary?: string | null;
 }
 
 export interface StashInfo {

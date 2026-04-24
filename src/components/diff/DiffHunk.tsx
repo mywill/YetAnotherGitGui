@@ -132,25 +132,25 @@ export const DiffHunk = memo(function DiffHunk({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <div className="hunk-header border-border bg-bg-tertiary flex items-center justify-between border-b px-2 py-1 text-xs">
+      <div className="hunk-header border-border bg-bg-well flex items-center justify-between border-b px-2 py-1 text-xs">
         <span className="hunk-info text-text-muted font-mono">{hunkInfo.trim()}</span>
         <div className="hunk-actions flex gap-1">
           {onResolveConflict ? (
             <>
               <YaggButton
-                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                 onClick={() => onResolveConflict("ours")}
               >
                 Accept Ours
               </YaggButton>
               <YaggButton
-                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                 onClick={() => onResolveConflict("theirs")}
               >
                 Accept Theirs
               </YaggButton>
               <YaggButton
-                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                 onClick={() => onResolveConflict("both")}
               >
                 Both
@@ -160,21 +160,21 @@ export const DiffHunk = memo(function DiffHunk({
             <>
               {selectedLines.size > 0 && canSelectLines && (
                 <YaggButton
-                  className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                  className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                   onClick={handleStageSelected}
                 >
                   Stage {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
                 </YaggButton>
               )}
               <YaggButton
-                className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                 onClick={onAction}
               >
                 {actionLabel}
               </YaggButton>
               {selectedLines.size > 0 && canSelectLines && onDiscardLines && (
                 <YaggButton
-                  className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                  className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                   onClick={handleDiscardSelected}
                 >
                   Discard {selectedLines.size} line{selectedLines.size > 1 ? "s" : ""}
@@ -182,7 +182,7 @@ export const DiffHunk = memo(function DiffHunk({
               )}
               {onDiscardHunk && (
                 <YaggButton
-                  className="hunk-action bg-bg-secondary hover:bg-bg-hover rounded px-2 py-px text-xs"
+                  className="hunk-action bg-bg-panel hover:bg-bg-hover rounded px-2 py-px text-xs"
                   onClick={onDiscardHunk}
                 >
                   Discard hunk
@@ -201,7 +201,7 @@ export const DiffHunk = memo(function DiffHunk({
           )}
         </div>
       </div>
-      <div className="hunk-lines bg-bg-primary table w-full min-w-max">
+      <div className="hunk-lines bg-bg-canvas table w-full min-w-max">
         {visibleLines.map((line, visibleIdx) => {
           const isSelectable = canSelectLines && isSelectableLineType(line.line_type);
           const isSelected = selectedLines.has(line.originalIndex);

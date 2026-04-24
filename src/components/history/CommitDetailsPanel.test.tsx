@@ -4,13 +4,19 @@ import { CommitDetailsPanel } from "./CommitDetailsPanel";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { mockStore } from "../../test/mockStores";
 import type { CommitDetails } from "../../types";
 
 // Mock stores
-vi.mock("../../stores/repositoryStore", () => ({
-  useRepositoryStore: vi.fn(),
-}));
+vi.mock("../../stores/repositoryStore", () => {
+  const hook = vi.fn() as unknown as { getState: () => unknown } & ReturnType<typeof vi.fn>;
+  (hook as unknown as { getState: () => unknown }).getState = () => ({
+    expandedCommitFiles: new Set<string>(),
+    commitFileDiffs: new Map<string, unknown>(),
+  });
+  return { useRepositoryStore: hook };
+});
 
 vi.mock("../../stores/selectionStore", () => ({
   useSelectionStore: vi.fn(),
@@ -43,17 +49,42 @@ const mockCommitDetails: CommitDetails = {
   ],
 };
 
+// jsdom reports clientHeight as 0, which breaks resizer max-height math.
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get: () => 600,
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get: () => 800,
+  });
+});
+
 describe("CommitDetailsPanel", () => {
   const mockRevertCommit = vi.fn().mockResolvedValue(undefined);
   const mockSetActiveView = vi.fn();
   const mockShowConfirm = vi.fn().mockResolvedValue(true);
+  const mockToggleCommitFileExpanded = vi.fn();
+  const mockLoadCommitFileDiff = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockStore(useRepositoryStore, { revertCommit: mockRevertCommit });
+    useSettingsStore.setState({ layoutSizes: {}, sectionExpanded: {} });
+
+    mockStore(useRepositoryStore, {
+      revertCommit: mockRevertCommit,
+      toggleCommitFileExpanded: mockToggleCommitFileExpanded,
+      loadCommitFileDiff: mockLoadCommitFileDiff,
+    });
     mockStore(useSelectionStore, { setActiveView: mockSetActiveView });
     mockStore(useDialogStore, { showConfirm: mockShowConfirm });
+
+    (useRepositoryStore as unknown as { getState: () => unknown }).getState = () => ({
+      expandedCommitFiles: new Set<string>(),
+      commitFileDiffs: new Map<string, unknown>(),
+    });
   });
 
   it("shows empty state when no commit is selected", () => {
@@ -114,19 +145,21 @@ describe("CommitDetailsPanel", () => {
     expect(screen.getByText("src/old-file.ts")).toBeInTheDocument();
   });
 
-  it("commit-info section is scrollable and not fixed-height for long messages", () => {
+  it("commit-info section is scrollable and has a user-resizable height", () => {
     const longMessage = "Long commit title\n\n" + "Detail line\n".repeat(50);
     const longCommit = { ...mockCommitDetails, message: longMessage };
     render(<CommitDetailsPanel details={longCommit} loading={false} />);
 
-    const commitInfo = document.querySelector(".commit-info");
+    const commitInfo = document.querySelector<HTMLDivElement>(".commit-info");
     expect(commitInfo).not.toBeNull();
-    // Should have overflow-y-auto for scrolling
+    // Should have overflow-y-auto for scrolling when content exceeds the panel
     expect(commitInfo!.className).toContain("overflow-y-auto");
-    // Should have a max-height cap so it doesn't consume all panel space
-    expect(commitInfo!.className).toMatch(/max-h-/);
-    // Should NOT have shrink-0 which prevents flex shrinking
-    expect(commitInfo!.className).not.toContain("shrink-0");
+    // Should have an explicit inline height set (controlled by the resizer)
+    expect(commitInfo!.style.height).toMatch(/\d+px/);
+    // There should be a horizontal resizer separating info and files
+    const resizer = document.querySelector('[aria-label="Resize commit info"]');
+    expect(resizer).not.toBeNull();
+    expect(resizer!.getAttribute("aria-orientation")).toBe("horizontal");
   });
 
   it("shows files changed header", () => {
@@ -230,6 +263,63 @@ describe("CommitDetailsPanel", () => {
       });
       expect(mockRevertCommit).not.toHaveBeenCalled();
       expect(mockSetActiveView).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("file activation", () => {
+    it("Enter on files list toggles expand and loads diff for un-cached file", () => {
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(mockToggleCommitFileExpanded).toHaveBeenCalledWith("src/main.ts");
+      expect(mockLoadCommitFileDiff).toHaveBeenCalledWith(
+        "abc123def456789012345678901234567890abcd",
+        "src/main.ts"
+      );
+    });
+
+    it("Space on files list triggers secondary activation", () => {
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: " " });
+
+      expect(mockToggleCommitFileExpanded).toHaveBeenCalledWith("src/main.ts");
+    });
+
+    it("does not re-fetch diff for an already-expanded file", () => {
+      (useRepositoryStore as unknown as { getState: () => unknown }).getState = () => ({
+        expandedCommitFiles: new Set(["src/main.ts"]),
+        commitFileDiffs: new Map(),
+      });
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(mockToggleCommitFileExpanded).toHaveBeenCalledWith("src/main.ts");
+      expect(mockLoadCommitFileDiff).not.toHaveBeenCalled();
+    });
+
+    it("does not re-fetch diff for a file whose diff is already cached", () => {
+      (useRepositoryStore as unknown as { getState: () => unknown }).getState = () => ({
+        expandedCommitFiles: new Set<string>(),
+        commitFileDiffs: new Map([["src/main.ts", { hunks: [] }]]),
+      });
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+      const listbox = screen.getByRole("listbox", { name: "Files changed" });
+      fireEvent.keyDown(listbox, { key: "Enter" });
+
+      expect(mockLoadCommitFileDiff).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("info/files resizer", () => {
+    it("persists a keyboard resize to settingsStore", () => {
+      useSettingsStore.setState({ layoutSizes: { "history.commitInfo": 200 } });
+      render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+      const separator = screen.getByRole("separator", { name: "Resize commit info" });
+      fireEvent.keyDown(separator, { key: "ArrowDown" });
+      expect(useSettingsStore.getState().layoutSizes["history.commitInfo"]).toBe(208);
     });
   });
 });

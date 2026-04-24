@@ -28,13 +28,31 @@ const STATUS_ICONS: Record<FileStatusType, string> = {
   conflicted: "!",
 };
 
-const STATUS_STYLE: Record<string, string> = {
-  modified: "text-status-modified bg-status-modified/15",
-  added: "text-status-added bg-status-added/15",
-  deleted: "text-status-deleted bg-status-deleted/15",
-  renamed: "text-status-modified bg-status-modified/15",
-  untracked: "text-status-untracked bg-status-untracked/15",
-  conflicted: "text-status-conflicted bg-status-conflicted/20",
+const STATUS_STYLE: Record<string, { color: string; bg: string }> = {
+  modified: {
+    color: "var(--color-status-modified)",
+    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
+  },
+  added: {
+    color: "var(--color-status-added)",
+    bg: "color-mix(in srgb, var(--color-status-added) var(--badge-bg-mix), transparent)",
+  },
+  deleted: {
+    color: "var(--color-status-deleted)",
+    bg: "color-mix(in srgb, var(--color-status-deleted) var(--badge-bg-mix), transparent)",
+  },
+  renamed: {
+    color: "var(--color-status-modified)",
+    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
+  },
+  untracked: {
+    color: "var(--color-status-untracked)",
+    bg: "color-mix(in srgb, var(--color-status-untracked) var(--badge-bg-mix), transparent)",
+  },
+  conflicted: {
+    color: "var(--color-status-conflicted)",
+    bg: "color-mix(in srgb, var(--color-status-conflicted) var(--badge-bg-mix), transparent)",
+  },
 };
 
 export const FileItem = memo(function FileItem({
@@ -114,11 +132,10 @@ export const FileItem = memo(function FileItem({
     <>
       <div
         className={clsx(
-          "file-item hover:bg-bg-hover flex shrink-0 cursor-pointer items-center gap-2 px-3 py-1 text-xs transition-colors duration-100",
+          "file-item hover:bg-bg-hover min-h-row flex shrink-0 cursor-pointer items-center gap-2 px-3 py-1 text-xs transition-colors duration-100",
           isStaged && "staged bg-success/8 hover:bg-success/15",
-          isSelected &&
-            "selected bg-bg-selected outline-focus-outline hover:bg-bg-selected-hover outline outline-1 -outline-offset-1",
-          isStaged && isSelected && "bg-primary/20 hover:bg-primary/30"
+          isSelected && "selected bg-bg-selected hover:bg-bg-selected-hover",
+          isStaged && isSelected && "bg-accent-lime/20 hover:bg-accent-lime/30"
         )}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
@@ -131,7 +148,7 @@ export const FileItem = memo(function FileItem({
             "stage-checkbox flex size-4 shrink-0 cursor-pointer items-center justify-center rounded border",
             isStaged
               ? "border-addition bg-addition/20 text-addition"
-              : "border-border bg-bg-tertiary text-transparent"
+              : "border-border bg-bg-well text-transparent"
           )}
           onClick={handleCheckboxClick}
           role="presentation"
@@ -151,19 +168,29 @@ export const FileItem = memo(function FileItem({
           )}
         </span>
         <span
-          className={clsx(
-            "status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold",
-            STATUS_STYLE[file.status] || ""
-          )}
+          className="status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold"
+          style={
+            STATUS_STYLE[file.status]
+              ? { color: STATUS_STYLE[file.status].color, background: STATUS_STYLE[file.status].bg }
+              : undefined
+          }
         >
           {STATUS_ICONS[file.status]}
         </span>
-        <span className="file-name shrink-0 font-medium">{fileName}</span>
+        <span className="file-name shrink-0 font-mono font-medium">{fileName}</span>
         {dirPath && (
-          <span className="file-path text-text-muted ml-1 flex-1 truncate">{dirPath}</span>
+          <span className="file-path text-text-muted ml-1 flex-1 truncate font-mono">
+            {dirPath}
+          </span>
         )}
         {isUntracked && (
-          <span className="untracked-badge text-status-untracked bg-status-untracked/20 text-2xs shrink-0 rounded px-1.5 py-px">
+          <span
+            className="untracked-badge text-status-untracked text-2xs shrink-0 rounded px-1.5 py-px"
+            style={{
+              background:
+                "color-mix(in srgb, var(--color-status-untracked) var(--badge-bg-mix), transparent)",
+            }}
+          >
             new
           </span>
         )}

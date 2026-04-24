@@ -9,12 +9,27 @@ interface StashFileItemProps {
   stashIndex: number;
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  added: { bg: "bg-status-added/20", text: "text-status-added" },
-  deleted: { bg: "bg-status-deleted/20", text: "text-status-deleted" },
-  modified: { bg: "bg-status-modified/20", text: "text-status-modified" },
-  renamed: { bg: "bg-badge-branch/20", text: "text-badge-branch" },
-  copied: { bg: "bg-badge-remote/20", text: "text-badge-remote" },
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  added: {
+    bg: "color-mix(in srgb, var(--color-status-added) var(--badge-bg-mix), transparent)",
+    color: "var(--color-status-added)",
+  },
+  deleted: {
+    bg: "color-mix(in srgb, var(--color-status-deleted) var(--badge-bg-mix), transparent)",
+    color: "var(--color-status-deleted)",
+  },
+  modified: {
+    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
+    color: "var(--color-status-modified)",
+  },
+  renamed: {
+    bg: "color-mix(in srgb, var(--color-badge-branch) var(--badge-bg-mix), transparent)",
+    color: "var(--color-badge-branch)",
+  },
+  copied: {
+    bg: "color-mix(in srgb, var(--color-badge-remote) var(--badge-bg-mix), transparent)",
+    color: "var(--color-badge-remote)",
+  },
 };
 
 export function StashFileItem({ file, stashIndex }: StashFileItemProps) {
@@ -34,7 +49,7 @@ export function StashFileItem({ file, stashIndex }: StashFileItemProps) {
   }, [file.path, isExpanded, diff, toggleStashFileExpanded, loadStashFileDiff, stashIndex]);
 
   const statusIcon = getStatusIcon(file.status);
-  const colors = STATUS_COLORS[file.status] || { bg: "bg-bg-tertiary", text: "text-text-muted" };
+  const colors = STATUS_COLORS[file.status];
 
   // For renamed files, show the old path
   const displayPath = file.old_path ? `${file.old_path} → ${file.path}` : file.path;
@@ -49,7 +64,7 @@ export function StashFileItem({ file, stashIndex }: StashFileItemProps) {
       <div
         className={clsx(
           "file-header hover:bg-bg-hover flex cursor-pointer items-center gap-2 px-3 py-2 text-xs transition-colors duration-150",
-          isExpanded && "bg-bg-tertiary"
+          isExpanded && "bg-bg-well"
         )}
         onClick={handleClick}
       >
@@ -57,20 +72,21 @@ export function StashFileItem({ file, stashIndex }: StashFileItemProps) {
           {isExpanded ? "▼" : "▶"}
         </span>
         <span
-          className={clsx(
-            "status-icon flex size-4 shrink-0 items-center justify-center rounded-sm font-mono text-xs font-semibold",
-            colors.bg,
-            colors.text
-          )}
+          className="status-icon flex size-4 shrink-0 items-center justify-center rounded-sm font-mono text-xs font-semibold"
+          style={
+            colors
+              ? { background: colors.bg, color: colors.color }
+              : { background: "var(--color-bg-well)", color: "var(--color-text-muted)" }
+          }
         >
           {statusIcon}
         </span>
-        <span className="file-path text-text-primary flex-1 truncate" title={displayPath}>
+        <span className="file-path text-text-primary flex-1 truncate font-mono" title={displayPath}>
           {displayPath}
         </span>
       </div>
       {isExpanded && (
-        <div className="file-diff-container border-border bg-bg-primary max-h-96 overflow-auto border-t">
+        <div className="file-diff-container bg-bg-canvas max-h-96 overflow-auto">
           {diff ? (
             <CommitFileDiff diff={diff} />
           ) : (

@@ -1,4 +1,6 @@
 import { useCallback } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { IconTag } from "@tabler/icons-react";
 import type { TagInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
@@ -82,20 +84,34 @@ export function TagItem({ tag }: TagItemProps) {
     },
   ];
 
+  const taggerText = tag.is_annotated ? tag.tagger_name : null;
+  const dateText =
+    tag.is_annotated && tag.tagger_time != null ? safeFormatDistance(tag.tagger_time) : null;
+
   return (
     <>
       <div
-        className="tag-item text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150"
+        className="tag-item text-text-primary hover:bg-bg-hover min-h-row flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150"
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         title={tag.message || tag.name}
       >
         <TagIcon />
-        <span className="tag-item-name flex-1 truncate">{tag.name}</span>
+        <span className="tag-item-name min-w-0 shrink truncate font-mono">{tag.name}</span>
         {tag.is_annotated && (
-          <span className="annotated-badge bg-badge-tag text-3xs rounded px-1 py-px font-semibold text-white">
+          <span className="annotated-badge bg-badge-tag text-3xs shrink-0 rounded px-1 py-px font-semibold text-white">
             A
+          </span>
+        )}
+        {taggerText && (
+          <span className="tag-item-tagger text-text-muted text-2xs shrink-0 truncate font-mono">
+            {taggerText}
+          </span>
+        )}
+        {dateText && (
+          <span className="tag-item-date text-text-muted text-2xs shrink-0 font-mono whitespace-nowrap">
+            {dateText}
           </span>
         )}
       </div>
@@ -111,16 +127,16 @@ export function TagItem({ tag }: TagItemProps) {
   );
 }
 
+function safeFormatDistance(secondsSinceEpoch: number): string | null {
+  try {
+    return formatDistanceToNow(new Date(secondsSinceEpoch * 1000), { addSuffix: true });
+  } catch {
+    return null;
+  }
+}
+
 function TagIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className="tag-icon text-badge-tag shrink-0"
-    >
-      <path d="M2 2h5.5l6 6-5.5 5.5-6-6V2zm1 1v4.086l5 5L12.086 8l-5-5H3zm3.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
-    </svg>
+    <IconTag size={14} stroke={1.75} className="tag-icon text-badge-tag shrink-0" aria-hidden />
   );
 }

@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import clsx from "clsx";
+import { IconStack2 } from "@tabler/icons-react";
 import type { StashInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
@@ -18,7 +18,6 @@ export function StashItem({ stash }: StashItemProps) {
   const applyStash = useRepositoryStore((s) => s.applyStash);
   const dropStash = useRepositoryStore((s) => s.dropStash);
   const selectedStashDetails = useRepositoryStore((s) => s.selectedStashDetails);
-  const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
@@ -34,8 +33,7 @@ export function StashItem({ stash }: StashItemProps) {
 
   const handleClick = useCallback(() => {
     loadStashDetails(stash.index);
-    setActiveView("status");
-  }, [stash.index, loadStashDetails, setActiveView]);
+  }, [stash.index, loadStashDetails]);
 
   const handleDoubleClick = useCallback(async () => {
     const confirmed = await showConfirm({
@@ -99,7 +97,7 @@ export function StashItem({ stash }: StashItemProps) {
     <>
       <div
         className={clsx(
-          "stash-item group text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
+          "stash-item group text-text-primary hover:bg-bg-hover min-h-row flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
           isSelected && "is-selected bg-bg-selected hover:bg-bg-selected-hover"
         )}
         onClick={handleClick}
@@ -112,7 +110,7 @@ export function StashItem({ stash }: StashItemProps) {
         <span
           className={clsx(
             "stash-item-message text-2xs flex-1 truncate",
-            isSelected ? "text-text-primary" : "text-text-secondary group-hover:text-text-primary"
+            isSelected ? "text-text-primary" : "text-text-muted group-hover:text-text-primary"
           )}
         >
           {getShortMessage()}
@@ -132,14 +130,11 @@ export function StashItem({ stash }: StashItemProps) {
 
 function StashIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className="stash-icon text-text-secondary shrink-0"
-    >
-      <path d="M2 3h12v2H2V3zm1 3h10v2H3V6zm1 3h8v2H4V9zm1 3h6v2H5v-2z" />
-    </svg>
+    <IconStack2
+      size={14}
+      stroke={1.75}
+      className="stash-icon text-text-muted shrink-0"
+      aria-hidden
+    />
   );
 }

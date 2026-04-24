@@ -157,7 +157,7 @@ function ContextMenuItemComponent({
       {hasChildren && submenuOpen && (
         <div
           role="menu"
-          className="context-submenu border-border bg-bg-secondary shadow-menu absolute top-0 left-full min-w-40 rounded border py-1"
+          className="context-submenu border-border bg-bg-panel shadow-menu absolute top-0 left-full min-w-40 rounded border py-1"
           onKeyDown={handleSubmenuKeyDown}
         >
           {item.children!.map((child, idx) => (
@@ -311,7 +311,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     <div
       ref={menuRef}
       role="menu"
-      className="context-menu border-border bg-bg-secondary shadow-menu fixed min-w-40 rounded border py-1"
+      className="context-menu border-border bg-bg-panel shadow-menu fixed min-w-40 rounded border py-1"
       style={{ left: x, top: y }}
       onKeyDown={handleKeyDown}
     >

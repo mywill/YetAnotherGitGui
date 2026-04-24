@@ -41,7 +41,7 @@ export function WelcomeScreen({ failedPath }: WelcomeScreenProps) {
   return (
     <div className="welcome-screen flex h-full flex-col items-center justify-center gap-4 p-4">
       <div className="welcome-screen-content flex w-full max-w-lg flex-col gap-4">
-        <div className="welcome-card border-border bg-bg-secondary rounded-md border p-3">
+        <div className="welcome-card border-border bg-bg-panel rounded-md border p-3">
           <div className="welcome-card-title text-text-primary mb-1 text-sm font-semibold">
             Open a Repository
           </div>

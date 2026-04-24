@@ -54,6 +54,16 @@ beforeAll(() => {
     vi.fn(() => true)
   );
   vi.stubGlobal("alert", vi.fn());
+
+  // jsdom doesn't implement ResizeObserver; components use it to track size.
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
 });
 
 // Cleanup after each test

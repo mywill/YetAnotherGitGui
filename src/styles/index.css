@@ -3,99 +3,228 @@
 @import "./grid-layout.css";
 @import "@xterm/xterm/css/xterm.css";
 
-/* ─── Theme: map existing design tokens to Tailwind ─── */
+/* ─── Theme: Voltage palette + density tokens ─── */
+/* Dark mode values are defaults (dark is primary).                */
+/* [data-theme="light"] overrides palette.                         */
+/* [data-density="comfortable|spacious"] overrides spacing.        */
+/* All components use new Voltage token names.                     */
 @theme {
-  /* Background colors */
-  --color-bg-primary: #1e1e1e;
-  --color-bg-secondary: #252526;
-  --color-bg-tertiary: #2d2d2d;
-  --color-bg-hover: #383838;
-  --color-bg-selected: #063350;
-  --color-bg-selected-hover: #073a62;
+  /* ── Voltage palette (dark) ── */
+
+  /* Background colors — new names */
+  --color-bg-canvas: #0a0a0c;
+  --color-bg-panel: #141418;
+  --color-bg-well: #050507;
+  --color-bg-hover: #222226;
+  --color-bg-selected: rgba(14, 208, 245, 0.15);
+  --color-bg-selected-hover: rgba(14, 208, 245, 0.25);
 
   /* Text colors */
-  --color-text-primary: #cccccc;
-  --color-text-secondary: #c0c0c0;
-  --color-text-muted: #bababa;
+  --color-text-primary: #f0f0f2;
+  --color-text-muted: #8a8a90;
 
   /* Border colors */
-  --color-border: #3c3c3c;
-  --color-border-light: #4a4a4a;
+  --color-border: #222226;
+  --color-border-light: #333338;
+
+  /* Accent: magenta — primary actions, focus, commit button */
+  --color-accent-magenta: #f50ed0;
+
+  /* Accent: cyan — selections, meta, branches, tags */
+  --color-accent-cyan: #0ed0f5;
+
+  /* Accent: lime — success, additions, staged */
+  --color-accent-lime: #d0f50e;
+
+  /* Semantic colors */
+  --color-danger: #ff5a6e;
+  --color-warning: #f5b50e;
+  --color-info: #8a8a90;
 
   /* Diff / syntax colors */
-  --color-addition: #4caf50;
-  --color-deletion: #f44336;
+  --color-addition: #d0f50e;
+  --color-deletion: #ff5a6e;
 
   /* Conflict colors */
-  --color-conflict-ours: #2ea043;
-  --color-conflict-theirs: #388bfd;
-  --color-conflict-marker: #6e7681;
+  --color-conflict-ours: #d0f50e;
+  --color-conflict-theirs: #0ed0f5;
+  --color-conflict-marker: #8a8a90;
 
-  /* Branch line colors (graph) */
-  --color-branch-1: #4fc3f7;
-  --color-branch-2: #81c784;
-  --color-branch-3: #ffb74d;
-  --color-branch-4: #f06292;
-  --color-branch-5: #ba68c8;
+  /* Branch line colors (graph) — remapped to Voltage hues */
+  --color-branch-1: #0ed0f5;
+  --color-branch-2: #d0f50e;
+  --color-branch-3: #f50ed0;
+  --color-branch-4: #ff5a6e;
+  --color-branch-5: #f5b50e;
   --color-branch-6: #4db6ac;
   --color-branch-7: #ff8a65;
-  --color-branch-8: #90a4ae;
+  --color-branch-8: #8a8a90;
 
   /* Status colors */
-  --color-status-modified: #e2c08d;
-  --color-status-added: #89d185;
-  --color-status-deleted: #c74e39;
-  --color-status-untracked: #73c991;
-  --color-status-conflicted: #e51400;
+  --color-status-modified: #f5b50e;
+  --color-status-added: #d0f50e;
+  --color-status-deleted: #ff5a6e;
+  --color-status-untracked: #0ed0f5;
+  --color-status-conflicted: #ff5a6e;
 
   /* Badge colors */
-  --color-badge-branch: #4fc3f7;
-  --color-badge-remote: #81c784;
-  --color-badge-tag: #ffb74d;
-  --color-badge-head: #d81b60;
+  --color-badge-branch: #0ed0f5;
+  --color-badge-remote: #d0f50e;
+  --color-badge-tag: #f5b50e;
+  --color-badge-head: #f50ed0;
+  --color-badge-head-text: #0a0a0c;
 
   /* Selection colors */
-  --color-selection-border: #569cd6;
-
-  /* Tab colors */
-  --color-tab-active: #4fc3f7;
+  --color-selection-border: #0ed0f5;
 
   /* Toast colors (WCAG AA compliant with white text) */
   --color-toast-success: #2e7d32;
   --color-toast-error: #c62828;
 
-  /* Warning colors */
-  --color-warning: #f59e0b;
+  /* Warning surface colors */
   --color-warning-bg: #78350f;
   --color-warning-text: #fef3c7;
 
-  /* Focus outline */
-  --color-focus-outline: #ff2d9b;
+  /* Focus outline — magenta accent */
+  --color-focus-outline: #f50ed0;
 
-  /* Functional colors */
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-success: #4caf50;
-  --color-accent: #2196f3;
-  --color-danger: #f44336;
+  --color-accent: #0ed0f5;
 
-  /* Font family */
-  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+  /* ── Badge background mix — theme-aware opacity for badge tints ── */
+  --badge-bg-mix: 20%;
+  --head-bg-mix: 18%;
 
-  /* Shadows */
-  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-dialog: 0 4px 20px rgba(0, 0, 0, 0.3);
+  /* ── Font families ── */
+  --font-sans:
+    "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono:
+    "JetBrains Mono Variable", "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
 
-  /* Custom font sizes (smaller than text-xs = 12px) */
-  --text-2xs: 10px;
-  --text-3xs: 9px;
+  /* ── Text sizes (rem-based so they scale with [data-text-size]) ── */
+  --text-display: 1.375rem; /* 22px @ 16px root */
+  --text-prose: 0.875rem; /* 14px */
+  --text-body: 0.8125rem; /* 13px */
+  --text-2xs: 0.625rem; /* 10px */
+  --text-3xs: 0.5625rem; /* 9px */
   --text-code: 0.9em;
   --text-submenu-arrow: 0.7em;
 
-  /* Animation */
+  /* ── Density spacing (defaults = Compact) ──                     */
+  /* These feed Tailwind's --spacing-* namespace, so density tokens */
+  /* become utilities: h-row, min-h-row, px-card-x, py-card-y,      */
+  /* gap-section, w-rail, etc.                                      */
+  --spacing-row: 22px;
+  --spacing-card-y: 6px;
+  --spacing-card-x: 10px;
+  --spacing-section-gap: 12px;
+  --spacing-rail: 44px;
+
+  /* ── Shadows ── */
+  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-dialog: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  /* ── Animation ── */
   --animate-spin: spin 1s linear infinite;
   --animate-slide-up: slideUp 0.3s ease;
   --animate-slide-down: slideDown 0.15s ease;
+}
+
+/* ─── Light mode ─── */
+[data-theme="light"] {
+  --color-bg-canvas: #fafafa;
+  --color-bg-panel: #ffffff;
+  --color-bg-well: #f0f0f2;
+  --color-bg-hover: #e8e8ec;
+  --color-bg-selected: rgba(33, 132, 174, 0.12);
+  --color-bg-selected-hover: rgba(33, 132, 174, 0.2);
+
+  --color-text-primary: #0a0a0c;
+  --color-text-muted: #6a6a70;
+
+  --color-border: #e4e4e8;
+  --color-border-light: #d0d0d6;
+
+  --color-accent-magenta: #ae2184;
+  --color-accent-cyan: #1a6d8f;
+  --color-accent-lime: #4a6a10;
+
+  --color-danger: #c0232c;
+  --color-warning: #a8770d;
+  --color-info: #6a6a70;
+
+  --color-addition: #4a6a10;
+  --color-deletion: #c0232c;
+
+  --color-conflict-ours: #4a6a10;
+  --color-conflict-theirs: #1a6d8f;
+  --color-conflict-marker: #6a6a70;
+
+  --color-branch-1: #2184ae;
+  --color-branch-2: #84ae21;
+  --color-branch-3: #ae2184;
+  --color-branch-4: #c0232c;
+  --color-branch-5: #a8770d;
+  --color-branch-6: #1a7a6d;
+  --color-branch-7: #b85c3a;
+  --color-branch-8: #6a6a70;
+
+  --color-status-modified: #7c5c08;
+  --color-status-added: #4a6a10;
+  --color-status-deleted: #c0232c;
+  --color-status-untracked: #1a6d8f;
+  --color-status-conflicted: #c0232c;
+
+  --color-badge-branch: #1a6d8f;
+  --color-badge-remote: #4a6a10;
+  --color-badge-tag: #7c5c08;
+  --color-badge-head: #ae2184;
+  --color-badge-head-text: #ffffff;
+
+  --color-selection-border: #1a6d8f;
+
+  --color-toast-success: #2e7d32;
+  --color-toast-error: #c62828;
+
+  --color-warning-bg: #fef3c7;
+  --color-warning-text: #78350f;
+
+  --color-focus-outline: #ae2184;
+
+  --color-accent: #1a6d8f;
+
+  --badge-bg-mix: 3%;
+  --head-bg-mix: 6%;
+
+  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-dialog: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Density: spacing only. Text size lives on [data-text-size]. ─── */
+[data-density="comfortable"] {
+  --spacing-row: 26px;
+  --spacing-card-y: 8px;
+  --spacing-card-x: 12px;
+  --spacing-section-gap: 16px;
+  --spacing-rail: 48px;
+}
+
+[data-density="spacious"] {
+  --spacing-row: 31px;
+  --spacing-card-y: 10px;
+  --spacing-card-x: 14px;
+  --spacing-section-gap: 20px;
+  --spacing-rail: 52px;
+}
+
+/* ─── Text size: scales html font-size so all rem-based utilities grow. ─── */
+/* Medium = base (16px root, no selector needed).                          */
+[data-text-size="small"] {
+  font-size: 14px;
+}
+
+[data-text-size="large"] {
+  font-size: 18px;
 }
 
 /* ─── Base layer: resets ─── */
@@ -115,18 +244,10 @@
   }
 
   body {
-    font-family:
-      "Inter Variable",
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      Helvetica,
-      Arial,
-      sans-serif;
-    font-size: 13px;
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
     color: var(--color-text-primary);
-    background-color: var(--color-bg-primary);
+    background-color: var(--color-bg-canvas);
   }
 
   button {
@@ -151,12 +272,27 @@
     outline-offset: -2px;
   }
 
+  /* Listbox focus ring uses a real border (not outline) so it's part of the
+     box model — scrollbars and expanded children live inside the border, not
+     on top of it. The border is always 2px transparent to keep the layout
+     stable when focus comes and goes; only the color changes on focus.
+     :focus-within (not :focus-visible) so the ring appears on mouse click too. */
+  [role="listbox"][tabindex="0"] {
+    border: 2px solid transparent;
+    border-radius: 2px;
+  }
+  [role="listbox"][tabindex="0"]:focus-within {
+    border-color: var(--color-focus-outline);
+    outline: none;
+    box-shadow: none;
+  }
+
   input,
   textarea {
     font-family: inherit;
-    font-size: 13px;
-    padding: 8px;
-    background: var(--color-bg-tertiary);
+    font-size: var(--text-body);
+    padding: var(--spacing-card-y) var(--spacing-card-x);
+    background: var(--color-bg-well);
     color: var(--color-text-primary);
     border: 1px solid var(--color-border);
     border-radius: 4px;
@@ -189,7 +325,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-secondary);
+  background: var(--color-bg-panel);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -201,35 +337,92 @@
   background: var(--color-text-muted);
 }
 
-/* ─── Keyboard-active item highlight — only visible when the listbox has focus ─── */
-[role="listbox"]:focus-within [role="option"][aria-selected="true"] {
-  background-color: var(--color-bg-hover);
+/* ─── Keyboard-active item highlight ───
+   Uses --color-bg-selected-hover (cyan tint at 25%) — the same token FileItem
+   uses for its mouse-selected state — so keyboard-active and click-selected
+   stay visually consistent and the active row reads clearly in long lists.
+   Uses :focus (not :focus-within) so the cyan only lights up while the
+   listbox itself is the focus target. When the user Tabs into an interactive
+   child like a "Revert hunk" button, listbox loses :focus, the cyan recedes,
+   and the button's own focus ring becomes the unambiguous "Enter will do
+   this" indicator. The listbox border still uses :focus-within so the user
+   keeps a visual boundary while working inside the diff. */
+[role="listbox"]:focus [role="option"][aria-selected="true"] {
+  background-color: var(--color-bg-selected-hover);
   color: var(--color-text-primary);
 }
 
-/* ─── Keyboard focus ring for virtualized list rows (commit graph) ─── */
-/* Use box-shadow instead of outline so it isn't clipped by overflow:hidden */
-[role="listbox"]:focus-within .commit-row.is-keyboard-focused {
-  box-shadow: inset 0 0 0 2px var(--color-focus-outline) !important;
+/* Same contrast bump for muted text on the active-row tint — only when the
+   listbox itself has focus (matches the rule above). */
+[role="listbox"]:focus [role="option"][aria-selected="true"] .text-text-muted {
+  color: rgb(from var(--color-text-primary) r g b / 0.75);
+}
+
+/* The current-branch row gets a cyan tint to mark it as HEAD. Set it via CSS
+   (not inline style) so the more-specific active-row rule below can override
+   it without !important when the row is also keyboard-active. */
+.branch-item.is-current {
+  background: color-mix(in srgb, var(--color-badge-branch) var(--badge-bg-mix), transparent);
+}
+
+/* Same reasoning for the `current` badge bg — set it via CSS so we can clear
+   it on active+is-current rows where stacking with bg-selected-hover would
+   push cyan text below WCAG AA. */
+.current-badge {
+  border-color: var(--color-badge-branch);
+  background: color-mix(in srgb, var(--color-badge-branch) var(--badge-bg-mix), transparent);
+}
+
+/* When the keyboard-active row is ALSO the current branch, the option's
+   active-row cyan tint and the inner is-current cyan tint would visually
+   compound, pushing the bg saturation high enough that red `-N` (text-deletion)
+   text and cyan `current` badge text fall below WCAG AA. Drop both inner tints
+   so only the option's bg-selected-hover shows. */
+[role="listbox"]:focus [role="option"][aria-selected="true"] .branch-item.is-current,
+[role="listbox"]:focus [role="option"][aria-selected="true"] .current-badge {
+  background: transparent;
+}
+
+/* Even on the plain active-row cyan tint, the deletion red (#ff5a6e) just
+   barely fails contrast (3.96:1 vs 4.5 required) because cyan and red are
+   chromatic opposites. Bump red to a brighter salmon inside active rows so
+   ahead/behind digits stay readable. Lime (text-addition) already passes
+   easily so it stays unchanged. */
+[role="listbox"]:focus [role="option"][aria-selected="true"] .text-deletion {
+  color: #ff8a96;
+}
+
+/* When a CommitFileItem is expanded inside the active row, the file row +
+   expanded diff visually read as a single "card": the file row keeps its
+   strong bg-selected-hover (cyan 25%), and the diff body gets a much lighter
+   cyan tint (4%) so the user can see the relationship without any horizontal
+   accent or layout shift. Uses :focus on the listbox (not :focus-within) so
+   the tint recedes the moment focus moves to an interactive child like
+   "Revert hunk" — that way the button's own focus ring becomes the
+   unambiguous "Enter will do this" indicator.
+   ── Tint knob: 4% reads as quiet/unified; bump to ~8% for a more obvious
+   ── link if 4% feels too subtle in real use. */
+[role="listbox"]:focus [role="option"][aria-selected="true"] .file-diff-container {
+  background: color-mix(in srgb, var(--color-badge-branch) 4%, var(--color-bg-canvas));
 }
 
 /* ─── Grouped selection borders for diff lines ─── */
 /* Left border on first cell, right border on last cell — all selected rows */
 .diff-line.selected > :first-child {
-  border-left: 2px solid var(--color-primary);
+  border-left: 2px solid var(--color-accent-cyan);
 }
 .diff-line.selected > :last-child {
-  border-right: 2px solid var(--color-primary);
+  border-right: 2px solid var(--color-accent-cyan);
 }
 
 /* Top border on all cells in the first selected row */
 .diff-line.selected.selected-first > * {
-  border-top: 2px solid var(--color-primary);
+  border-top: 2px solid var(--color-accent-cyan);
 }
 
 /* Bottom border on all cells in the last selected row */
 .diff-line.selected.selected-last > * {
-  border-bottom: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-accent-cyan);
 }
 
 /* ─── Keyframes ─── */

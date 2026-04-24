@@ -65,6 +65,8 @@ pub fn run() {
             commands::get_stash_file_diff,
             commands::write_update_log,
             commands::get_update_log_path,
+            commands::read_settings,
+            commands::write_settings,
             commands::spawn_terminal,
             commands::write_terminal,
             commands::resize_terminal,

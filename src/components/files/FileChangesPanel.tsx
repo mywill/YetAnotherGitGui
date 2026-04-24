@@ -117,7 +117,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
   if (loading && !statuses) {
     return (
-      <div className="file-changes-panel loading text-text-secondary flex h-full items-center justify-center">
+      <div className="file-changes-panel loading text-text-muted flex h-full items-center justify-center">
         Loading...
       </div>
     );
@@ -125,7 +125,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
   if (!statuses) {
     return (
-      <div className="file-changes-panel empty text-text-secondary flex h-full items-center justify-center">
+      <div className="file-changes-panel empty text-text-muted flex h-full items-center justify-center">
         No repository open
       </div>
     );
@@ -208,15 +208,15 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
       >
         <button
           type="button"
-          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+          className="section-header clickable bg-bg-well hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
           onClick={() => setShowStaged(!showStaged)}
           aria-expanded={showStaged}
         >
-          <span className="toggle-icon text-text-secondary text-2xs w-4">
-            {showStaged ? "▼" : "▶"}
+          <span className="toggle-icon text-text-muted text-2xs w-4">{showStaged ? "▼" : "▶"}</span>
+          <span className="section-title text-3xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
+            Staged
           </span>
-          <span className="section-title flex-1 text-left text-xs font-medium">Staged</span>
-          <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
+          <span className="section-count bg-bg-canvas text-text-muted mr-auto rounded-full px-1.5 py-px font-mono text-xs">
             {staged.length}
           </span>
           {staged.length > 0 && (
@@ -275,7 +275,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
       {showStaged && (
         <div
-          className="section-resizer bg-border hover:bg-primary h-1 shrink-0 cursor-row-resize transition-colors duration-100"
+          className="section-resizer bg-border hover:bg-accent-cyan h-1 shrink-0 cursor-row-resize transition-colors duration-100"
           onMouseDown={(e) => startResize("staged", e)}
         />
       )}
@@ -287,16 +287,18 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
       >
         <button
           type="button"
-          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+          className="section-header clickable bg-bg-well hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
           onClick={() => setShowUnstaged(!showUnstaged)}
           aria-expanded={showUnstaged}
         >
-          <span className="toggle-icon text-text-secondary text-2xs w-4">
+          <span className="toggle-icon text-text-muted text-2xs w-4">
             {showUnstaged ? "▼" : "▶"}
           </span>
-          <span className="section-title flex-1 text-left text-xs font-medium">Unstaged</span>
-          <span className="text-text-secondary text-xs">(Del to discard)</span>
-          <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
+          <span className="section-title text-3xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
+            Unstaged
+          </span>
+          <span className="text-text-muted text-xs">(Del to discard)</span>
+          <span className="section-count bg-bg-canvas text-text-muted mr-auto rounded-full px-1.5 py-px font-mono text-xs">
             {unstaged.length}
           </span>
           {unstaged.length > 0 && (
@@ -359,7 +361,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
 
       {showUnstaged && (
         <div
-          className="section-resizer bg-border hover:bg-primary h-1 shrink-0 cursor-row-resize transition-colors duration-100"
+          className="section-resizer bg-border hover:bg-accent-cyan h-1 shrink-0 cursor-row-resize transition-colors duration-100"
           onMouseDown={(e) => startResize("unstaged", e)}
         />
       )}
@@ -374,16 +376,18 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
       >
         <button
           type="button"
-          className="section-header clickable bg-bg-tertiary hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
+          className="section-header clickable bg-bg-well hover:bg-bg-hover flex w-full cursor-pointer items-center px-3 py-2 transition-colors duration-100 select-none"
           onClick={() => setShowUntracked(!showUntracked)}
           aria-expanded={showUntracked}
         >
-          <span className="toggle-icon text-text-secondary text-2xs w-4">
+          <span className="toggle-icon text-text-muted text-2xs w-4">
             {showUntracked ? "▼" : "▶"}
           </span>
-          <span className="section-title flex-1 text-left text-xs font-medium">Untracked</span>
-          <span className="text-text-secondary text-xs">(Del to delete)</span>
-          <span className="section-count bg-bg-primary text-text-secondary mr-auto rounded-full px-1.5 py-px text-xs">
+          <span className="section-title text-3xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
+            Untracked
+          </span>
+          <span className="text-text-muted text-xs">(Del to delete)</span>
+          <span className="section-count bg-bg-canvas text-text-muted mr-auto rounded-full px-1.5 py-px font-mono text-xs">
             {untracked.length}
           </span>
           {untracked.length > 0 && (

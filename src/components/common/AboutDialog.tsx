@@ -95,7 +95,7 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
       onClick={handleBackdropClick}
     >
       <div
-        className="about-dialog border-border bg-bg-secondary shadow-dialog max-w-md min-w-80 rounded-lg border"
+        className="about-dialog border-border bg-bg-panel shadow-dialog max-w-md min-w-80 rounded-lg border"
         role="dialog"
         aria-modal="true"
         aria-labelledby="about-dialog-title"
@@ -113,33 +113,33 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                   <td className="text-text-primary pr-3 text-xs font-semibold whitespace-nowrap">
                     Version
                   </td>
-                  <td className="text-text-secondary py-1 text-xs">{appInfo.version}</td>
+                  <td className="text-text-muted py-1 text-xs">{appInfo.version}</td>
                 </tr>
                 <tr>
                   <td className="text-text-primary pr-3 text-xs font-semibold whitespace-nowrap">
                     Tauri
                   </td>
-                  <td className="text-text-secondary py-1 text-xs">{appInfo.tauri_version}</td>
+                  <td className="text-text-muted py-1 text-xs">{appInfo.tauri_version}</td>
                 </tr>
                 <tr>
                   <td className="text-text-primary pr-3 text-xs font-semibold whitespace-nowrap">
                     Platform
                   </td>
-                  <td className="text-text-secondary py-1 text-xs">{appInfo.platform}</td>
+                  <td className="text-text-muted py-1 text-xs">{appInfo.platform}</td>
                 </tr>
                 <tr>
                   <td className="text-text-primary pr-3 text-xs font-semibold whitespace-nowrap">
                     Architecture
                   </td>
-                  <td className="text-text-secondary py-1 text-xs">{appInfo.arch}</td>
+                  <td className="text-text-muted py-1 text-xs">{appInfo.arch}</td>
                 </tr>
                 <tr>
                   <td className="text-text-primary pr-3 text-xs font-semibold whitespace-nowrap">
                     Update
                   </td>
-                  <td className="about-update-cell text-text-secondary flex flex-col gap-1 py-1 text-xs">
+                  <td className="about-update-cell text-text-muted flex flex-col gap-1 py-1 text-xs">
                     {updateStatus === "checking" && (
-                      <span className="about-update-checking text-text-secondary italic">
+                      <span className="about-update-checking text-text-muted italic">
                         Checking...
                       </span>
                     )}
@@ -169,7 +169,7 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                       </span>
                     )}
                     {updateStatus === "installing" && (
-                      <span className="about-update-checking text-text-secondary italic">
+                      <span className="about-update-checking text-text-muted italic">
                         Installing...
                       </span>
                     )}

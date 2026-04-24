@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ViewType = "history" | "status";
+export type ViewType = "history" | "status" | "branches" | "stashes";
 
 // Selection key format: "staged:path" or "unstaged:path"
 type SelectionKey = string;

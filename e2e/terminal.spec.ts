@@ -65,7 +65,7 @@ test.describe("Terminal Panel", () => {
       hasText: "Terminal",
     });
     await terminalButton.click();
-    await expect(page.locator(".terminal-resizer")).toBeVisible();
+    await expect(page.locator('[aria-label="Resize terminal panel"]')).toBeVisible();
   });
 
   test.describe("Accessibility - axe-core", () => {
