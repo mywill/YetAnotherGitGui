@@ -2,105 +2,52 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ MANDATORY: Coverage Stats in Every Response
+## ⚠️ MANDATORY: Before declaring a task complete
 
-**BEFORE saying a task is complete, you MUST:**
-0. Run TypeScript type check (`npx tsc --noEmit`)
-1. Run all tests (frontend, E2E, Rust)
-2. Run coverage commands
-3. **PRINT THE FULL COVERAGE TABLES IN YOUR RESPONSE TO THE USER**
+Run these in order, then **paste the full per-file coverage tables in your response** — running them silently or faking their running is the failure mode this rule exists to prevent:
 
-If you do not print the coverage tables, the task is NOT complete.
+1. **TypeScript type check** — `npx tsc --noEmit` (catches errors Vite/esbuild skip; CI uses full `tsc`).
+2. **Linters** — `pnpm lint && pnpm format:check` and `pnpm lint:rust`.
+3. **Frontend tests + coverage** — `pnpm test:coverage --run` then `pnpm test:e2e`. If Playwright browsers are missing, run `npx playwright install` yourself — don't ask the user.
+4. **Rust tests + coverage** — `source ~/.cargo/env && cd src-tauri && cargo test` then `cargo llvm-cov --summary-only`. If `llvm-cov` is missing: `cargo install cargo-llvm-cov`.
+5. **Visual validation** — if you touched CSS/layout/visual components, take a screenshot (procedure in rule 3 below).
+
+Paste the **complete** per-file tables, not summaries — every file, no truncation:
+
+```
+Frontend Coverage (per file):
+File                      | % Stmts | % Branch | % Funcs | % Lines |
+--------------------------|---------|----------|---------|---------|
+All files                 |   XX.XX |    XX.XX |   XX.XX |   XX.XX |
+src/components/...        |   XX.XX |    XX.XX |   XX.XX |   XX.XX |
+[... every single file ...]
+
+Tests: X passed, X failed
+E2E: X passed
+```
+
+```
+Rust Coverage (per file):
+Filename                  | Regions | Functions | Lines   | Branches |
+--------------------------|---------|-----------|---------|----------|
+commands/branches.rs      |  XX.XX% |    XX.XX% |  XX.XX% |   XX.XX% |
+[... every single file ...]
+TOTAL                     |  XX.XX% |    XX.XX% |  XX.XX% |   XX.XX% |
+
+Tests: X passed, X failed
+```
+
+A task is **not complete** until those tables are in your response to the user.
 
 ---
 
-## Important Rules for Claude
+## Other rules
 
-1. **Always run, fix and add new appropriate tests before finishing a task:**
-   ```bash
-   pnpm test && pnpm test:e2e
-   ```
-   ```bash
-   cd src-tauri && cargo test
-   ```
+1. **Request missing tools/dependencies explicitly:** If a command fails due to missing system packages or other dependencies, clearly state what is needed so the user can install them.
 
-2. **Always run tests and print FULL coverage after ANY code change:**
+2. **Do not run git commands unless explicitly asked:** The user handles all git operations (staging, committing, pushing). Focus on code changes.
 
-   **CRITICAL: After every code change, you MUST run all tests and print the complete coverage tables FOR EACH FILE in your response to the user.**
-
-   **Frontend (run these commands):**
-   ```bash
-   pnpm test:coverage --run    # Unit tests with coverage
-   pnpm test:e2e               # E2E tests
-   ```
-
-   **You MUST print the COMPLETE frontend coverage table showing EVERY file:**
-   ```
-   Frontend Coverage (per file):
-   File                      | % Stmts | % Branch | % Funcs | % Lines |
-   --------------------------|---------|----------|---------|---------|
-   All files                 |   XX.XX |    XX.XX |   XX.XX |   XX.XX |
-   src/components/...        |   XX.XX |    XX.XX |   XX.XX |   XX.XX |
-   [... every single file ...]
-
-   Tests: X passed, X failed
-   E2E: X passed
-   ```
-
-   **Backend (run these commands):**
-   ```bash
-   source ~/.cargo/env && cd src-tauri && cargo test
-   source ~/.cargo/env && cd src-tauri && cargo llvm-cov --summary-only
-   ```
-
-   **You MUST print the COMPLETE Rust coverage table showing EVERY file:**
-   ```
-   Rust Coverage (per file):
-   Filename                  | Regions | Functions | Lines   | Branches |
-   --------------------------|---------|-----------|---------|----------|
-   commands/branches.rs      |  XX.XX% |    XX.XX% |  XX.XX% |   XX.XX% |
-   [... every single file ...]
-   TOTAL                     |  XX.XX% |    XX.XX% |  XX.XX% |   XX.XX% |
-
-   Tests: X passed, X failed
-   ```
-
-   **If tools are missing, install them:**
-   ```bash
-   source ~/.cargo/env && cargo install cargo-llvm-cov   # if llvm-cov not found
-   ```
-
-   **IMPORTANT:**
-   - You must actually run these commands - do not just state the results without running them.
-   - Always print the complete coverage percentages FOR EACH FILE, not abbreviated summaries.
-   - This applies to EVERY code change, not just at the end of a task.
-   - Do NOT truncate or abbreviate the coverage tables - show every file.
-   - **The coverage tables MUST be shown IN YOUR RESPONSE TO THE USER - not just run silently.**
-   - A task is NOT complete until you have printed the coverage stats for the user to see.
-
-3. **Explicitly request missing tools/dependencies:** If a command fails due to missing system packages, browsers, or other dependencies, clearly state what is needed so the user can install them.
-
-4. **Always ensure E2E test environment is set up:** Before running E2E tests, ensure Playwright browsers are installed. If they are missing, run:
-   ```bash
-   npx playwright install
-   ```
-   Do NOT ask the user to do this - just run it yourself.
-
-5. **Always run linters before finishing a task:**
-   ```bash
-   pnpm lint && pnpm format:check
-   pnpm lint:rust
-   ```
-
-6. **Always run TypeScript type check before finishing a task:**
-   ```bash
-   npx tsc --noEmit
-   ```
-   This catches type errors that Vite/esbuild skip during development. The CI build uses full `tsc` compilation, so type errors will fail the build if not caught locally.
-
-7. **Do not run git commands unless explicitly asked:** The user will handle all git operations (staging, committing, pushing). Focus on code changes and let the user manage version control.
-
-8. **Visually validate UI changes:** Whenever you modify CSS, layout, or any visual component, you MUST take a screenshot to verify it looks correct before considering the task done. Use Playwright to render the app with Tauri mocks and capture screenshots.
+3. **Visually validate UI changes:** Whenever you modify CSS, layout, or any visual component, you MUST take a screenshot to verify it looks correct before considering the task done. Use Playwright to render the app with Tauri mocks and capture screenshots.
 
    **How to take a visual validation screenshot:**
 
@@ -190,10 +137,15 @@ npx tsc --noEmit
   - `dialogStore.ts` - Confirmation dialog state
   - `notificationStore.ts` - Stacking notification toasts (errors auto-dismiss 10s, success 3s)
   - `commandPaletteStore.ts` - Command palette open/close state and search query
+  - `settingsStore.ts` - Application settings (density, etc.)
+  - `terminalStore.ts` - Terminal session state
+  - `branchFilterStore.ts` - Branch/tag filter UI state
 - **Tauri IPC**: `src/services/` contains Tauri IPC wrappers:
   - `git.ts` - All git operations (invokes Rust commands)
   - `clipboard.ts` - Clipboard read/write via Tauri plugin
   - `system.ts` - System commands (CLI install, app info, updates)
+  - `settings.ts` - Settings persistence
+  - `terminal.ts` - Terminal process / PTY communication
 - **Components**: `src/components/` organized by feature:
   - `graph/` - Commit graph visualization
   - `files/` - File list and staging panels
@@ -204,11 +156,14 @@ npx tsc --noEmit
   - `common/` - Shared UI components (dialogs, context menus, command palette)
   - `history/` - Commit details panel
   - `views/` - Main view containers (HistoryView, StatusView)
+  - `shell/` - UI redesign workspace shell (WorkspaceShell, WorkspaceCenter, IconRail, InspectorPanel)
+  - `terminal/` - Terminal panel (xterm.js): TerminalPanel, TerminalInstance
 
 ### Backend (Rust + Tauri)
 - **Entry**: `src-tauri/src/lib.rs` registers all Tauri commands
-- **Commands**: `src-tauri/src/commands/` - Tauri command handlers (repository, commits, branches, staging, diff, commit, stash, system)
+- **Commands**: `src-tauri/src/commands/` - Tauri command handlers (repository, commits, branches, staging, diff, commit, stash, system, settings, terminal)
 - **Git Operations**: `src-tauri/src/git/` - Core git logic using `git2` crate (repository, commit, graph, diff, staging, stash)
+- **Terminal**: `src-tauri/src/terminal/` - Shell/PTY integration backing the terminal panel
 - **State**: `src-tauri/src/state/mod.rs` - App state with repository handle
 - **Errors**: `src-tauri/src/error.rs` - Error types using `thiserror`
 - **Crash Handler**: `src-tauri/src/crash_handler.rs` - Panic hook for crash log files
@@ -232,8 +187,10 @@ Frontend components → Zustand actions → `git.ts` invoke() → Tauri commands
 
 - **Tailwind CSS v4** with CSS-based config (no `tailwind.config.js`)
 - Custom theme tokens defined in `@theme` block in `src/styles/index.css`
-- Key token categories: backgrounds, text, borders, status colors, branch colors, toast colors
+- Key token categories: backgrounds, text, borders, status colors, branch colors, toast colors, density spacing
 - Toast colors (`--color-toast-success`, `--color-toast-error`) are WCAG AA compliant with white text
+- **Density system**: `--spacing-row`, `--spacing-card-y/x`, `--spacing-section-gap`, `--spacing-rail` feed Tailwind's `--spacing-*` namespace; `[data-density="comfortable"|"spacious"]` selectors override the compact defaults
+- **xterm styling**: `src/styles/index.css` imports `@xterm/xterm/css/xterm.css` for the terminal panel
 - `prettier-plugin-tailwindcss` auto-sorts classes
 - When adding new colors, prefer adding to the `@theme` block rather than inline values
 
