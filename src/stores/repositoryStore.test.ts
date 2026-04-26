@@ -530,6 +530,112 @@ describe("repositoryStore", () => {
     });
   });
 
+  describe("deleteFiles", () => {
+    it("does nothing for an empty path list", async () => {
+      const { deleteFiles } = useRepositoryStore.getState();
+      await deleteFiles([]);
+
+      expect(mockShowConfirm).not.toHaveBeenCalled();
+      expect(git.deleteFiles).not.toHaveBeenCalled();
+      expect(git.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it("delegates to deleteFile when only one path", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+      vi.mocked(git.deleteFile).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { deleteFiles } = useRepositoryStore.getState();
+      await deleteFiles(["only.ts"]);
+
+      expect(mockShowConfirm).toHaveBeenCalledWith({
+        title: "Delete file",
+        message: "Delete only.ts? This cannot be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      });
+      expect(git.deleteFile).toHaveBeenCalledWith("only.ts");
+      expect(git.deleteFiles).not.toHaveBeenCalled();
+    });
+
+    it("shows a batch confirmation listing every path", async () => {
+      mockShowConfirm.mockResolvedValue(true);
+      vi.mocked(git.deleteFiles).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { deleteFiles } = useRepositoryStore.getState();
+      await deleteFiles(["a.ts", "nested/b.ts", "c.ts"]);
+
+      expect(mockShowConfirm).toHaveBeenCalledWith({
+        title: "Delete files",
+        message: "Delete 3 files? This cannot be undone.\n\n  • a.ts\n  • nested/b.ts\n  • c.ts",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      });
+      expect(git.deleteFiles).toHaveBeenCalledWith(["a.ts", "nested/b.ts", "c.ts"]);
+    });
+
+    it("does not delete if user cancels batch confirmation", async () => {
+      mockShowConfirm.mockResolvedValue(false);
+
+      const { deleteFiles } = useRepositoryStore.getState();
+      await deleteFiles(["a.ts", "b.ts"]);
+
+      expect(git.deleteFiles).not.toHaveBeenCalled();
+    });
+
+    it("clears diff if viewing one of the deleted files", async () => {
+      useRepositoryStore.setState({
+        currentDiffPath: "b.ts",
+        currentDiff: { path: "b.ts", hunks: [], is_binary: false, total_lines: 0 },
+      });
+
+      mockShowConfirm.mockResolvedValue(true);
+      vi.mocked(git.deleteFiles).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { deleteFiles } = useRepositoryStore.getState();
+      await deleteFiles(["a.ts", "b.ts"]);
+
+      expect(useRepositoryStore.getState().currentDiff).toBeNull();
+      expect(useRepositoryStore.getState().currentDiffPath).toBeNull();
+    });
+
+    it("does not clear diff if the visible diff is unrelated", async () => {
+      const visibleDiff = { path: "other.ts", hunks: [], is_binary: false, total_lines: 0 };
+      useRepositoryStore.setState({
+        currentDiffPath: "other.ts",
+        currentDiff: visibleDiff,
+      });
+
+      mockShowConfirm.mockResolvedValue(true);
+      vi.mocked(git.deleteFiles).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { deleteFiles } = useRepositoryStore.getState();
+      await deleteFiles(["a.ts", "b.ts"]);
+
+      expect(useRepositoryStore.getState().currentDiffPath).toBe("other.ts");
+      expect(useRepositoryStore.getState().currentDiff).toBe(visibleDiff);
+    });
+  });
+
   describe("loadFileDiff", () => {
     it("sets diff loading state", async () => {
       vi.mocked(git.getFileDiff).mockImplementation(

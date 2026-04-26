@@ -1080,6 +1080,112 @@ test.describe("File Context Menus", () => {
   });
 });
 
+test.describe("Batch Delete", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await switchToStatusView(page);
+  });
+
+  test("Delete Selected button appears when multiple untracked files are selected", async ({
+    page,
+  }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "new-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+
+    const untrackedSection = page
+      .locator(".section-header")
+      .filter({ has: page.getByText("Untracked", { exact: true }) });
+    await expect(
+      untrackedSection.locator("button", { hasText: "Delete Selected" })
+    ).toBeVisible();
+  });
+
+  test("Delete Selected button appears when multiple unstaged files are selected", async ({
+    page,
+  }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "unstaged-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+
+    const unstagedSection = page
+      .locator(".section-header")
+      .filter({ has: page.getByText("Unstaged", { exact: true }) });
+    await expect(
+      unstagedSection.locator("button", { hasText: "Delete Selected" })
+    ).toBeVisible();
+  });
+
+  test("right-click on a multi-selected untracked file shows batch delete entry", async ({
+    page,
+  }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "new-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+    await file1.click({ button: "right" });
+
+    const contextMenu = page.locator(".context-menu");
+    await expect(contextMenu).toBeVisible();
+    await expect(contextMenu.getByText("Delete 2 files")).toBeVisible();
+  });
+
+  test("Delete Selected confirmation lists every selected path", async ({ page }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "new-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+
+    const untrackedSection = page
+      .locator(".section-header")
+      .filter({ has: page.getByText("Untracked", { exact: true }) });
+    await untrackedSection.locator("button", { hasText: "Delete Selected" }).click();
+
+    const dialogBody = page.locator(".confirm-dialog-body");
+    await expect(dialogBody).toBeVisible();
+    await expect(dialogBody).toContainText("Delete 2 files?");
+    await expect(dialogBody).toContainText("new-file1.ts");
+    await expect(dialogBody).toContainText("new-file2.ts");
+
+    // Cancel cleans up
+    await page.locator(".dialog-btn.cancel").click();
+  });
+
+  test("Delete key returns focus to the list after the dialog closes", async ({ page }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+    await file1.click();
+
+    // Press Delete to invoke the keyboard delete path on the listbox
+    await page.keyboard.press("Delete");
+
+    const dialog = page.locator(".confirm-dialog");
+    await expect(dialog).toBeVisible();
+
+    // Cancel — the listbox in the untracked panel should regain focus
+    await page.locator(".dialog-btn.cancel").click();
+    await expect(dialog).not.toBeVisible();
+
+    const listFocused = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      return el?.getAttribute("role") === "listbox" && el.getAttribute("aria-label") === "Untracked files";
+    });
+    expect(listFocused).toBe(true);
+  });
+});
+
 test.describe("Commit Details", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(tauriMocks);

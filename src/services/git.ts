@@ -121,6 +121,10 @@ export async function deleteFile(path: string): Promise<void> {
   return invoke("delete_file", { path });
 }
 
+export async function deleteFiles(paths: string[]): Promise<void> {
+  return invoke("delete_files", { paths });
+}
+
 export async function resolveConflict(path: string, strategy: string): Promise<void> {
   return invoke("resolve_conflict", { path, strategy });
 }

@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -17,6 +17,7 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
   const stageFiles = useRepositoryStore((s) => s.stageFiles);
   const loadFileDiff = useRepositoryStore((s) => s.loadFileDiff);
   const deleteFile = useRepositoryStore((s) => s.deleteFile);
+  const deleteFiles = useRepositoryStore((s) => s.deleteFiles);
 
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
   const toggleFileSelection = useSelectionStore((s) => s.toggleFileSelection);
@@ -59,6 +60,13 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedUntrackedPaths.length > 0) {
+      await deleteFiles(selectedUntrackedPaths);
+      clearFileSelection();
+    }
+  };
+
   const handleClearSelection = () => {
     clearFileSelection();
   };
@@ -84,6 +92,14 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
               >
                 <IconPlus size={12} stroke={2} aria-hidden />
                 <span>Stage Selected</span>
+              </YaggButton>
+              <YaggButton
+                className="section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex items-center gap-1 bg-transparent px-2 py-px text-xs"
+                onClick={handleDeleteSelected}
+                title="Delete selected files"
+              >
+                <IconTrash size={12} stroke={2} aria-hidden />
+                <span>Delete Selected</span>
               </YaggButton>
               <YaggButton
                 variant="outline"
@@ -126,23 +142,41 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
             }}
             onActivate={(i) => stageFile(untracked[i].path)}
             onSecondaryActivate={(i) => stageFile(untracked[i].path)}
-            onDelete={(i) => deleteFile(untracked[i].path)}
+            onDelete={(i) => {
+              const focused = untracked[i].path;
+              const inSelection =
+                selectedUntrackedPaths.length > 1 && selectedUntrackedPaths.includes(focused);
+              return inSelection ? deleteFiles(selectedUntrackedPaths) : deleteFile(focused);
+            }}
           >
-            {untracked.map((file, i) => (
-              <KeyboardList.Item key={file.path} index={i}>
-                <FileItem
-                  file={file}
-                  isStaged={false}
-                  isUntracked
-                  isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
-                  onToggleStage={() => stageFile(file.path)}
-                  onSelect={() => loadFileDiff(file.path, false, true)}
-                  onSelectWithModifiers={handleSelectWithModifiers}
-                  onDoubleClick={() => stageFile(file.path)}
-                  extraMenuItems={[{ label: "Delete file", onClick: () => deleteFile(file.path) }]}
-                />
-              </KeyboardList.Item>
-            ))}
+            {untracked.map((file, i) => {
+              const inMultiSelection =
+                selectedUntrackedPaths.length > 1 && selectedUntrackedPaths.includes(file.path);
+              return (
+                <KeyboardList.Item key={file.path} index={i}>
+                  <FileItem
+                    file={file}
+                    isStaged={false}
+                    isUntracked
+                    isSelected={selectedFilePaths.has(makeSelectionKey(file.path, false))}
+                    onToggleStage={() => stageFile(file.path)}
+                    onSelect={() => loadFileDiff(file.path, false, true)}
+                    onSelectWithModifiers={handleSelectWithModifiers}
+                    onDoubleClick={() => stageFile(file.path)}
+                    extraMenuItems={
+                      inMultiSelection
+                        ? [
+                            {
+                              label: `Delete ${selectedUntrackedPaths.length} files`,
+                              onClick: () => deleteFiles(selectedUntrackedPaths),
+                            },
+                          ]
+                        : [{ label: "Delete file", onClick: () => deleteFile(file.path) }]
+                    }
+                  />
+                </KeyboardList.Item>
+              );
+            })}
           </KeyboardList>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { IconPlus, IconMinus, IconX } from "@tabler/icons-react";
+import { IconPlus, IconMinus, IconTrash, IconX } from "@tabler/icons-react";
 import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -20,6 +20,7 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
   const loadFileDiff = useRepositoryStore((s) => s.loadFileDiff);
   const revertFile = useRepositoryStore((s) => s.revertFile);
   const deleteFile = useRepositoryStore((s) => s.deleteFile);
+  const deleteFiles = useRepositoryStore((s) => s.deleteFiles);
   const resolveConflict = useRepositoryStore((s) => s.resolveConflict);
 
   const selectedFilePaths = useSelectionStore((s) => s.selectedFilePaths);
@@ -96,6 +97,13 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
   const handleUnstageSelected = async () => {
     if (selectedStagedPaths.length > 0) {
       await unstageFiles(selectedStagedPaths);
+      clearFileSelection();
+    }
+  };
+
+  const handleDeleteSelectedUnstaged = async () => {
+    if (selectedUnstagedPaths.length > 0) {
+      await deleteFiles(selectedUnstagedPaths);
       clearFileSelection();
     }
   };
@@ -216,6 +224,14 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
                   <span>Stage Selected</span>
                 </YaggButton>
                 <YaggButton
+                  className="section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex items-center gap-1 bg-transparent px-2 py-px text-xs"
+                  onClick={handleDeleteSelectedUnstaged}
+                  title="Delete selected files"
+                >
+                  <IconTrash size={12} stroke={2} aria-hidden />
+                  <span>Delete Selected</span>
+                </YaggButton>
+                <YaggButton
                   variant="outline"
                   className="section-action-btn secondary inline-flex items-center gap-1 px-2 py-px text-xs"
                   onClick={handleClearUnstagedSelection}
@@ -293,10 +309,25 @@ export function StagedUnstagedPanel({ statuses, loading }: StagedUnstagedPanelPr
                                 onClick: () => stageFile(file.path),
                               },
                             ]
-                          : [
-                              { label: "Discard changes", onClick: () => revertFile(file.path) },
-                              { label: "Delete file", onClick: () => deleteFile(file.path) },
-                            ]
+                          : selectedUnstagedPaths.length > 1 &&
+                              selectedUnstagedPaths.includes(file.path)
+                            ? [
+                                {
+                                  label: "Discard changes",
+                                  onClick: () => revertFile(file.path),
+                                },
+                                {
+                                  label: `Delete ${selectedUnstagedPaths.length} files`,
+                                  onClick: () => deleteFiles(selectedUnstagedPaths),
+                                },
+                              ]
+                            : [
+                                {
+                                  label: "Discard changes",
+                                  onClick: () => revertFile(file.path),
+                                },
+                                { label: "Delete file", onClick: () => deleteFile(file.path) },
+                              ]
                       }
                     />
                   </KeyboardList.Item>

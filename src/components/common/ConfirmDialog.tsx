@@ -65,9 +65,9 @@ export function ConfirmDialog({
             {title}
           </h2>
         </div>
-        <div className="confirm-dialog-body p-3">
+        <div className="confirm-dialog-body max-h-96 overflow-y-auto p-3">
           {typeof message === "string" ? (
-            <p className="text-text-muted text-xs leading-normal">{message}</p>
+            <p className="text-text-muted text-xs leading-normal whitespace-pre-line">{message}</p>
           ) : (
             message
           )}

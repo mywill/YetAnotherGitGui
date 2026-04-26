@@ -30,6 +30,7 @@ vi.mock("./FileItem", () => ({
     onToggleStage,
     onSelect,
     onDoubleClick,
+    extraMenuItems,
   }: {
     file: { path: string };
     isUntracked?: boolean;
@@ -37,6 +38,7 @@ vi.mock("./FileItem", () => ({
     onToggleStage: () => void;
     onSelect: () => void;
     onDoubleClick: () => void;
+    extraMenuItems?: { label: string; onClick: () => void }[];
   }) => (
     <div
       data-testid={`file-item-${file.path}`}
@@ -47,6 +49,15 @@ vi.mock("./FileItem", () => ({
     >
       <button onClick={onToggleStage}>Toggle</button>
       {file.path}
+      {extraMenuItems?.map((item) => (
+        <button
+          key={item.label}
+          data-testid={`menu-${file.path}-${item.label}`}
+          onClick={item.onClick}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   ),
 }));
@@ -56,6 +67,7 @@ describe("UntrackedPanel", () => {
   const mockStageFiles = vi.fn();
   const mockLoadFileDiff = vi.fn();
   const mockDeleteFile = vi.fn();
+  const mockDeleteFiles = vi.fn();
 
   const mockToggleFileSelection = vi.fn();
   const mockSelectSingleFile = vi.fn();
@@ -75,6 +87,7 @@ describe("UntrackedPanel", () => {
       stageFiles: mockStageFiles,
       loadFileDiff: mockLoadFileDiff,
       deleteFile: mockDeleteFile,
+      deleteFiles: mockDeleteFiles,
     });
   }
 
@@ -308,6 +321,106 @@ describe("UntrackedPanel", () => {
       fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
 
       expect(mockClearFileSelection).toHaveBeenCalled();
+    });
+  });
+
+  describe("batch delete", () => {
+    const statusesMultiple: FileStatuses = {
+      staged: [],
+      unstaged: [],
+      untracked: [
+        { path: "a.ts", status: "untracked", is_staged: false },
+        { path: "b.ts", status: "untracked", is_staged: false },
+        { path: "c.ts", status: "untracked", is_staged: false },
+      ],
+    };
+
+    it("does not show Delete Selected when nothing is selected", () => {
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      expect(screen.queryByText("Delete Selected")).not.toBeInTheDocument();
+    });
+
+    it("shows Delete Selected when one or more files are selected", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
+      setupSelectionStore();
+
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      expect(screen.getByText("Delete Selected")).toBeInTheDocument();
+    });
+
+    it("calls deleteFiles with all selected paths and clears selection", async () => {
+      mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("c.ts", false));
+      setupSelectionStore();
+      mockDeleteFiles.mockResolvedValue(undefined);
+
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      fireEvent.click(screen.getByText("Delete Selected"));
+
+      await waitFor(() => {
+        expect(mockDeleteFiles).toHaveBeenCalledWith(["a.ts", "c.ts"]);
+        expect(mockClearFileSelection).toHaveBeenCalled();
+      });
+    });
+
+    it("Delete key on a multi-selected file deletes the entire selection", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("b.ts", false));
+      setupSelectionStore();
+
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      const listbox = screen.getByRole("listbox", { name: "Untracked files" });
+      // Default activeIndex is 0 (a.ts)
+      fireEvent.keyDown(listbox, { key: "Delete" });
+
+      expect(mockDeleteFiles).toHaveBeenCalledWith(["a.ts", "b.ts"]);
+      expect(mockDeleteFile).not.toHaveBeenCalled();
+    });
+
+    it("Delete key on a non-selected file deletes only that file", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("b.ts", false));
+      setupSelectionStore();
+
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      const listbox = screen.getByRole("listbox", { name: "Untracked files" });
+      // Move active to c.ts which is NOT in the multi-selection
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+      fireEvent.keyDown(listbox, { key: "ArrowDown" });
+      fireEvent.keyDown(listbox, { key: "Delete" });
+
+      expect(mockDeleteFile).toHaveBeenCalledWith("c.ts");
+      expect(mockDeleteFiles).not.toHaveBeenCalled();
+    });
+
+    it("right-click on a multi-selected file uses the batch delete menu entry", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("b.ts", false));
+      setupSelectionStore();
+
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      fireEvent.click(screen.getByTestId("menu-a.ts-Delete 2 files"));
+
+      expect(mockDeleteFiles).toHaveBeenCalledWith(["a.ts", "b.ts"]);
+    });
+
+    it("right-click on an unselected file uses the single-file delete menu entry", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("b.ts", false));
+      setupSelectionStore();
+
+      render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
+
+      fireEvent.click(screen.getByTestId("menu-c.ts-Delete file"));
+
+      expect(mockDeleteFile).toHaveBeenCalledWith("c.ts");
+      expect(mockDeleteFiles).not.toHaveBeenCalled();
     });
   });
 });

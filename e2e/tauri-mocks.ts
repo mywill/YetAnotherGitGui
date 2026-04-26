@@ -288,6 +288,7 @@ export const tauriMocks = `
         case 'unstage_files':
         case 'revert_file':
         case 'delete_file':
+        case 'delete_files':
         case 'resolve_conflict':
         case 'stage_hunk':
         case 'unstage_hunk':

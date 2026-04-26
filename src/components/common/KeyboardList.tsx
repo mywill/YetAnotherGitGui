@@ -16,7 +16,7 @@ interface KeyboardListProps {
   "aria-label": string;
   onActivate?: (index: number) => void;
   onSecondaryActivate?: (index: number) => void;
-  onDelete?: (index: number) => void;
+  onDelete?: (index: number) => void | Promise<void>;
   onActiveChange?: (index: number, isShift: boolean) => void;
   children: ReactNode;
   className?: string;
@@ -196,7 +196,11 @@ export function KeyboardList({
         case "Delete":
         case "Backspace": {
           e.preventDefault();
-          onDelete?.(activeIndex);
+          const result = onDelete?.(activeIndex);
+          // Re-focus the listbox after the (possibly async) delete settles.
+          // Confirmation dialogs steal focus and never return it; without
+          // this, repeat Delete presses don't reach the list.
+          Promise.resolve(result).finally(() => listRef.current?.focus());
           break;
         }
       }

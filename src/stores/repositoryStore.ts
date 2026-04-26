@@ -86,6 +86,7 @@ interface RepositoryState {
   checkoutCommit: (hash: string) => Promise<void>;
   revertFile: (path: string) => Promise<void>;
   deleteFile: (path: string) => Promise<void>;
+  deleteFiles: (paths: string[]) => Promise<void>;
 
   // Lazy hunk loading
   loadDiffHunk: (
@@ -470,6 +471,34 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       // Clear diff if viewing the deleted file
       const { currentDiffPath } = get();
       if (currentDiffPath === path) {
+        set({ currentDiff: null, currentDiffPath: null });
+      }
+    } catch (err) {
+      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+    }
+  },
+
+  deleteFiles: async (paths: string[]) => {
+    if (paths.length === 0) return;
+    if (paths.length === 1) {
+      return get().deleteFile(paths[0]);
+    }
+
+    const fileList = paths.map((p) => `  • ${p}`).join("\n");
+    const confirmed = await useDialogStore.getState().showConfirm({
+      title: "Delete files",
+      message: `Delete ${paths.length} files? This cannot be undone.\n\n${fileList}`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+    });
+    if (!confirmed) return;
+
+    try {
+      await git.deleteFiles(paths);
+      await get().loadFileStatuses();
+
+      const { currentDiffPath } = get();
+      if (currentDiffPath && paths.includes(currentDiffPath)) {
         set({ currentDiff: null, currentDiffPath: null });
       }
     } catch (err) {

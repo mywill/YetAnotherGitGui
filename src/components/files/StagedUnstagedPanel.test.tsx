@@ -70,6 +70,7 @@ describe("StagedUnstagedPanel", () => {
   const mockLoadFileDiff = vi.fn();
   const mockRevertFile = vi.fn();
   const mockDeleteFile = vi.fn();
+  const mockDeleteFiles = vi.fn();
   const mockResolveConflict = vi.fn();
 
   const mockToggleFileSelection = vi.fn();
@@ -93,6 +94,7 @@ describe("StagedUnstagedPanel", () => {
       loadFileDiff: mockLoadFileDiff,
       revertFile: mockRevertFile,
       deleteFile: mockDeleteFile,
+      deleteFiles: mockDeleteFiles,
       resolveConflict: mockResolveConflict,
     });
   }
@@ -533,6 +535,76 @@ describe("StagedUnstagedPanel", () => {
       render(<StagedUnstagedPanel statuses={unstaged} loading={false} />);
       fireEvent.click(screen.getByTestId("menu-Delete file"));
       expect(mockDeleteFile).toHaveBeenCalledWith("u.ts");
+    });
+  });
+
+  describe("batch delete (unstaged)", () => {
+    const twoUnstaged: FileStatuses = {
+      staged: [],
+      unstaged: [
+        { path: "u1.ts", status: "modified", is_staged: false },
+        { path: "u2.ts", status: "modified", is_staged: false },
+      ],
+      untracked: [],
+    };
+
+    it("does not show Delete Selected when nothing is selected", () => {
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+
+      expect(screen.queryByText("Delete Selected")).not.toBeInTheDocument();
+    });
+
+    it("shows Delete Selected in the unstaged header when files are selected", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("u1.ts", false));
+      setupSelectionStore();
+
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+
+      expect(screen.getByText("Delete Selected")).toBeInTheDocument();
+    });
+
+    it("Delete Selected calls deleteFiles with all selected paths and clears selection", async () => {
+      mockSelectedFilePaths.add(makeSelectionKey("u1.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("u2.ts", false));
+      setupSelectionStore();
+      mockDeleteFiles.mockResolvedValue(undefined);
+
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+
+      fireEvent.click(screen.getByText("Delete Selected"));
+
+      await waitFor(() => {
+        expect(mockDeleteFiles).toHaveBeenCalledWith(["u1.ts", "u2.ts"]);
+        expect(mockClearFileSelection).toHaveBeenCalled();
+      });
+    });
+
+    it("right-click on a multi-selected unstaged file shows batch delete entry", () => {
+      mockSelectedFilePaths.add(makeSelectionKey("u1.ts", false));
+      mockSelectedFilePaths.add(makeSelectionKey("u2.ts", false));
+      setupSelectionStore();
+
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+
+      const batchEntries = screen.getAllByTestId("menu-Delete 2 files");
+      expect(batchEntries.length).toBeGreaterThan(0);
+      fireEvent.click(batchEntries[0]);
+      expect(mockDeleteFiles).toHaveBeenCalledWith(["u1.ts", "u2.ts"]);
+    });
+
+    it("right-click on an unselected unstaged file uses single-file delete", () => {
+      // Select only u1; right-click u2 to confirm it falls through to single-file
+      mockSelectedFilePaths.add(makeSelectionKey("u1.ts", false));
+      setupSelectionStore();
+
+      render(<StagedUnstagedPanel statuses={twoUnstaged} loading={false} />);
+
+      // Both files render "Delete file" menu (selection size is 1 — never the batch path)
+      const singleEntries = screen.getAllByTestId("menu-Delete file");
+      expect(singleEntries).toHaveLength(2);
+      fireEvent.click(singleEntries[1]);
+      expect(mockDeleteFile).toHaveBeenCalledWith("u2.ts");
+      expect(mockDeleteFiles).not.toHaveBeenCalled();
     });
   });
 

@@ -147,6 +147,19 @@ pub fn delete_file(path: String, state: State<AppState>) -> Result<(), AppError>
 }
 
 #[tauri::command]
+pub fn delete_files(paths: Vec<String>, state: State<AppState>) -> Result<(), AppError> {
+    let repo = state.get_repo()?;
+
+    let workdir = repo
+        .workdir()
+        .ok_or(AppError::InvalidPath("No working directory".to_string()))?;
+    for path in &paths {
+        std::fs::remove_file(workdir.join(path))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn resolve_conflict(
     path: String,
     strategy: String,
@@ -269,6 +282,29 @@ mod tests {
         fs::remove_file(full_path).unwrap();
 
         assert!(!file_path.exists());
+    }
+
+    #[test]
+    fn test_delete_files_logic() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        let names = ["a.txt", "b.txt", "c.txt"];
+        for name in &names {
+            fs::write(temp_dir.path().join(name), "content").unwrap();
+        }
+        for name in &names {
+            assert!(temp_dir.path().join(name).exists());
+        }
+
+        let workdir = repo.workdir().unwrap();
+        for name in &names {
+            fs::remove_file(workdir.join(name)).unwrap();
+        }
+
+        for name in &names {
+            assert!(!temp_dir.path().join(name).exists());
+        }
     }
 
     #[test]
