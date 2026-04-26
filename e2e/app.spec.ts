@@ -8,6 +8,7 @@ import {
   switchToStashesView,
   expandBranchSection,
 } from "./helpers";
+import { assertContrastClean } from "./contrast-helper";
 
 /**
  * E2E tests for Yet Another Git Gui
@@ -361,11 +362,12 @@ test.describe("Accessibility - axe-core", () => {
   });
 
   test("should not have any automatically detectable accessibility issues", async ({ page }) => {
+    // Broad rule sweep (focus order, alt text, roles, etc.). Contrast is
+    // covered separately by assertContrastClean below so AAA also runs.
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
 
-    // Log violations for debugging
     if (accessibilityScanResults.violations.length > 0) {
       console.log("Accessibility violations:");
       accessibilityScanResults.violations.forEach((violation) => {
@@ -379,51 +381,23 @@ test.describe("Accessibility - axe-core", () => {
     }
 
     expect(accessibilityScanResults.violations).toEqual([]);
+
+    await assertContrastClean(page);
   });
 
   test("commit panel should pass color contrast checks", async ({ page }) => {
-    // Switch to Status View to access commit panel
     await switchToStatusView(page);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".commit-panel")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".commit-panel");
   });
 
   test("file changes panel should pass color contrast checks", async ({ page }) => {
-    // Switch to Status View to access file changes panel
     await switchToStatusView(page);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".staged-unstaged-panel")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".staged-unstaged-panel");
   });
 
   test("commit graph should pass color contrast checks", async ({ page }) => {
-    // Switch to History View to test commit graph
     await switchToHistoryView(page);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".commit-graph")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".commit-graph");
   });
 
   test("buttons should be keyboard accessible", async ({ page }) => {
@@ -437,48 +411,15 @@ test.describe("Accessibility - axe-core", () => {
   });
 
   test("notification toasts should pass color contrast checks", async ({ page }) => {
-    // Trigger notifications via the Zustand store
-    await page.evaluate(() => {
-      // Access the Zustand store from the React component tree
-      const rootFiber = (document.getElementById("root") as any)?._reactRootContainer?._internalRoot
-        ?.current;
-
-      // Direct approach: dispatch custom events that the app listens for,
-      // or call the store directly via module scope
-      // Simplest: inject notifications by manipulating the DOM store reference
-    });
-
-    // Use page.evaluate to call the store's methods directly
+    // Trigger notifications via the Zustand store so toast nodes mount in the
+    // DOM before axe scans them.
     await page.evaluate(async () => {
-      // Import the store module - Vite exposes modules at their paths
       const mod = await import("/src/stores/notificationStore.ts");
       mod.useNotificationStore.getState().showSuccess("Test success");
       mod.useNotificationStore.getState().showError("Test error");
     });
-
-    // Wait for toasts to appear
     await page.waitForSelector(".notification-toast", { timeout: 5000 });
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".notification-toast")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-
-    if (contrastViolations.length > 0) {
-      console.log("Notification toast contrast violations:");
-      contrastViolations.forEach((v) => {
-        v.nodes.forEach((node) => {
-          console.log(`  Element: ${node.html}`);
-          console.log(`  Message: ${node.any?.map((a) => a.message).join(", ")}`);
-        });
-      });
-    }
-
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".notification-toast");
   });
 
   test("form elements should have labels", async ({ page }) => {
@@ -496,39 +437,22 @@ test.describe("Accessibility - axe-core", () => {
   });
 
   test("light mode should pass overall color contrast checks", async ({ page }) => {
-    // Switch to light mode
     await page.evaluate(async () => {
       const mod = await import("/src/stores/settingsStore.ts");
       mod.useSettingsStore.getState().setTheme("light");
     });
     await page.waitForTimeout(200);
-
-    const accessibilityScanResults = await new AxeBuilder({ page }).withTags(["wcag2aa"]).analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page);
   });
 
   test("light mode commit graph should pass color contrast checks", async ({ page }) => {
     await switchToHistoryView(page);
-    // Switch to light mode
     await page.evaluate(async () => {
       const mod = await import("/src/stores/settingsStore.ts");
       mod.useSettingsStore.getState().setTheme("light");
     });
     await page.waitForTimeout(200);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".commit-graph")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".commit-graph");
   });
 });
 
@@ -927,8 +851,7 @@ test.describe("Scroll-to-commit on tag click", () => {
       const scroller = candidates.find((el) => {
         const s = getComputedStyle(el);
         return (
-          (s.overflowY === "auto" || s.overflowY === "scroll") &&
-          el.scrollHeight > el.clientHeight
+          (s.overflowY === "auto" || s.overflowY === "scroll") && el.scrollHeight > el.clientHeight
         );
       });
       return scroller?.scrollTop ?? 0;
@@ -1101,9 +1024,7 @@ test.describe("Batch Delete", () => {
     const untrackedSection = page
       .locator(".section-header")
       .filter({ has: page.getByText("Untracked", { exact: true }) });
-    await expect(
-      untrackedSection.locator("button", { hasText: "Delete Selected" })
-    ).toBeVisible();
+    await expect(untrackedSection.locator("button", { hasText: "Delete Selected" })).toBeVisible();
   });
 
   test("Delete Selected button appears when multiple unstaged files are selected", async ({
@@ -1119,9 +1040,7 @@ test.describe("Batch Delete", () => {
     const unstagedSection = page
       .locator(".section-header")
       .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await expect(
-      unstagedSection.locator("button", { hasText: "Delete Selected" })
-    ).toBeVisible();
+    await expect(unstagedSection.locator("button", { hasText: "Delete Selected" })).toBeVisible();
   });
 
   test("right-click on a multi-selected untracked file shows batch delete entry", async ({
@@ -1180,7 +1099,10 @@ test.describe("Batch Delete", () => {
 
     const listFocused = await page.evaluate(() => {
       const el = document.activeElement as HTMLElement | null;
-      return el?.getAttribute("role") === "listbox" && el.getAttribute("aria-label") === "Untracked files";
+      return (
+        el?.getAttribute("role") === "listbox" &&
+        el.getAttribute("aria-label") === "Untracked files"
+      );
     });
     expect(listFocused).toBe(true);
   });
@@ -1446,9 +1368,7 @@ test.describe("Multi-Select Files", () => {
       .locator(".section-header")
       .filter({ has: page.getByText("Unstaged", { exact: true }) });
     await expect(unstagedSection.locator("button", { hasText: "Stage Selected" })).toBeVisible();
-    await expect(
-      unstagedSection.getByRole("button", { name: "Clear selection" })
-    ).toBeVisible();
+    await expect(unstagedSection.getByRole("button", { name: "Clear selection" })).toBeVisible();
   });
 
   test("Clear button clears selection", async ({ page }) => {
@@ -1772,16 +1692,7 @@ test.describe("Repo State Banner - Accessibility", () => {
     await expect(page.locator(".repo-state-banner")).toBeVisible({
       timeout: 10000,
     });
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".repo-state-banner")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".repo-state-banner");
   });
 });
 

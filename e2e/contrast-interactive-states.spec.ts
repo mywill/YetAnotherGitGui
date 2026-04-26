@@ -1,5 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test, expect } from "@playwright/test";
 import { tauriMocks } from "./tauri-mocks";
 import {
   switchToStatusView,
@@ -8,48 +7,17 @@ import {
   switchToStashesView,
   expandAllBranchSections,
 } from "./helpers";
+import { assertContrastClean } from "./contrast-helper";
 
 /**
- * WCAG AA Color Contrast Tests for Interactive States
+ * WCAG AA Color Contrast Tests for Interactive States.
  *
- * These tests verify that all interactive component states (hover, selected,
- * focused, disabled) meet WCAG AA color contrast requirements (4.5:1 for
- * normal text, 3:1 for large text).
- *
- * Some tests are expected to fail — known contrast issues are documented
- * inline and will be fixed in a follow-up pass.
+ * Each `assertContrastClean` call runs the axe `color-contrast` rule (4.5:1
+ * normal text, 3:1 large text) and asserts zero violations. AAA was evaluated
+ * separately and produced 21 unique failures across brand-critical tokens
+ * (commit button magenta, toast green/red, muted text); those are tracked but
+ * not enforced.
  */
-
-/**
- * Scan a region for WCAG AA color-contrast violations.
- * Returns { violations, incomplete } so callers can assert on violations
- * and log incomplete results (e.g. color-mix backgrounds axe can't resolve).
- */
-async function scanForContrastViolations(
-  page: Page,
-  selector?: string
-): Promise<{
-  violations: Awaited<ReturnType<InstanceType<typeof AxeBuilder>["analyze"]>>["violations"];
-  incomplete: Awaited<ReturnType<InstanceType<typeof AxeBuilder>["analyze"]>>["incomplete"];
-}> {
-  let builder = new AxeBuilder({ page }).withTags(["wcag2aa"]);
-  if (selector) {
-    builder = builder.include(selector);
-  }
-  const results = await builder.analyze();
-
-  const violations = results.violations.filter((v) => v.id === "color-contrast");
-  const incomplete = results.incomplete.filter((v) => v.id === "color-contrast");
-
-  if (incomplete.length > 0) {
-    console.log(
-      `[contrast] incomplete results for "${selector ?? "page"}":`,
-      incomplete.map((i) => i.nodes.map((n) => n.html)).flat()
-    );
-  }
-
-  return { violations, incomplete };
-}
 
 // --- Test Suite ---
 
@@ -63,22 +31,19 @@ test.describe("Contrast - Interactive States", () => {
   // ===== 1. IconRail =====
   test.describe("IconRail", () => {
     test("active tab has sufficient contrast", async ({ page }) => {
-      const { violations } = await scanForContrastViolations(page, ".icon-rail");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".icon-rail");
     });
 
     test("inactive tab has sufficient contrast", async ({ page }) => {
       // All rail items are visible — one active, rest inactive
-      const { violations } = await scanForContrastViolations(page, ".icon-rail");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".icon-rail");
     });
 
     test("hovered inactive tab has sufficient contrast", async ({ page }) => {
       // Find an inactive rail item and hover it
       const inactiveTab = page.locator('.rail-item[aria-selected="false"]').first();
       await inactiveTab.hover();
-      const { violations } = await scanForContrastViolations(page, ".icon-rail");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".icon-rail");
     });
   });
 
@@ -91,31 +56,27 @@ test.describe("Contrast - Interactive States", () => {
 
     test("current branch has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".branch-item.is-current", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".branch-item.is-current");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".branch-item.is-current");
     });
 
     test("current branch badge has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".branch-item.is-current", { timeout: 10000 });
       const badge = page.locator(".branch-item.is-current .current-badge");
       if ((await badge.count()) > 0) {
-        const { violations } = await scanForContrastViolations(page, ".branch-item.is-current");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".branch-item.is-current");
       }
     });
 
     test("remote branch has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".branch-item.is-remote", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".branch-item.is-remote");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".branch-item.is-remote");
     });
 
     test("hovered branch item has sufficient contrast", async ({ page }) => {
       const branchItem = page.locator(".branch-item").first();
       await branchItem.hover();
       // Scan the sidebar section that contains branch items
-      const { violations } = await scanForContrastViolations(page, ".branch-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".branch-item");
     });
   });
 
@@ -128,23 +89,21 @@ test.describe("Contrast - Interactive States", () => {
 
     test("tag item has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".tag-item", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".tag-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".tag-item");
     });
 
     test("hovered tag item has sufficient contrast", async ({ page }) => {
       const tagItem = page.locator(".tag-item").first();
       await tagItem.hover();
-      const { violations } = await scanForContrastViolations(page, ".tag-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".tag-item");
     });
 
     test("annotated tag badge has sufficient contrast", async ({ page }) => {
-      // The mock has an annotated tag (v1.0.0 with is_annotated: true)
+      // Mock has v1.0.0 with is_annotated: true. Diagnostic showed axe puts
+      // single-letter "A" pills in `incomplete` ("Element content is too
+      // short") — historically swallowed; helper now asserts on incomplete.
       await page.waitForSelector(".annotated-badge", { timeout: 10000 });
-      // HIGH RISK: bg-badge-tag (#ffb74d) + white text ≈ 1.8:1 — expected to FAIL
-      const { violations } = await scanForContrastViolations(page, ".tag-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".tag-item");
     });
   });
 
@@ -156,23 +115,20 @@ test.describe("Contrast - Interactive States", () => {
 
     test("stash item has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".stash-item", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".stash-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".stash-item");
     });
 
     test("hovered stash item has sufficient contrast", async ({ page }) => {
       const stashItem = page.locator(".stash-item").first();
       await stashItem.hover();
-      const { violations } = await scanForContrastViolations(page, ".stash-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".stash-item");
     });
 
     test("selected stash item has sufficient contrast", async ({ page }) => {
       const stashItem = page.locator(".stash-item").first();
       await stashItem.click();
       await page.waitForSelector(".stash-item.is-selected", { timeout: 5000 });
-      const { violations } = await scanForContrastViolations(page, ".stash-item.is-selected");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".stash-item.is-selected");
     });
   });
 
@@ -186,15 +142,13 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector('[data-testid="file-item"]', {
         timeout: 10000,
       });
-      const { violations } = await scanForContrastViolations(page, ".staged-unstaged-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".staged-unstaged-panel");
     });
 
     test("hovered file item has sufficient contrast", async ({ page }) => {
       const fileItem = page.locator('[data-testid="file-item"]').first();
       await fileItem.hover();
-      const { violations } = await scanForContrastViolations(page, ".staged-unstaged-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".staged-unstaged-panel");
     });
 
     test("selected file item has sufficient contrast", async ({ page }) => {
@@ -202,8 +156,7 @@ test.describe("Contrast - Interactive States", () => {
       await fileItem.click();
       // Wait for selection state
       await page.waitForTimeout(200);
-      const { violations } = await scanForContrastViolations(page, ".staged-unstaged-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".staged-unstaged-panel");
     });
 
     test("staged + selected file has sufficient contrast", async ({ page }) => {
@@ -212,8 +165,7 @@ test.describe("Contrast - Interactive States", () => {
       if ((await stagedFile.count()) > 0) {
         await stagedFile.first().click();
         await page.waitForTimeout(200);
-        const { violations } = await scanForContrastViolations(page, ".staged-unstaged-panel");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".staged-unstaged-panel");
       }
     });
 
@@ -223,8 +175,7 @@ test.describe("Contrast - Interactive States", () => {
       await listbox.focus();
       await page.keyboard.press("ArrowDown");
       await page.waitForTimeout(200);
-      const { violations } = await scanForContrastViolations(page, ".staged-unstaged-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".staged-unstaged-panel");
     });
   });
 
@@ -242,16 +193,14 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector(".diff-line.line-addition", {
         timeout: 5000,
       });
-      const { violations } = await scanForContrastViolations(page, ".diff-hunk");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".diff-hunk");
     });
 
     test("deletion lines have sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".diff-line.line-deletion", {
         timeout: 5000,
       });
-      const { violations } = await scanForContrastViolations(page, ".diff-hunk");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".diff-hunk");
     });
 
     test("selected addition line has sufficient contrast", async ({ page }) => {
@@ -259,8 +208,7 @@ test.describe("Contrast - Interactive States", () => {
       if ((await addLine.count()) > 0) {
         await addLine.first().click();
         await page.waitForTimeout(200);
-        const { violations } = await scanForContrastViolations(page, ".diff-hunk");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".diff-hunk");
       }
     });
 
@@ -269,8 +217,7 @@ test.describe("Contrast - Interactive States", () => {
       if ((await delLine.count()) > 0) {
         await delLine.first().click();
         await page.waitForTimeout(200);
-        const { violations } = await scanForContrastViolations(page, ".diff-hunk");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".diff-hunk");
       }
     });
 
@@ -278,8 +225,7 @@ test.describe("Contrast - Interactive States", () => {
       const selectable = page.locator(".diff-line.selectable").first();
       if ((await selectable.count()) > 0) {
         await selectable.hover();
-        const { violations } = await scanForContrastViolations(page, ".diff-hunk");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".diff-hunk");
       }
     });
   });
@@ -292,15 +238,13 @@ test.describe("Contrast - Interactive States", () => {
 
     test("commit row has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".commit-row", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".commit-graph");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-graph");
     });
 
     test("hovered commit row has sufficient contrast", async ({ page }) => {
       const row = page.locator(".commit-row").first();
       await row.hover();
-      const { violations } = await scanForContrastViolations(page, ".commit-graph");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-graph");
     });
 
     test("selected commit row has sufficient contrast", async ({ page }) => {
@@ -310,15 +254,13 @@ test.describe("Contrast - Interactive States", () => {
       if (count > 1) {
         await rows.nth(1).click();
         await page.waitForTimeout(200);
-        const { violations } = await scanForContrastViolations(page, ".commit-graph");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".commit-graph");
       }
     });
 
     test("HEAD commit row has sufficient contrast", async ({ page }) => {
       await page.waitForSelector(".commit-row.is-head", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".commit-row.is-head");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-row.is-head");
     });
 
     test("HEAD + selected commit row has sufficient contrast", async ({ page }) => {
@@ -326,16 +268,14 @@ test.describe("Contrast - Interactive States", () => {
       if ((await headRow.count()) > 0) {
         await headRow.first().click();
         await page.waitForTimeout(200);
-        const { violations } = await scanForContrastViolations(page, ".commit-row.is-head");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".commit-row.is-head");
       }
     });
 
     test("ref badges have sufficient contrast", async ({ page }) => {
       // Ref badges (branch, tag, HEAD) are rendered inline
       await page.waitForSelector(".ref-badge", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".commit-graph");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-graph");
     });
 
     test("keyboard-focused commit row has sufficient contrast", async ({ page }) => {
@@ -344,8 +284,7 @@ test.describe("Contrast - Interactive States", () => {
         await listbox.first().focus();
         await page.keyboard.press("ArrowDown");
         await page.waitForTimeout(200);
-        const { violations } = await scanForContrastViolations(page, ".commit-graph");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".commit-graph");
       }
     });
   });
@@ -361,15 +300,13 @@ test.describe("Contrast - Interactive States", () => {
     });
 
     test("commit file item has sufficient contrast", async ({ page }) => {
-      const { violations } = await scanForContrastViolations(page, ".commit-file-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-file-item");
     });
 
     test("hovered commit file item has sufficient contrast", async ({ page }) => {
       const fileItem = page.locator(".commit-file-item .file-header").first();
       await fileItem.hover();
-      const { violations } = await scanForContrastViolations(page, ".commit-file-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-file-item");
     });
 
     test("expanded commit file item has sufficient contrast", async ({ page }) => {
@@ -379,15 +316,13 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector(".commit-file-item.expanded", {
         timeout: 5000,
       });
-      const { violations } = await scanForContrastViolations(page, ".commit-file-item.expanded");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-file-item.expanded");
     });
 
     test("status badges have sufficient contrast", async ({ page }) => {
       const statusIcons = page.locator(".commit-file-item .status-icon");
       if ((await statusIcons.count()) > 0) {
-        const { violations } = await scanForContrastViolations(page, ".commit-file-item");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".commit-file-item");
       }
     });
   });
@@ -403,8 +338,7 @@ test.describe("Contrast - Interactive States", () => {
     });
 
     test("stash file item has sufficient contrast", async ({ page }) => {
-      const { violations } = await scanForContrastViolations(page, ".stash-file-item");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".stash-file-item");
     });
 
     test("expanded stash file item has sufficient contrast", async ({ page }) => {
@@ -413,15 +347,13 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector(".stash-file-item.expanded", {
         timeout: 5000,
       });
-      const { violations } = await scanForContrastViolations(page, ".stash-file-item.expanded");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".stash-file-item.expanded");
     });
 
     test("status badges have sufficient contrast", async ({ page }) => {
       const statusIcons = page.locator(".stash-file-item .status-icon");
       if ((await statusIcons.count()) > 0) {
-        const { violations } = await scanForContrastViolations(page, ".stash-file-item");
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, ".stash-file-item");
       }
     });
   });
@@ -438,8 +370,7 @@ test.describe("Contrast - Interactive States", () => {
       const branchItem = page.locator(".branch-item").first();
       await branchItem.click({ button: "right" });
       await page.waitForSelector('[role="menu"]', { timeout: 5000 });
-      const { violations } = await scanForContrastViolations(page, '[role="menu"]');
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, '[role="menu"]');
     });
 
     test("focused menu item has sufficient contrast", async ({ page }) => {
@@ -447,8 +378,7 @@ test.describe("Contrast - Interactive States", () => {
       const branchItem = page.locator(".branch-item").first();
       await branchItem.click({ button: "right" });
       await page.waitForSelector('[role="menu"]', { timeout: 5000 });
-      const { violations } = await scanForContrastViolations(page, '[role="menu"]');
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, '[role="menu"]');
     });
 
     test("keyboard-navigated menu item has sufficient contrast", async ({ page }) => {
@@ -458,8 +388,7 @@ test.describe("Contrast - Interactive States", () => {
       // Navigate down in the menu
       await page.keyboard.press("ArrowDown");
       await page.waitForTimeout(100);
-      const { violations } = await scanForContrastViolations(page, '[role="menu"]');
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, '[role="menu"]');
     });
 
     test("disabled menu items have sufficient contrast", async ({ page }) => {
@@ -469,8 +398,7 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector('[role="menu"]', { timeout: 5000 });
       const disabledItems = page.locator('[role="menuitem"].disabled');
       if ((await disabledItems.count()) > 0) {
-        const { violations } = await scanForContrastViolations(page, '[role="menu"]');
-        expect(violations).toEqual([]);
+        await assertContrastClean(page, '[role="menu"]');
       }
     });
   });
@@ -483,8 +411,7 @@ test.describe("Contrast - Interactive States", () => {
       await expect(commitButton).toBeVisible({ timeout: 10000 });
       await expect(commitButton).toBeDisabled();
       // Disabled buttons use opacity-60 which may reduce contrast
-      const { violations } = await scanForContrastViolations(page, ".commit-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-panel");
     });
 
     test("focus-visible button has sufficient contrast", async ({ page }) => {
@@ -493,8 +420,7 @@ test.describe("Contrast - Interactive States", () => {
       await page.keyboard.press("Tab");
       await page.keyboard.press("Tab");
       await page.waitForTimeout(200);
-      const { violations } = await scanForContrastViolations(page, ".commit-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-panel");
     });
 
     test("hovered primary button has sufficient contrast", async ({ page }) => {
@@ -505,8 +431,7 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForTimeout(200);
       const commitButton = page.locator(".commit-button");
       await commitButton.hover();
-      const { violations } = await scanForContrastViolations(page, ".commit-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".commit-panel");
     });
   });
 
@@ -523,13 +448,11 @@ test.describe("Contrast - Interactive States", () => {
     });
 
     test("conflict diff lines have sufficient contrast", async ({ page }) => {
-      const { violations } = await scanForContrastViolations(page, ".diff-view-panel");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".diff-view-panel");
     });
 
     test("conflict resolution buttons have sufficient contrast", async ({ page }) => {
-      const { violations } = await scanForContrastViolations(page, ".hunk-header");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".hunk-header");
     });
 
     test("hovered conflict resolution button has sufficient contrast", async ({ page }) => {
@@ -538,8 +461,7 @@ test.describe("Contrast - Interactive States", () => {
       });
       await oursButton.hover();
       await page.waitForTimeout(200);
-      const { violations } = await scanForContrastViolations(page, ".hunk-header");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".hunk-header");
     });
   });
 
@@ -548,9 +470,7 @@ test.describe("Contrast - Interactive States", () => {
   // on that background passes WCAG AA in every listbox that uses it, and cover
   // hover+selected combos, toast colors, and muted text on tinted backgrounds.
   test.describe("Combined states (selected + focused / hovered / tinted)", () => {
-    test("history files: keyboard-focused active row has sufficient contrast", async ({
-      page,
-    }) => {
+    test("history files: keyboard-focused active row has sufficient contrast", async ({ page }) => {
       await switchToHistoryView(page);
       await page.waitForSelector(".commit-row", { timeout: 10000 });
       // Selecting a commit triggers the files-changed listbox to render.
@@ -561,11 +481,10 @@ test.describe("Contrast - Interactive States", () => {
       const filesList = page.locator('[role="listbox"][aria-label="Files changed"]');
       await filesList.evaluate((el) => (el as HTMLElement).focus());
       await page.waitForTimeout(150);
-      const { violations } = await scanForContrastViolations(
+      await assertContrastClean(
         page,
         '[role="listbox"][aria-label="Files changed"] [aria-selected="true"]'
       );
-      expect(violations).toEqual([]);
     });
 
     test("branches list: keyboard-focused active branch has sufficient contrast", async ({
@@ -576,11 +495,10 @@ test.describe("Contrast - Interactive States", () => {
       const list = page.locator('[role="listbox"][aria-label="Local Branches"]');
       await list.evaluate((el) => (el as HTMLElement).focus());
       await page.waitForTimeout(150);
-      const { violations } = await scanForContrastViolations(
+      await assertContrastClean(
         page,
         '[role="listbox"][aria-label="Local Branches"] [aria-selected="true"]'
       );
-      expect(violations).toEqual([]);
     });
 
     test("tags list: keyboard-focused active tag has sufficient contrast", async ({ page }) => {
@@ -589,11 +507,7 @@ test.describe("Contrast - Interactive States", () => {
       const list = page.locator('[role="listbox"][aria-label="Tags"]');
       await list.evaluate((el) => (el as HTMLElement).focus());
       await page.waitForTimeout(150);
-      const { violations } = await scanForContrastViolations(
-        page,
-        '[role="listbox"][aria-label="Tags"] [aria-selected="true"]'
-      );
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, '[role="listbox"][aria-label="Tags"] [aria-selected="true"]');
     });
 
     test("stashes list: keyboard-focused active stash has sufficient contrast", async ({
@@ -604,11 +518,7 @@ test.describe("Contrast - Interactive States", () => {
       const list = page.locator('[role="listbox"]').first();
       await list.evaluate((el) => (el as HTMLElement).focus());
       await page.waitForTimeout(150);
-      const { violations } = await scanForContrastViolations(
-        page,
-        '[role="listbox"] [aria-selected="true"]'
-      );
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, '[role="listbox"] [aria-selected="true"]');
     });
 
     test("staged file list: hover + selected file has sufficient contrast", async ({ page }) => {
@@ -617,8 +527,7 @@ test.describe("Contrast - Interactive States", () => {
       await file.click();
       await file.hover();
       await page.waitForTimeout(150);
-      const { violations } = await scanForContrastViolations(page, ".file-item.selected");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".file-item.selected");
     });
 
     test("toast: success notification has sufficient contrast (white on green)", async ({
@@ -629,8 +538,7 @@ test.describe("Contrast - Interactive States", () => {
         mod.useNotificationStore.getState().showSuccess("Operation completed");
       });
       await page.waitForSelector(".notification-toast-success", { timeout: 5000 });
-      const { violations } = await scanForContrastViolations(page, ".notification-toast-success");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".notification-toast-success");
     });
 
     test("toast: error notification has sufficient contrast (white on red)", async ({ page }) => {
@@ -639,8 +547,7 @@ test.describe("Contrast - Interactive States", () => {
         mod.useNotificationStore.getState().showError("Something went wrong");
       });
       await page.waitForSelector(".notification-toast-error", { timeout: 5000 });
-      const { violations } = await scanForContrastViolations(page, ".notification-toast-error");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".notification-toast-error");
     });
 
     test("current branch row: muted secondary text on cyan-tinted background passes contrast", async ({
@@ -649,8 +556,7 @@ test.describe("Contrast - Interactive States", () => {
       await switchToBranchesView(page);
       await expandAllBranchSections(page);
       await page.waitForSelector(".branch-item.is-current", { timeout: 10000 });
-      const { violations } = await scanForContrastViolations(page, ".branch-item.is-current");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".branch-item.is-current");
     });
 
     test("repo state banner: warning text on warning background passes contrast", async ({
@@ -665,14 +571,19 @@ test.describe("Contrast - Interactive States", () => {
       // The banner only renders when repo_state !== "clean". Mocks default to
       // clean; verify the warning tokens themselves via a synthetic element so
       // axe can resolve the colors even without the real banner rendered.
+      // Diagnostic showed that scoping `.include(".synthetic-warning")` puts
+      // the rule into `inapplicable` (axe needs more DOM context). Wrap the
+      // text in a child <span> and scan the wrapper so contrast applies.
       await page.evaluate(() => {
         const el = document.createElement("div");
-        el.className = "synthetic-warning bg-warning-bg text-warning-text rounded px-2 py-1";
-        el.textContent = "Merge in progress — resolve or run git merge --abort";
+        el.className = "synthetic-warning bg-warning-bg rounded px-2 py-1";
+        const inner = document.createElement("span");
+        inner.className = "text-warning-text";
+        inner.textContent = "Merge in progress — resolve or run git merge --abort";
+        el.appendChild(inner);
         document.body.appendChild(el);
       });
-      const { violations } = await scanForContrastViolations(page, ".synthetic-warning");
-      expect(violations).toEqual([]);
+      await assertContrastClean(page, ".synthetic-warning");
     });
   });
 });
@@ -693,30 +604,26 @@ test.describe("Contrast - Light Mode", () => {
 
   test("status view passes contrast checks in light mode", async ({ page }) => {
     await switchToStatusView(page);
-    const { violations } = await scanForContrastViolations(page);
-    expect(violations).toEqual([]);
+    await assertContrastClean(page);
   });
 
   test("history view passes contrast checks in light mode", async ({ page }) => {
     await switchToHistoryView(page);
     await page.waitForSelector(".commit-row", { timeout: 10000 });
-    const { violations } = await scanForContrastViolations(page, ".commit-graph");
-    expect(violations).toEqual([]);
+    await assertContrastClean(page, ".commit-graph");
   });
 
   test("branches view passes contrast checks in light mode", async ({ page }) => {
     await switchToBranchesView(page);
     await expandAllBranchSections(page);
     await page.waitForSelector(".branch-item", { timeout: 10000 });
-    const { violations } = await scanForContrastViolations(page, ".branch-tag-list");
-    expect(violations).toEqual([]);
+    await assertContrastClean(page, ".branch-tag-list");
   });
 
   test("stashes view passes contrast checks in light mode", async ({ page }) => {
     await switchToStashesView(page);
     await page.waitForSelector(".stash-item", { timeout: 10000 });
-    const { violations } = await scanForContrastViolations(page, ".stash-list");
-    expect(violations).toEqual([]);
+    await assertContrastClean(page, ".stash-list");
   });
 
   test("diff view passes contrast checks in light mode", async ({ page }) => {
@@ -724,18 +631,15 @@ test.describe("Contrast - Light Mode", () => {
     const fileItem = page.locator(".file-item").first();
     await fileItem.click();
     await page.waitForSelector(".diff-view-panel", { timeout: 10000 });
-    const { violations } = await scanForContrastViolations(page, ".diff-view-panel");
-    expect(violations).toEqual([]);
+    await assertContrastClean(page, ".diff-view-panel");
   });
 
   test("icon rail passes contrast checks in light mode", async ({ page }) => {
-    const { violations } = await scanForContrastViolations(page, ".icon-rail");
-    expect(violations).toEqual([]);
+    await assertContrastClean(page, ".icon-rail");
   });
 
   test("commit panel passes contrast checks in light mode", async ({ page }) => {
     await switchToStatusView(page);
-    const { violations } = await scanForContrastViolations(page, ".commit-panel");
-    expect(violations).toEqual([]);
+    await assertContrastClean(page, ".commit-panel");
   });
 });

@@ -100,7 +100,7 @@ export function TagItem({ tag }: TagItemProps) {
         <TagIcon />
         <span className="tag-item-name min-w-0 shrink truncate font-mono">{tag.name}</span>
         {tag.is_annotated && (
-          <span className="annotated-badge bg-badge-tag text-3xs shrink-0 rounded px-1 py-px font-semibold text-white">
+          <span className="annotated-badge bg-badge-tag text-badge-tag-text text-3xs shrink-0 rounded px-1 py-px font-semibold">
             A
           </span>
         )}

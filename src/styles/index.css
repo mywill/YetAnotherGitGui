@@ -71,6 +71,7 @@
   --color-badge-branch: #0ed0f5;
   --color-badge-remote: #d0f50e;
   --color-badge-tag: #f5b50e;
+  --color-badge-tag-text: #0a0a0c;
   --color-badge-head: #f50ed0;
   --color-badge-head-text: #0a0a0c;
 
@@ -140,7 +141,7 @@
   --color-bg-selected-hover: rgba(33, 132, 174, 0.2);
 
   --color-text-primary: #0a0a0c;
-  --color-text-muted: #6a6a70;
+  --color-text-muted: #5e5e64;
 
   --color-border: #e4e4e8;
   --color-border-light: #d0d0d6;
@@ -150,7 +151,7 @@
   --color-accent-lime: #4a6a10;
 
   --color-danger: #c0232c;
-  --color-warning: #a8770d;
+  --color-warning: #7c5c08;
   --color-info: #6a6a70;
 
   --color-addition: #4a6a10;
@@ -178,6 +179,7 @@
   --color-badge-branch: #1a6d8f;
   --color-badge-remote: #4a6a10;
   --color-badge-tag: #7c5c08;
+  --color-badge-tag-text: #ffffff;
   --color-badge-head: #ae2184;
   --color-badge-head-text: #ffffff;
 
