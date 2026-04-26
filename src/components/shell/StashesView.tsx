@@ -10,7 +10,7 @@ const LIST_MIN = 180;
 const LIST_EDGE_RESERVE = 240;
 const LIST_FRACTION = 0.4;
 
-export function StashesView() {
+export const StashesView = () => {
   const selectedStashDetails = useRepositoryStore((s) => s.selectedStashDetails);
   const stashDetailsLoading = useRepositoryStore((s) => s.stashDetailsLoading);
 
@@ -71,4 +71,4 @@ export function StashesView() {
       </div>
     </div>
   );
-}
+};

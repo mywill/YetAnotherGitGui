@@ -10,7 +10,7 @@ const RAIL_ITEMS: { id: ViewType; label: string; shortcut: string }[] = [
   { id: "stashes", label: "Stashes", shortcut: "" },
 ];
 
-export function IconRail() {
+export const IconRail = () => {
   const activeView = useSelectionStore((s) => s.activeView);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
 
@@ -31,7 +31,7 @@ export function IconRail() {
           title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
           className={clsx(
             "rail-item relative flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-100",
-            "hover:bg-bg-hover focus-visible:outline-accent-magenta focus-visible:outline-2 focus-visible:outline-offset-[-1px]",
+            "hover:bg-bg-hover focus-ring",
             activeView === item.id ? "text-text-primary" : "text-text-muted"
           )}
           onClick={() => setActiveView(item.id)}
@@ -44,9 +44,9 @@ export function IconRail() {
       ))}
     </nav>
   );
-}
+};
 
-function RailIcon({ id }: { id: ViewType }) {
+const RailIcon = ({ id }: { id: ViewType }) => {
   const props = { size: 16, stroke: 1.75, "aria-hidden": true } as const;
   switch (id) {
     case "status":
@@ -58,4 +58,4 @@ function RailIcon({ id }: { id: ViewType }) {
     case "stashes":
       return <IconStack2 {...props} />;
   }
-}
+};

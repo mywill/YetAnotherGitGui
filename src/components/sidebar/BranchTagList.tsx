@@ -232,7 +232,7 @@ function FilterableSection<T extends { name: string }>({
               effectiveExpanded && "expanded rotate-90"
             )}
           >
-            <ChevronIcon />
+            <IconChevronRight size={10} stroke={2} aria-hidden />
           </span>
           <span className="section-title text-2xs truncate font-mono font-medium tracking-widest uppercase">
             {title}
@@ -309,8 +309,4 @@ function FilteredList<T extends { name: string }>({
       ))}
     </KeyboardList>
   );
-}
-
-function ChevronIcon() {
-  return <IconChevronRight size={10} stroke={2} aria-hidden />;
 }

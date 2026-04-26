@@ -4,7 +4,7 @@ import { IconGitBranch, IconSearch } from "@tabler/icons-react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useBranchFilterStore } from "../../stores/branchFilterStore";
 
-export function CurrentBranch() {
+export const CurrentBranch = () => {
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
   const query = useBranchFilterStore((s) => s.query);
   const setQuery = useBranchFilterStore((s) => s.setQuery);
@@ -49,7 +49,7 @@ export function CurrentBranch() {
 
   return (
     <div className="current-branch border-border bg-bg-well text-text-primary flex items-center gap-2 border-b px-3 py-2">
-      <BranchIcon />
+      <IconGitBranch size={14} stroke={1.75} className="text-badge-branch shrink-0" aria-hidden />
       <span
         className="branch-name min-w-0 shrink truncate font-mono font-medium"
         title={branchName}
@@ -66,7 +66,7 @@ export function CurrentBranch() {
           className="text-text-muted pointer-events-none absolute left-1.5 inline-flex size-3 shrink-0 items-center justify-center"
           aria-hidden="true"
         >
-          <SearchIcon />
+          <IconSearch size={10} stroke={1.8} aria-hidden />
         </span>
         <input
           ref={inputRef}
@@ -77,7 +77,7 @@ export function CurrentBranch() {
           placeholder="Filter branches & tags"
           aria-label="Filter branches and tags"
           className={clsx(
-            "branch-filter-input text-2xs border-border bg-bg-canvas/60 hover:bg-bg-canvas focus:border-text-muted w-full min-w-0 rounded !border !py-0.5 !pr-5 !pl-6 font-mono transition-colors duration-150 focus:outline-none"
+            "branch-filter-input text-2xs border-border bg-bg-canvas/60 hover:bg-bg-canvas focus:border-text-muted focus-ring w-full min-w-0 rounded border py-0.5 pr-5 pl-6 font-mono transition-colors duration-150"
           )}
         />
         {query && (
@@ -85,7 +85,7 @@ export function CurrentBranch() {
             type="button"
             onClick={clear}
             aria-label="Clear filter"
-            className="text-text-muted hover:text-text-primary absolute right-0.5 inline-flex size-4 items-center justify-center rounded focus-visible:outline-none"
+            className="text-text-muted hover:text-text-primary focus-ring absolute right-0.5 inline-flex size-4 items-center justify-center rounded"
             tabIndex={-1}
           >
             {"×"}
@@ -94,14 +94,4 @@ export function CurrentBranch() {
       </div>
     </div>
   );
-}
-
-function BranchIcon() {
-  return (
-    <IconGitBranch size={14} stroke={1.75} className="text-badge-branch shrink-0" aria-hidden />
-  );
-}
-
-function SearchIcon() {
-  return <IconSearch size={10} stroke={1.8} aria-hidden />;
-}
+};

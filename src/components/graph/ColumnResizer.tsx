@@ -8,13 +8,13 @@ interface ColumnResizerProps {
   largeStep?: number;
 }
 
-export function ColumnResizer({
+export const ColumnResizer = ({
   onResize,
   position,
   ariaLabel,
   step = 8,
   largeStep = 32,
-}: ColumnResizerProps) {
+}: ColumnResizerProps) => {
   const resizerRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const rafRef = useRef<number | null>(null);
@@ -87,8 +87,8 @@ export function ColumnResizer({
       tabIndex={0}
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
-      className="column-resizer before:bg-border hover:bg-accent-cyan/20 hover:before:bg-bg-selected active:bg-accent-cyan/20 active:before:bg-bg-selected focus-visible:outline-accent-magenta pointer-events-auto absolute inset-y-0 z-10 -ml-1 w-2 cursor-col-resize touch-none bg-transparent transition-colors duration-150 before:absolute before:inset-y-1 before:left-0.75 before:w-0.5 before:rounded-sm before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-[-1px]"
+      className="column-resizer before:bg-border hover:bg-accent-cyan/20 hover:before:bg-bg-selected active:bg-accent-cyan/20 active:before:bg-bg-selected focus-ring pointer-events-auto absolute inset-y-0 z-10 -ml-1 w-2 cursor-col-resize touch-none bg-transparent transition-colors duration-150 before:absolute before:inset-y-1 before:left-0.75 before:w-0.5 before:rounded-sm before:content-['']"
       style={{ left: position }}
     />
   );
-}
+};

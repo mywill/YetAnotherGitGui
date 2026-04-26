@@ -422,6 +422,25 @@ test.describe("Accessibility - axe-core", () => {
     await assertContrastClean(page, ".notification-toast");
   });
 
+  test("notification toasts should announce to assistive tech", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/notificationStore.ts");
+      mod.useNotificationStore.getState().showSuccess("Test success");
+      mod.useNotificationStore.getState().showError("Test error");
+    });
+    await page.waitForSelector(".notification-toast", { timeout: 5000 });
+
+    const successToast = page.locator(".notification-toast-success");
+    await expect(successToast).toHaveAttribute("role", "status");
+    await expect(successToast).toHaveAttribute("aria-live", "polite");
+    await expect(successToast).toHaveAttribute("aria-atomic", "true");
+
+    const errorToast = page.locator(".notification-toast-error");
+    await expect(errorToast).toHaveAttribute("role", "alert");
+    await expect(errorToast).toHaveAttribute("aria-live", "assertive");
+    await expect(errorToast).toHaveAttribute("aria-atomic", "true");
+  });
+
   test("form elements should have labels", async ({ page }) => {
     // Switch to Status View to test form elements (commit message textarea)
     await switchToStatusView(page);

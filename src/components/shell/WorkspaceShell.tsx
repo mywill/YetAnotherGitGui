@@ -12,7 +12,7 @@ const INSPECTOR_MAX = 100000;
 
 const VIEWS_WITH_INSPECTOR = new Set(["history"]);
 
-export function WorkspaceShell() {
+export const WorkspaceShell = () => {
   const inspectorVisible = useSettingsStore((s) => s.inspectorVisible);
   const activeView = useSelectionStore((s) => s.activeView);
   const inspectorWidth = useSettingsStore(
@@ -58,4 +58,4 @@ export function WorkspaceShell() {
       )}
     </div>
   );
-}
+};

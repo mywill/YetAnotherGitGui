@@ -10,7 +10,7 @@ interface BranchSwitcherProps {
   isDetached: boolean;
 }
 
-export function BranchSwitcher({ branchName, isDetached }: BranchSwitcherProps) {
+export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) => {
   const branches = useRepositoryStore((s) => s.branches);
   const checkoutBranch = useRepositoryStore((s) => s.checkoutBranch);
   const showConfirm = useDialogStore((s) => s.showConfirm);
@@ -157,7 +157,7 @@ export function BranchSwitcher({ branchName, isDetached }: BranchSwitcherProps) 
               onKeyDown={onInputKeyDown}
               placeholder="Filter branches"
               aria-label="Filter branches"
-              className="!text-2xs w-full !py-1"
+              className="text-2xs font-inherit bg-bg-well text-text-primary border-border focus-ring px-card-x w-full rounded border py-1"
             />
           </div>
           <div
@@ -199,4 +199,4 @@ export function BranchSwitcher({ branchName, isDetached }: BranchSwitcherProps) 
       )}
     </div>
   );
-}
+};

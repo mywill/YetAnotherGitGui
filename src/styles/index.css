@@ -44,6 +44,10 @@
   /* Diff / syntax colors */
   --color-addition: #d0f50e;
   --color-deletion: #ff5a6e;
+  /* `--color-deletion` (#ff5a6e) on the cyan-tinted active row falls just
+     below WCAG AA (3.96:1). This brighter salmon restores 4.5:1 contrast for
+     ahead/behind digits on the focused row. */
+  --color-deletion-on-active: #ff8a96;
 
   /* Conflict colors */
   --color-conflict-ours: #d0f50e;
@@ -156,6 +160,9 @@
 
   --color-addition: #4a6a10;
   --color-deletion: #c0232c;
+  /* Light mode: deletion red is already dark enough — same value works
+     against the cyan-tinted active row */
+  --color-deletion-on-active: #c0232c;
 
   --color-conflict-ours: #4a6a10;
   --color-conflict-theirs: #1a6d8f;
@@ -288,23 +295,16 @@
     outline: none;
     box-shadow: none;
   }
+}
 
-  input,
-  textarea {
-    font-family: inherit;
-    font-size: var(--text-body);
-    padding: var(--spacing-card-y) var(--spacing-card-x);
-    background: var(--color-bg-well);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    resize: none;
-  }
-
-  input:focus,
-  textarea:focus {
-    outline: none;
-    border-color: var(--color-focus-outline);
+/* Single source of truth for the keyboard focus ring. Apply to any focusable
+   element via `className="... focus-ring"`. The negative offset works for
+   most cases (overlap a 1px border or sit just inside a button/resizer). For
+   borderless inputs, override with `focus-visible:outline-offset-*` after. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-magenta);
+    outline-offset: -1px;
   }
 }
 
@@ -387,11 +387,10 @@
 
 /* Even on the plain active-row cyan tint, the deletion red (#ff5a6e) just
    barely fails contrast (3.96:1 vs 4.5 required) because cyan and red are
-   chromatic opposites. Bump red to a brighter salmon inside active rows so
-   ahead/behind digits stay readable. Lime (text-addition) already passes
-   easily so it stays unchanged. */
+   chromatic opposites. Use the brighter `--color-deletion-on-active` token
+   (defined per theme) so ahead/behind digits stay readable. */
 [role="listbox"]:focus [role="option"][aria-selected="true"] .text-deletion {
-  color: #ff8a96;
+  color: var(--color-deletion-on-active);
 }
 
 /* When a CommitFileItem is expanded inside the active row, the file row +

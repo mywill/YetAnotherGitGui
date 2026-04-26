@@ -12,6 +12,9 @@ export function NotificationToast() {
         n.type === "error" ? (
           <div
             key={n.id}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
             className="notification-toast notification-toast-error animate-slide-up bg-toast-error cursor-pointer rounded px-3 py-2 text-xs text-white"
             onClick={() => dismiss(n.id)}
             title="Click to dismiss"
@@ -21,6 +24,9 @@ export function NotificationToast() {
         ) : (
           <div
             key={n.id}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
             className="notification-toast notification-toast-success animate-slide-up bg-toast-success rounded px-3 py-2 text-xs text-white"
           >
             {n.message}

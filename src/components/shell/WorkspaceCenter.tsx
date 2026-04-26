@@ -5,7 +5,7 @@ import { BranchTagList } from "../sidebar/BranchTagList";
 import { StashesView } from "./StashesView";
 import { useSelectionStore } from "../../stores/selectionStore";
 
-export function WorkspaceCenter() {
+export const WorkspaceCenter = () => {
   const activeView = useSelectionStore((s) => s.activeView);
 
   return (
@@ -28,4 +28,4 @@ export function WorkspaceCenter() {
       {activeView === "stashes" && <StashesView />}
     </div>
   );
-}
+};

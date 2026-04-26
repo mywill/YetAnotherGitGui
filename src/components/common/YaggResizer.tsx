@@ -19,7 +19,7 @@ interface YaggResizerProps {
   panelSide?: "left" | "right" | "up" | "down";
 }
 
-export function YaggResizer({
+export const YaggResizer = ({
   orientation,
   size,
   onSizeChange,
@@ -33,7 +33,7 @@ export function YaggResizer({
   collapsible = false,
   panelId,
   panelSide,
-}: YaggResizerProps) {
+}: YaggResizerProps) => {
   const resizerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const pendingSizeRef = useRef<number | null>(null);
@@ -197,7 +197,7 @@ export function YaggResizer({
         "yagg-resizer shrink-0 touch-none transition-colors duration-100 select-none",
         "before:absolute before:rounded-sm before:transition-colors before:duration-100 before:content-['']",
         "hover:before:bg-bg-selected active:before:bg-accent-cyan/40",
-        "focus-visible:outline-accent-magenta focus-visible:outline-2 focus-visible:outline-offset-[-1px]",
+        "focus-ring",
         "motion-reduce:transition-none motion-reduce:before:transition-none",
         isVertical
           ? "before:bg-border relative w-2 cursor-col-resize before:inset-y-0 before:left-[3px] before:w-px"
@@ -205,4 +205,4 @@ export function YaggResizer({
       )}
     />
   );
-}
+};

@@ -192,7 +192,7 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             type="search"
-            className="flex-1 border-none bg-transparent p-0 text-sm outline-none"
+            className="focus-ring flex-1 border-none bg-transparent p-0 text-sm focus-visible:outline-offset-2"
             placeholder="Search commits, branches, tags, authors, files..."
             aria-label="Search"
             value={query}

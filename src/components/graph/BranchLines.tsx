@@ -20,7 +20,7 @@ interface BranchLinesProps {
   rowHeight?: number;
 }
 
-export const BranchLines = memo(function BranchLines({ commit, rowHeight }: BranchLinesProps) {
+export const BranchLines = memo(({ commit, rowHeight }: BranchLinesProps) => {
   const height = rowHeight ?? 28;
   const nodeX = COLUMN_WIDTH + commit.column * COLUMN_WIDTH;
   const nodeY = height / 2;
@@ -110,3 +110,5 @@ export const BranchLines = memo(function BranchLines({ commit, rowHeight }: Bran
     </svg>
   );
 });
+
+BranchLines.displayName = "BranchLines";

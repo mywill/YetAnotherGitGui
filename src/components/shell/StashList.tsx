@@ -5,7 +5,7 @@ import { StashItem } from "../sidebar/StashItem";
 import { KeyboardList } from "../common/KeyboardList";
 import { DetailsPanelEmpty } from "../common/DetailsPanelStates";
 
-export function StashList() {
+export const StashList = () => {
   const stashes = useRepositoryStore((s) => s.stashes);
   const loadStashDetails = useRepositoryStore((s) => s.loadStashDetails);
   const applyStash = useRepositoryStore((s) => s.applyStash);
@@ -58,4 +58,4 @@ export function StashList() {
       </KeyboardList>
     </div>
   );
-}
+};

@@ -3,7 +3,7 @@ import { DetailsPanelEmpty } from "../common/DetailsPanelStates";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 
-export function InspectorPanel() {
+export const InspectorPanel = () => {
   const activeView = useSelectionStore((s) => s.activeView);
   const selectedCommitDetails = useRepositoryStore((s) => s.selectedCommitDetails);
   const commitDetailsLoading = useRepositoryStore((s) => s.commitDetailsLoading);
@@ -13,4 +13,4 @@ export function InspectorPanel() {
   }
 
   return <DetailsPanelEmpty className="inspector-empty" label="No details to show" />;
-}
+};

@@ -50,7 +50,7 @@ export function WelcomeScreen({ failedPath }: WelcomeScreenProps) {
           </div>
           <div className="welcome-repo-input flex flex-col gap-2">
             <input
-              className="w-full"
+              className="font-inherit text-body bg-bg-well text-text-primary border-border focus-ring px-card-x py-card-y w-full rounded border"
               type="text"
               value={pathInput}
               onChange={(e) => setPathInput(e.target.value)}
