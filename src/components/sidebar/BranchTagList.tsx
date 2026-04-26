@@ -234,7 +234,7 @@ function FilterableSection<T extends { name: string }>({
           >
             <ChevronIcon />
           </span>
-          <span className="section-title text-3xs truncate font-mono font-medium tracking-widest uppercase">
+          <span className="section-title text-2xs truncate font-mono font-medium tracking-widest uppercase">
             {title}
           </span>
         </button>
