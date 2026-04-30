@@ -3,6 +3,8 @@
 @import "./grid-layout.css";
 @import "@xterm/xterm/css/xterm.css";
 
+@custom-variant light ([data-theme="light"] &);
+
 /* ─── Theme: Voltage palette + density tokens ─── */
 /* Dark mode values are defaults (dark is primary).                */
 /* [data-theme="light"] overrides palette.                         */
@@ -16,6 +18,7 @@
   --color-bg-panel: #141418;
   --color-bg-well: #050507;
   --color-bg-hover: #222226;
+  --color-bg-rail: var(--color-bg-panel);
   --color-bg-selected: rgba(14, 208, 245, 0.15);
   --color-bg-selected-hover: rgba(14, 208, 245, 0.25);
 
@@ -33,8 +36,12 @@
   /* Accent: cyan — selections, meta, branches, tags */
   --color-accent-cyan: #0ed0f5;
 
-  /* Accent: lime — success, additions, staged */
+  /* Accent: lime — brand third hue (dark-mode only). */
   --color-accent-lime: #d0f50e;
+
+  /* Semantic green — success / staged / additions. Light overrides this; dark
+     keeps it identical to brand lime so dark renders unchanged. */
+  --color-success: #d0f50e;
 
   /* Semantic colors */
   --color-danger: #ff5a6e;
@@ -137,35 +144,36 @@
 
 /* ─── Light mode ─── */
 [data-theme="light"] {
-  --color-bg-canvas: #fafafa;
-  --color-bg-panel: #ffffff;
-  --color-bg-well: #f0f0f2;
-  --color-bg-hover: #e8e8ec;
-  --color-bg-selected: rgba(33, 132, 174, 0.12);
-  --color-bg-selected-hover: rgba(33, 132, 174, 0.2);
+  --color-bg-canvas: #ddd3cd;
+  --color-bg-panel: #ede5e0;
+  --color-bg-well: #c8bcb4;
+  --color-bg-hover: #d4c8be;
+  --color-bg-rail: #c5b8ad;
+  --color-bg-selected: rgba(13, 106, 145, 0.1);
+  --color-bg-selected-hover: rgba(13, 106, 145, 0.14);
 
   --color-text-primary: #0a0a0c;
-  --color-text-muted: #5e5e64;
+  --color-text-muted: #42424a;
 
-  --color-border: #e4e4e8;
-  --color-border-light: #d0d0d6;
+  --color-border: #b8aca2;
+  --color-border-light: #cabfb5;
 
-  --color-accent-magenta: #ae2184;
-  --color-accent-cyan: #1a6d8f;
+  --color-accent-magenta: #d05a1a;
+  --color-accent-cyan: #1a98c4;
   --color-accent-lime: #4a6a10;
+
+  --color-success: #317705;
 
   --color-danger: #c0232c;
   --color-warning: #7c5c08;
   --color-info: #6a6a70;
 
-  --color-addition: #4a6a10;
-  --color-deletion: #c0232c;
-  /* Light mode: deletion red is already dark enough — same value works
-     against the cyan-tinted active row */
-  --color-deletion-on-active: #c0232c;
+  --color-addition: #1f5004;
+  --color-deletion: #8a181f;
+  --color-deletion-on-active: #8a181f;
 
-  --color-conflict-ours: #4a6a10;
-  --color-conflict-theirs: #1a6d8f;
+  --color-conflict-ours: #317705;
+  --color-conflict-theirs: #0d6a91;
   --color-conflict-marker: #6a6a70;
 
   --color-branch-1: #2184ae;
@@ -177,20 +185,20 @@
   --color-branch-7: #b85c3a;
   --color-branch-8: #6a6a70;
 
-  --color-status-modified: #7c5c08;
-  --color-status-added: #4a6a10;
-  --color-status-deleted: #c0232c;
-  --color-status-untracked: #1a6d8f;
-  --color-status-conflicted: #c0232c;
+  --color-status-modified: #5e4506;
+  --color-status-added: #2a6804;
+  --color-status-deleted: #a01d25;
+  --color-status-untracked: #094b6a;
+  --color-status-conflicted: #a01d25;
 
-  --color-badge-branch: #1a6d8f;
-  --color-badge-remote: #4a6a10;
-  --color-badge-tag: #7c5c08;
+  --color-badge-branch: #073f5a;
+  --color-badge-remote: #2a6804;
+  --color-badge-tag: #5e4506;
   --color-badge-tag-text: #ffffff;
-  --color-badge-head: #ae2184;
+  --color-badge-head: #a6390d;
   --color-badge-head-text: #ffffff;
 
-  --color-selection-border: #1a6d8f;
+  --color-selection-border: #0d6a91;
 
   --color-toast-success: #2e7d32;
   --color-toast-error: #c62828;
@@ -198,15 +206,15 @@
   --color-warning-bg: #fef3c7;
   --color-warning-text: #78350f;
 
-  --color-focus-outline: #ae2184;
+  --color-focus-outline: #a6390d;
 
-  --color-accent: #1a6d8f;
+  --color-accent: #0d6a91;
 
-  --badge-bg-mix: 3%;
-  --head-bg-mix: 6%;
+  --badge-bg-mix: 16%;
+  --head-bg-mix: 22%;
 
-  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-dialog: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-menu: 0 8px 24px rgba(60, 40, 20, 0.28);
+  --shadow-dialog: 0 14px 42px rgba(60, 40, 20, 0.32);
 }
 
 /* ─── Density: spacing only. Text size lives on [data-text-size]. ─── */

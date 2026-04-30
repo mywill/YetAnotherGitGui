@@ -16,7 +16,7 @@ export const IconRail = () => {
 
   return (
     <nav
-      className="icon-rail bg-bg-panel border-border w-rail flex shrink-0 flex-col items-center border-r pt-2"
+      className="icon-rail bg-bg-rail border-border w-rail flex shrink-0 flex-col items-center border-r pt-2"
       role="tablist"
       aria-label="Navigation"
     >

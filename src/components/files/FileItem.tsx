@@ -133,9 +133,9 @@ export const FileItem = memo(function FileItem({
       <div
         className={clsx(
           "file-item hover:bg-bg-hover min-h-row flex shrink-0 cursor-pointer items-center gap-2 px-3 py-1 text-xs transition-colors duration-100",
-          isStaged && "staged bg-success/8 hover:bg-success/15",
+          isStaged && "staged light:bg-success/15 light:hover:bg-success/20",
           isSelected && "selected bg-bg-selected hover:bg-bg-selected-hover",
-          isStaged && isSelected && "bg-accent-lime/20 hover:bg-accent-lime/30"
+          isStaged && isSelected && "bg-success/20 hover:bg-success/30"
         )}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
