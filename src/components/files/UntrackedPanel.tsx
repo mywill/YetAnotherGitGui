@@ -1,11 +1,14 @@
 import { useMemo, useCallback } from "react";
-import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconDeselect } from "@tabler/icons-react";
 import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
 import { YaggButton } from "../common/YaggButton";
 import { KeyboardList } from "../common/KeyboardList";
+
+const SECTION_ACTION_BTN =
+  "section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex h-6 items-center gap-1 bg-transparent px-2 text-xs";
 
 interface UntrackedPanelProps {
   statuses: FileStatuses | null;
@@ -72,9 +75,10 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
   };
 
   const hasSelectedUntracked = selectedUntrackedPaths.length > 0;
+  const selectedCount = selectedUntrackedPaths.length;
 
   return (
-    <div className="untracked-panel border-border flex h-full flex-col overflow-hidden border-t">
+    <div className="untracked-panel flex h-full flex-col overflow-hidden">
       <div className="section-header border-border bg-bg-well text-text-muted flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
         <div className="section-header-title flex w-full items-center gap-2">
           <span className="section-title font-medium">Untracked</span>
@@ -86,40 +90,43 @@ export function UntrackedPanel({ statuses, loading }: UntrackedPanelProps) {
           {hasSelectedUntracked && (
             <>
               <YaggButton
-                className="section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex items-center gap-1 bg-transparent px-2 py-px text-xs"
+                className={SECTION_ACTION_BTN}
                 onClick={handleStageSelected}
-                title="Stage selected files"
+                title={`Stage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                aria-label={`Stage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
               >
                 <IconPlus size={12} stroke={2} aria-hidden />
-                <span>Stage Selected</span>
+                <span>{selectedCount}</span>
               </YaggButton>
               <YaggButton
-                className="section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex items-center gap-1 bg-transparent px-2 py-px text-xs"
+                className={SECTION_ACTION_BTN}
                 onClick={handleDeleteSelected}
-                title="Delete selected files"
+                title={`Delete ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                aria-label={`Delete ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
               >
                 <IconTrash size={12} stroke={2} aria-hidden />
-                <span>Delete Selected</span>
+                <span>{selectedCount}</span>
               </YaggButton>
               <YaggButton
-                variant="outline"
-                className="section-action-btn secondary inline-flex items-center gap-1 px-2 py-px text-xs"
+                className={SECTION_ACTION_BTN}
                 onClick={handleClearSelection}
                 title="Clear selection"
                 aria-label="Clear selection"
               >
-                <IconX size={12} stroke={2} aria-hidden />
+                <IconDeselect size={12} stroke={2} aria-hidden />
+                <span>{selectedCount}</span>
               </YaggButton>
             </>
           )}
           {untracked.length > 0 && (
             <YaggButton
-              className="section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex items-center gap-1 bg-transparent px-2 py-px text-xs"
+              className={SECTION_ACTION_BTN}
               onClick={handleStageAllUntracked}
               title="Stage all untracked files"
+              aria-label="Stage all untracked files"
             >
               <IconPlus size={12} stroke={2} aria-hidden />
-              <span>Stage All</span>
+              <span>All</span>
             </YaggButton>
           )}
         </div>

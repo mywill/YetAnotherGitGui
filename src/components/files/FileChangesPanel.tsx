@@ -213,7 +213,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           aria-expanded={showStaged}
         >
           <span className="toggle-icon text-text-muted text-2xs w-4">{showStaged ? "▼" : "▶"}</span>
-          <span className="section-title text-3xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
+          <span className="section-title text-2xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
             Staged
           </span>
           <span className="section-count bg-bg-canvas text-text-muted mr-auto rounded-full px-1.5 py-px font-mono text-xs">
@@ -294,7 +294,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           <span className="toggle-icon text-text-muted text-2xs w-4">
             {showUnstaged ? "▼" : "▶"}
           </span>
-          <span className="section-title text-3xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
+          <span className="section-title text-2xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
             Unstaged
           </span>
           <span className="text-text-muted text-xs">(Del to discard)</span>
@@ -383,7 +383,7 @@ export function FileChangesPanel({ statuses, loading }: FileChangesPanelProps) {
           <span className="toggle-icon text-text-muted text-2xs w-4">
             {showUntracked ? "▼" : "▶"}
           </span>
-          <span className="section-title text-3xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
+          <span className="section-title text-2xs flex-1 text-left font-mono font-medium tracking-widest uppercase">
             Untracked
           </span>
           <span className="text-text-muted text-xs">(Del to delete)</span>

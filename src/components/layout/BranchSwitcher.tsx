@@ -146,7 +146,7 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
           className="branch-switcher-popover border-border bg-bg-panel absolute bottom-full left-0 z-50 mb-1 flex max-h-80 w-64 flex-col rounded-md border shadow-lg"
         >
           <div className="border-border border-b px-2 py-1.5">
-            <div className="text-text-muted text-3xs mb-1 font-mono font-medium tracking-widest uppercase">
+            <div className="text-text-muted text-2xs mb-1 font-mono font-medium tracking-widest uppercase">
               Switch branch
             </div>
             <input

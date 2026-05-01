@@ -1,6 +1,7 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { tauriMocks } from "./tauri-mocks";
+import { switchToStatusView, switchToHistoryView } from "./helpers";
 
 test.describe("Terminal Panel", () => {
   test.beforeEach(async ({ page }) => {
@@ -62,6 +63,18 @@ test.describe("Terminal Panel", () => {
     });
     await terminalButton.click();
     await expect(page.locator('[aria-label="Resize terminal panel"]')).toBeVisible();
+  });
+
+  test("terminal mount/unmount cycle does not produce page errors", async ({ page }) => {
+    const terminalButton = page.locator(".status-bar button", { hasText: "Terminal" });
+    await terminalButton.click();
+    await expect(page.locator(".terminal-panel")).toBeVisible();
+
+    await switchToHistoryView(page);
+    await switchToStatusView(page);
+
+    await page.locator(".terminal-close").click();
+    await expect(page.locator(".terminal-panel")).not.toBeVisible();
   });
 
   test.describe("Accessibility - axe-core", () => {

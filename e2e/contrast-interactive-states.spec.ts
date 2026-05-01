@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { tauriMocks } from "./tauri-mocks";
 import {
   switchToStatusView,
@@ -142,13 +142,13 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector('[data-testid="file-item"]', {
         timeout: 10000,
       });
-      await assertContrastClean(page, ".staged-unstaged-panel");
+      await assertContrastClean(page, ".status-left");
     });
 
     test("hovered file item has sufficient contrast", async ({ page }) => {
       const fileItem = page.locator('[data-testid="file-item"]').first();
       await fileItem.hover();
-      await assertContrastClean(page, ".staged-unstaged-panel");
+      await assertContrastClean(page, ".status-left");
     });
 
     test("selected file item has sufficient contrast", async ({ page }) => {
@@ -156,7 +156,7 @@ test.describe("Contrast - Interactive States", () => {
       await fileItem.click();
       // Wait for selection state
       await page.waitForTimeout(200);
-      await assertContrastClean(page, ".staged-unstaged-panel");
+      await assertContrastClean(page, ".status-left");
     });
 
     test("staged + selected file has sufficient contrast", async ({ page }) => {
@@ -165,7 +165,7 @@ test.describe("Contrast - Interactive States", () => {
       if ((await stagedFile.count()) > 0) {
         await stagedFile.first().click();
         await page.waitForTimeout(200);
-        await assertContrastClean(page, ".staged-unstaged-panel");
+        await assertContrastClean(page, ".status-left");
       }
     });
 
@@ -175,7 +175,7 @@ test.describe("Contrast - Interactive States", () => {
       await listbox.focus();
       await page.keyboard.press("ArrowDown");
       await page.waitForTimeout(200);
-      await assertContrastClean(page, ".staged-unstaged-panel");
+      await assertContrastClean(page, ".status-left");
     });
   });
 

@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "./fixtures";
 import { tauriMocks } from "./tauri-mocks";
 import { switchToBranchesView, expandAllBranchSections } from "./helpers";
 import { assertManualContrast } from "./contrast-helper";
@@ -77,4 +77,76 @@ test.describe("Contrast regressions (token-pair guards)", () => {
     await page.waitForSelector(".synthetic-hover-row > span", { timeout: 5000 });
     await assertManualContrast(page, ".synthetic-hover-row > span");
   });
+
+  /* ── Brand-accent text-on-surface guards ──
+   *
+   * `--color-accent-cyan` and `--color-accent-magenta` are used as text in
+   * `BranchSwitcher.tsx`, `DiffViewPanel.tsx`, and `YaggButton.tsx` (link
+   * variant). Those usage sites only render when their parent UI is open
+   * (dropdown / multi-select / link click), so the existing view-level scans
+   * never trigger them. These synthetic guards pin AA (4.5:1) on every
+   * standard surface in both themes — they would have caught the D2 vivid
+   * retune that pushed both accents below AA on light panel.
+   */
+  for (const theme of ["dark", "light"] as const) {
+    for (const surface of ["bg-panel", "bg-rail", "bg-canvas"] as const) {
+      const surfaceClass = `bg-${surface}`;
+      test(`text-accent-cyan on ${surfaceClass} passes AA in ${theme} mode`, async ({ page }) => {
+        await page.evaluate(async (t) => {
+          const mod = await import("/src/stores/settingsStore.ts");
+          mod.useSettingsStore.getState().setTheme(t);
+        }, theme);
+        await page.waitForTimeout(200);
+        await page.evaluate((cls) => {
+          const el = document.createElement("div");
+          el.className = `synthetic-cyan-${cls} ${cls} px-2 py-1`;
+          const inner = document.createElement("span");
+          inner.className = "text-accent-cyan text-xs";
+          inner.textContent = "branch label";
+          el.appendChild(inner);
+          document.body.appendChild(el);
+        }, surfaceClass);
+        await page.waitForSelector(`.synthetic-cyan-${surfaceClass} > span`, { timeout: 5000 });
+        await assertManualContrast(page, `.synthetic-cyan-${surfaceClass} > span`);
+      });
+
+      test(`text-accent-magenta on ${surfaceClass} passes AA in ${theme} mode`, async ({ page }) => {
+        await page.evaluate(async (t) => {
+          const mod = await import("/src/stores/settingsStore.ts");
+          mod.useSettingsStore.getState().setTheme(t);
+        }, theme);
+        await page.waitForTimeout(200);
+        await page.evaluate((cls) => {
+          const el = document.createElement("div");
+          el.className = `synthetic-magenta-${cls} ${cls} px-2 py-1`;
+          const inner = document.createElement("span");
+          inner.className = "text-accent-magenta text-xs";
+          inner.textContent = "primary action";
+          el.appendChild(inner);
+          document.body.appendChild(el);
+        }, surfaceClass);
+        await page.waitForSelector(`.synthetic-magenta-${surfaceClass} > span`, { timeout: 5000 });
+        await assertManualContrast(page, `.synthetic-magenta-${surfaceClass} > span`);
+      });
+    }
+
+    test(`text-success on bg-panel passes AA in ${theme} mode`, async ({ page }) => {
+      await page.evaluate(async (t) => {
+        const mod = await import("/src/stores/settingsStore.ts");
+        mod.useSettingsStore.getState().setTheme(t);
+      }, theme);
+      await page.waitForTimeout(200);
+      await page.evaluate(() => {
+        const el = document.createElement("div");
+        el.className = "synthetic-success bg-bg-panel px-2 py-1";
+        const inner = document.createElement("span");
+        inner.className = "text-success text-xs";
+        inner.textContent = "+12";
+        el.appendChild(inner);
+        document.body.appendChild(el);
+      });
+      await page.waitForSelector(".synthetic-success > span", { timeout: 5000 });
+      await assertManualContrast(page, ".synthetic-success > span");
+    });
+  }
 });

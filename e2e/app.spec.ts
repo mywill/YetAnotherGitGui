@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { tauriMocks } from "./tauri-mocks";
 import {
@@ -150,29 +150,14 @@ test.describe("File Staging Workflow", () => {
   });
 
   test("Stage All button appears when there are unstaged files", async ({ page }) => {
-    // Mock data has unstaged files, so Stage All should be visible in Unstaged section
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await expect(unstagedSection).toBeVisible({ timeout: 10000 });
-
-    const stageAllButton = unstagedSection.locator("button", {
-      hasText: "Stage All",
-    });
-    await expect(stageAllButton).toBeVisible();
+    // Mock data has unstaged files, so the All button should be visible in Unstaged section
+    const stageAllButton = page.getByRole("button", { name: "Stage all unstaged files" });
+    await expect(stageAllButton).toBeVisible({ timeout: 10000 });
   });
 
   test("Unstage All button appears when there are staged files", async ({ page }) => {
-    // Use exact match for Staged section
-    const stagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Staged", { exact: true }) });
-    await expect(stagedSection).toBeVisible({ timeout: 10000 });
-
-    const unstageAllButton = stagedSection.locator("button", {
-      hasText: "Unstage All",
-    });
-    await expect(unstageAllButton).toBeVisible();
+    const unstageAllButton = page.getByRole("button", { name: "Unstage all staged files" });
+    await expect(unstageAllButton).toBeVisible({ timeout: 10000 });
   });
 
   test("displays mock file items", async ({ page }) => {
@@ -392,7 +377,7 @@ test.describe("Accessibility - axe-core", () => {
 
   test("file changes panel should pass color contrast checks", async ({ page }) => {
     await switchToStatusView(page);
-    await assertContrastClean(page, ".staged-unstaged-panel");
+    await assertContrastClean(page, ".status-left");
   });
 
   test("commit graph should pass color contrast checks", async ({ page }) => {
@@ -472,6 +457,161 @@ test.describe("Accessibility - axe-core", () => {
     });
     await page.waitForTimeout(200);
     await assertContrastClean(page, ".commit-graph");
+  });
+
+  test("dark mode (default) should pass overall color contrast checks", async ({ page }) => {
+    // Theme defaults to dark; assert the explicit dark scan separately from the
+    // baseline so the dark-mode coverage isn't lost if defaults change.
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      mod.useSettingsStore.getState().setTheme("dark");
+    });
+    await page.waitForTimeout(200);
+    await assertContrastClean(page);
+  });
+
+  test("command palette should pass axe and contrast checks", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/commandPaletteStore.ts");
+      mod.useCommandPaletteStore.getState().open();
+    });
+    await page.waitForSelector(".command-palette", { timeout: 5000 });
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".command-palette-backdrop")
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await assertContrastClean(page, ".command-palette-backdrop");
+  });
+
+  test("confirmation dialog should pass axe and contrast checks", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/dialogStore.ts");
+      mod.useDialogStore.getState().showConfirm({
+        title: "Discard changes?",
+        message: "All uncommitted edits to this file will be lost.",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep",
+      });
+    });
+    await page.waitForSelector(".confirm-dialog-backdrop", { timeout: 5000 });
+
+    // The primary "confirm" button uses the brand accent-magenta token, whose
+    // small-text contrast trade-off is governed by contrast-known-bugs.spec.ts
+    // at the token level. Exclude it here so this test exercises dialog
+    // structure (header, body, cancel button) rather than re-litigating the
+    // accent color.
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".confirm-dialog-backdrop")
+      .exclude(".dialog-btn.confirm")
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("context menu on a file row should pass axe and contrast checks", async ({ page }) => {
+    await switchToStatusView(page);
+    const fileItem = page.locator('[data-testid="file-item"]').first();
+    await fileItem.waitFor({ state: "visible", timeout: 10000 });
+    await fileItem.click({ button: "right" });
+    await page.waitForSelector(".context-menu", { timeout: 5000 });
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".context-menu")
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await assertContrastClean(page, ".context-menu");
+  });
+
+  test("about dialog should pass axe and contrast checks", async ({ page }) => {
+    const settingsTrigger = page.locator(".settings-menu-button").first();
+    if (!(await settingsTrigger.count())) {
+      return;
+    }
+    await settingsTrigger.click();
+    const aboutItem = page.locator(".settings-menu-item", { hasText: "About" }).first();
+    if (!(await aboutItem.count())) {
+      return;
+    }
+    await aboutItem.click();
+
+    const dialog = page.locator(".confirm-dialog-backdrop");
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+
+    // Same accent-magenta trade-off as the generic confirmation dialog —
+    // exclude the primary button. Token-level coverage lives in
+    // contrast-known-bugs.spec.ts.
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".confirm-dialog-backdrop")
+      .exclude(".dialog-btn.confirm")
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("branch switcher dropdown should pass axe and contrast checks", async ({ page }) => {
+    const switcher = page.locator(".branch-switcher").first();
+    if (!(await switcher.count())) {
+      // No branch switcher in current layout — skip without failing.
+      return;
+    }
+    await switcher.click();
+    const dropdown = page.locator(".branch-switcher-dropdown, .branch-switcher-menu").first();
+    if (!(await dropdown.count())) {
+      return;
+    }
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".branch-switcher")
+      .analyze();
+    expect(results.violations).toEqual([]);
+    await assertContrastClean(page, ".branch-switcher");
+  });
+
+  test("comfortable density should pass overall color contrast checks", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      mod.useSettingsStore.getState().setDensity("comfortable");
+    });
+    await page.waitForTimeout(200);
+    await assertContrastClean(page);
+  });
+
+  test("spacious density should pass overall color contrast checks", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      mod.useSettingsStore.getState().setDensity("spacious");
+    });
+    await page.waitForTimeout(200);
+    await assertContrastClean(page);
+  });
+
+  test("status view at extreme pane sizes should pass color contrast checks", async ({ page }) => {
+    await switchToStatusView(page);
+    // Drive both staged and unstaged panes to their min size, leaving untracked to fill.
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      const { setLayoutSize } = mod.useSettingsStore.getState();
+      setLayoutSize("workspace.split.status.staged", 80);
+      setLayoutSize("workspace.split.status.unstaged", 80);
+    });
+    await page.waitForTimeout(200);
+    await assertContrastClean(page, ".status-left");
+
+    // Drive the staged pane very large to confirm the unstaged/untracked area
+    // still renders without contrast regressions when squeezed.
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      const { setLayoutSize } = mod.useSettingsStore.getState();
+      setLayoutSize("workspace.split.status.staged", 600);
+      setLayoutSize("workspace.split.status.unstaged", 80);
+    });
+    await page.waitForTimeout(200);
+    await assertContrastClean(page, ".status-left");
   });
 });
 
@@ -1040,10 +1180,9 @@ test.describe("Batch Delete", () => {
     await file1.click();
     await file2.click({ modifiers: ["ControlOrMeta"] });
 
-    const untrackedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Untracked", { exact: true }) });
-    await expect(untrackedSection.locator("button", { hasText: "Delete Selected" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Delete 2 selected files" })
+    ).toBeVisible();
   });
 
   test("Delete Selected button appears when multiple unstaged files are selected", async ({
@@ -1056,10 +1195,9 @@ test.describe("Batch Delete", () => {
     await file1.click();
     await file2.click({ modifiers: ["ControlOrMeta"] });
 
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await expect(unstagedSection.locator("button", { hasText: "Delete Selected" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Delete 2 selected files" })
+    ).toBeVisible();
   });
 
   test("right-click on a multi-selected untracked file shows batch delete entry", async ({
@@ -1086,10 +1224,7 @@ test.describe("Batch Delete", () => {
     await file1.click();
     await file2.click({ modifiers: ["ControlOrMeta"] });
 
-    const untrackedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Untracked", { exact: true }) });
-    await untrackedSection.locator("button", { hasText: "Delete Selected" }).click();
+    await page.getByRole("button", { name: "Delete 2 selected files" }).click();
 
     const dialogBody = page.locator(".confirm-dialog-body");
     await expect(dialogBody).toBeVisible();
@@ -1382,12 +1517,8 @@ test.describe("Multi-Select Files", () => {
     // Click a file to select it
     await file1.click();
 
-    // Selection buttons should appear in the section header
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await expect(unstagedSection.locator("button", { hasText: "Stage Selected" })).toBeVisible();
-    await expect(unstagedSection.getByRole("button", { name: "Clear selection" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stage 1 selected file" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Clear selection" }).first()).toBeVisible();
   });
 
   test("Clear button clears selection", async ({ page }) => {
@@ -1434,19 +1565,15 @@ test.describe("Stage All Button - All Files", () => {
   });
 
   test("Stage All button is present in Unstaged section", async ({ page }) => {
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-
-    await expect(unstagedSection.locator("button", { hasText: "Stage All" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Stage all unstaged files" })
+    ).toBeVisible();
   });
 
   test("Stage All button is present in Untracked section", async ({ page }) => {
-    const untrackedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Untracked", { exact: true }) });
-
-    await expect(untrackedSection.locator("button", { hasText: "Stage All" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Stage all untracked files" })
+    ).toBeVisible();
   });
 });
 

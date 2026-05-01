@@ -16,16 +16,18 @@ vi.mock("../../stores/settingsStore", () => ({
   }),
 }));
 
-vi.mock("../files/StagedUnstagedPanel", () => ({
-  StagedUnstagedPanel: ({
-    statuses,
-    loading,
-  }: {
-    statuses: FileStatuses | null;
-    loading: boolean;
-  }) => (
-    <div data-testid="staged-unstaged-panel">
+vi.mock("../files/StagedPanel", () => ({
+  StagedPanel: ({ statuses, loading }: { statuses: FileStatuses | null; loading: boolean }) => (
+    <div data-testid="staged-panel">
       {loading ? "Loading..." : `Staged: ${statuses?.staged.length ?? 0}`}
+    </div>
+  ),
+}));
+
+vi.mock("../files/UnstagedPanel", () => ({
+  UnstagedPanel: ({ statuses, loading }: { statuses: FileStatuses | null; loading: boolean }) => (
+    <div data-testid="unstaged-panel">
+      {loading ? "Loading..." : `Unstaged: ${statuses?.unstaged.length ?? 0}`}
     </div>
   ),
 }));
@@ -94,7 +96,8 @@ describe("StatusView", () => {
 
     render(<StatusView />);
 
-    expect(screen.getByTestId("staged-unstaged-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("staged-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("unstaged-panel")).toBeInTheDocument();
     expect(screen.getByTestId("untracked-panel")).toBeInTheDocument();
     expect(screen.getByTestId("diff-view-panel")).toBeInTheDocument();
     expect(screen.getByTestId("commit-panel")).toBeInTheDocument();
@@ -115,6 +118,7 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     expect(screen.getByText("Staged: 1")).toBeInTheDocument();
+    expect(screen.getByText("Unstaged: 1")).toBeInTheDocument();
     expect(screen.getByText("Untracked: 2")).toBeInTheDocument();
   });
 
@@ -179,7 +183,8 @@ describe("StatusView", () => {
     expect(container.querySelector(".status-view")).toBeInTheDocument();
     expect(container.querySelector(".status-left")).toBeInTheDocument();
     expect(container.querySelector(".status-right")).toBeInTheDocument();
-    expect(container.querySelector(".status-staging")).toBeInTheDocument();
+    expect(container.querySelector(".status-staged")).toBeInTheDocument();
+    expect(container.querySelector(".status-unstaged")).toBeInTheDocument();
     expect(container.querySelector(".status-untracked")).toBeInTheDocument();
     expect(container.querySelector(".status-diff")).toBeInTheDocument();
     expect(container.querySelector(".status-commit")).toBeInTheDocument();
@@ -195,6 +200,55 @@ describe("StatusView", () => {
     expect(resizer).toHaveAttribute("aria-label", "Resize file panel");
   });
 
+  it("has horizontal resizers between the staged/unstaged/untracked panes", () => {
+    setupStore();
+
+    const { container } = render(<StatusView />);
+
+    const horizontalResizers = container.querySelectorAll(
+      '[role="separator"][aria-orientation="horizontal"]'
+    );
+    expect(horizontalResizers).toHaveLength(2);
+    expect(horizontalResizers[0]).toHaveAttribute("aria-label", "Resize staged section");
+    expect(horizontalResizers[1]).toHaveAttribute("aria-label", "Resize untracked section");
+  });
+
+  it("renders panes in flex mode by default (no stored sizes)", () => {
+    setupStore();
+    const { container } = render(<StatusView />);
+
+    // With no stored sizes all three panes use flex, preserving the original
+    // 3:3:2 default ratio. Unstaged is always flex (it's the buffer pane).
+    const staged = container.querySelector(".status-staged") as HTMLElement;
+    const unstaged = container.querySelector(".status-unstaged") as HTMLElement;
+    const untracked = container.querySelector(".status-untracked") as HTMLElement;
+
+    expect(staged.style.flexGrow).toBe("3");
+    expect(unstaged.style.flexGrow).toBe("3");
+    expect(untracked.style.flexGrow).toBe("2");
+  });
+
+  it("renders staged and untracked in pixel mode when stored sizes exist", () => {
+    setupStore();
+    mockStore(useSettingsStore, {
+      layoutSizes: {
+        "workspace.split.status.staged": 200,
+        "workspace.split.status.untracked": 150,
+      },
+      setLayoutSize: vi.fn(),
+    });
+    const { container } = render(<StatusView />);
+
+    const staged = container.querySelector(".status-staged") as HTMLElement;
+    const untracked = container.querySelector(".status-untracked") as HTMLElement;
+    const unstaged = container.querySelector(".status-unstaged") as HTMLElement;
+
+    expect(staged.style.height).toBe("200px");
+    expect(untracked.style.height).toBe("150px");
+    // Unstaged is always flex — it absorbs all resize changes.
+    expect(unstaged.style.flexGrow).toBe("3");
+  });
+
   it("handles null file statuses", () => {
     setupStore({
       fileStatuses: null,
@@ -203,6 +257,7 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     expect(screen.getByText("Staged: 0")).toBeInTheDocument();
+    expect(screen.getByText("Unstaged: 0")).toBeInTheDocument();
     expect(screen.getByText("Untracked: 0")).toBeInTheDocument();
   });
 });

@@ -168,16 +168,16 @@ describe("UntrackedPanel", () => {
   });
 
   describe("Stage All button", () => {
-    it("shows Stage All button when there are untracked files", () => {
+    it("shows the All button when there are untracked files", () => {
       render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
 
-      expect(screen.getByText("Stage All")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Stage all untracked files" })).toBeInTheDocument();
     });
 
-    it("hides Stage All button when no untracked files", () => {
+    it("hides the All button when no untracked files", () => {
       render(<UntrackedPanel statuses={emptyStatuses} loading={false} />);
 
-      expect(screen.queryByText("Stage All")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Stage all untracked files" })).toBeNull();
     });
 
     it("calls stageFiles with all untracked file paths when clicked", async () => {
@@ -192,7 +192,7 @@ describe("UntrackedPanel", () => {
 
       render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
 
-      fireEvent.click(screen.getByText("Stage All"));
+      fireEvent.click(screen.getByRole("button", { name: "Stage all untracked files" }));
 
       await waitFor(() => {
         expect(mockStageFiles).toHaveBeenCalledWith(["new1.ts", "new2.ts"]);
@@ -281,13 +281,13 @@ describe("UntrackedPanel", () => {
   });
 
   describe("selection actions in header", () => {
-    it("shows Stage Selected button when files are selected", () => {
+    it("shows the stage-selected button with selection count", () => {
       mockSelectedFilePaths.add(makeSelectionKey("new-file.ts", false));
       setupSelectionStore();
 
       render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
 
-      expect(screen.getByText("Stage Selected")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Stage 1 selected file" })).toBeInTheDocument();
     });
 
     it("shows Clear button when files are selected", () => {
@@ -299,13 +299,13 @@ describe("UntrackedPanel", () => {
       expect(screen.getByRole("button", { name: "Clear selection" })).toBeInTheDocument();
     });
 
-    it("calls stageFiles when Stage Selected is clicked", async () => {
+    it("calls stageFiles when stage-selected is clicked", async () => {
       mockSelectedFilePaths.add(makeSelectionKey("new-file.ts", false));
       setupSelectionStore();
 
       render(<UntrackedPanel statuses={statusesWithUntracked} loading={false} />);
 
-      fireEvent.click(screen.getByText("Stage Selected"));
+      fireEvent.click(screen.getByRole("button", { name: "Stage 1 selected file" }));
 
       await waitFor(() => {
         expect(mockStageFiles).toHaveBeenCalledWith(["new-file.ts"]);
@@ -335,19 +335,19 @@ describe("UntrackedPanel", () => {
       ],
     };
 
-    it("does not show Delete Selected when nothing is selected", () => {
+    it("does not show delete-selected when nothing is selected", () => {
       render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
 
-      expect(screen.queryByText("Delete Selected")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Delete \d+ selected file/ })).toBeNull();
     });
 
-    it("shows Delete Selected when one or more files are selected", () => {
+    it("shows delete-selected when one or more files are selected", () => {
       mockSelectedFilePaths.add(makeSelectionKey("a.ts", false));
       setupSelectionStore();
 
       render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
 
-      expect(screen.getByText("Delete Selected")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Delete 1 selected file" })).toBeInTheDocument();
     });
 
     it("calls deleteFiles with all selected paths and clears selection", async () => {
@@ -358,7 +358,7 @@ describe("UntrackedPanel", () => {
 
       render(<UntrackedPanel statuses={statusesMultiple} loading={false} />);
 
-      fireEvent.click(screen.getByText("Delete Selected"));
+      fireEvent.click(screen.getByRole("button", { name: "Delete 2 selected files" }));
 
       await waitFor(() => {
         expect(mockDeleteFiles).toHaveBeenCalledWith(["a.ts", "c.ts"]);

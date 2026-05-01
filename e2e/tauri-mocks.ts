@@ -46,6 +46,24 @@ export const tauriMocks = `
           return null;
         }
 
+        if (pluginName === 'event') {
+          if (pluginCmd === 'listen') {
+            const eventId = window.__TAURI_NEXT_EVENT_ID__ = (window.__TAURI_NEXT_EVENT_ID__ || 0) + 1;
+            window.__TAURI_EVENT_LISTENERS__ = window.__TAURI_EVENT_LISTENERS__ || new Map();
+            window.__TAURI_EVENT_LISTENERS__.set(eventId, { event: args.event, handler: args.handler });
+            return eventId;
+          }
+          if (pluginCmd === 'unlisten') {
+            if (window.__TAURI_EVENT_LISTENERS__) {
+              window.__TAURI_EVENT_LISTENERS__.delete(args.eventId);
+            }
+            return undefined;
+          }
+          if (pluginCmd === 'emit' || pluginCmd === 'emit_to') {
+            return undefined;
+          }
+        }
+
         console.warn('[E2E Mock] Unhandled plugin command:', cmd);
         return null;
       }
@@ -518,6 +536,18 @@ export const tauriMocks = `
     metadata: {
       currentWindow: { label: 'main' },
       currentWebview: { label: 'main' }
+    }
+  };
+
+  // Tauri SDK's @tauri-apps/api/event uses this global (not __TAURI_INTERNALS__)
+  // for synchronous listener bookkeeping inside _unlisten. Without it, React
+  // effect cleanup throws TypeError during component unmount and surfaces as a
+  // flaky page-level unhandled rejection.
+  window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    unregisterListener: (event, eventId) => {
+      if (window.__TAURI_EVENT_LISTENERS__) {
+        window.__TAURI_EVENT_LISTENERS__.delete(eventId);
+      }
     }
   };
 

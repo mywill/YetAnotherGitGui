@@ -149,8 +149,8 @@
   --color-bg-well: #c8bcb4;
   --color-bg-hover: #d4c8be;
   --color-bg-rail: #c5b8ad;
-  --color-bg-selected: rgba(13, 106, 145, 0.1);
-  --color-bg-selected-hover: rgba(13, 106, 145, 0.14);
+  --color-bg-selected: rgba(9, 79, 110, 0.1);
+  --color-bg-selected-hover: rgba(9, 79, 110, 0.14);
 
   --color-text-primary: #0a0a0c;
   --color-text-muted: #42424a;
@@ -158,11 +158,11 @@
   --color-border: #b8aca2;
   --color-border-light: #cabfb5;
 
-  --color-accent-magenta: #d05a1a;
-  --color-accent-cyan: #1a98c4;
+  --color-accent-magenta: #802d0a;
+  --color-accent-cyan: #094f6e;
   --color-accent-lime: #4a6a10;
 
-  --color-success: #317705;
+  --color-success: #2e7104;
 
   --color-danger: #c0232c;
   --color-warning: #7c5c08;
