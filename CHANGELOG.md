@@ -1,3 +1,10 @@
+## [1.10.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.10.1...v1.10.2) (2026-05-03)
+
+
+### Bug Fixes
+
+* missed file in last merge ([5f4f4a2](https://github.com/mywill/YetAnotherGitGui/commit/5f4f4a2124d61a739224536d7b240364450f1d45))
+
 ## [1.10.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.10.0...v1.10.1) (2026-04-11)
 
 
