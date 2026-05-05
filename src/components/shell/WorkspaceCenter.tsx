@@ -1,12 +1,10 @@
-import { StatusView } from "../views/StatusView";
-import { HistoryView } from "../views/HistoryView";
-import { CurrentBranch } from "../sidebar/CurrentBranch";
-import { BranchTagList } from "../sidebar/BranchTagList";
-import { StashesView } from "./StashesView";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { getView } from "./viewRegistry";
 
 export const WorkspaceCenter = () => {
   const activeView = useSelectionStore((s) => s.activeView);
+  const view = getView(activeView);
+  const ViewComponent = view?.component;
 
   return (
     <div
@@ -15,17 +13,7 @@ export const WorkspaceCenter = () => {
       role="tabpanel"
       aria-labelledby={`rail-tab-${activeView}`}
     >
-      {activeView === "status" && <StatusView />}
-      {activeView === "history" && <HistoryView />}
-      {activeView === "branches" && (
-        <div className="branches-view bg-bg-canvas flex flex-1 flex-col overflow-hidden">
-          <CurrentBranch />
-          <div className="flex-1 overflow-y-auto p-2">
-            <BranchTagList />
-          </div>
-        </div>
-      )}
-      {activeView === "stashes" && <StashesView />}
+      {ViewComponent && <ViewComponent />}
     </div>
   );
 };

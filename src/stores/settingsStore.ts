@@ -10,7 +10,6 @@ interface SettingsState {
   density: Density;
   textSize: TextSize;
   theme: Theme;
-  inspectorVisible: boolean;
   layoutSizes: Record<string, number>;
   sectionExpanded: Record<string, boolean>;
   loaded: boolean;
@@ -19,7 +18,6 @@ interface SettingsState {
   setDensity: (d: Density) => void;
   setTextSize: (t: TextSize) => void;
   setTheme: (t: Theme) => void;
-  setInspectorVisible: (v: boolean) => void;
   setLayoutSize: (key: string, px: number) => void;
   setSectionExpanded: (key: string, value: boolean) => void;
 }
@@ -31,18 +29,17 @@ const DEFAULTS: Omit<
   | "setDensity"
   | "setTextSize"
   | "setTheme"
-  | "setInspectorVisible"
   | "setLayoutSize"
   | "setSectionExpanded"
 > = {
   density: "compact",
   textSize: "medium",
   theme: "dark",
-  inspectorVisible: true,
   layoutSizes: {},
   sectionExpanded: {},
 };
 
+// Module-level so concurrent setter calls coalesce into one persist write.
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
 function applyToDOM(density: Density, textSize: TextSize, theme: Theme) {
@@ -57,12 +54,11 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
   const delay = immediate ? 0 : 500;
   persistTimer = setTimeout(() => {
     persistTimer = null;
-    const { density, textSize, theme, inspectorVisible, layoutSizes, sectionExpanded } = getState();
+    const { density, textSize, theme, layoutSizes, sectionExpanded } = getState();
     const data: SettingsData = {
       density,
       textSize,
       theme,
-      inspectorVisible,
       layoutSizes,
       sectionExpanded,
     };
@@ -82,7 +78,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const density = saved.density ?? DEFAULTS.density;
       const textSize = saved.textSize ?? DEFAULTS.textSize;
       const theme = saved.theme ?? DEFAULTS.theme;
-      const inspectorVisible = saved.inspectorVisible ?? DEFAULTS.inspectorVisible;
       const layoutSizes = saved.layoutSizes ?? DEFAULTS.layoutSizes;
       const sectionExpanded = saved.sectionExpanded ?? DEFAULTS.sectionExpanded;
 
@@ -91,7 +86,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         density,
         textSize,
         theme,
-        inspectorVisible,
         layoutSizes,
         sectionExpanded,
         loaded: true,
@@ -118,11 +112,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setTheme: (theme) => {
     document.documentElement.dataset.theme = theme;
     set({ theme });
-    persistDebounced(get, true);
-  },
-
-  setInspectorVisible: (inspectorVisible) => {
-    set({ inspectorVisible });
     persistDebounced(get, true);
   },
 

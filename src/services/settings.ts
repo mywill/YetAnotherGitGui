@@ -4,7 +4,6 @@ export interface SettingsData {
   density?: "compact" | "comfortable" | "spacious";
   textSize?: "small" | "medium" | "large";
   theme?: "dark" | "light";
-  inspectorVisible?: boolean;
   layoutSizes?: Record<string, number>;
   sectionExpanded?: Record<string, boolean>;
 }

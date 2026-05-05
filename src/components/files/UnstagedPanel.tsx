@@ -4,11 +4,9 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
-import { YaggButton } from "../common/YaggButton";
 import { KeyboardList } from "../common/KeyboardList";
-
-const SECTION_ACTION_BTN =
-  "section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex h-6 items-center gap-1 bg-transparent px-2 text-xs";
+import { SectionHeader, SectionActionButton } from "./SectionHeader";
+import { getConflictMenuItems, getUnstagedFileMenuItems } from "./unstagedMenuItems";
 
 interface UnstagedPanelProps {
   statuses: FileStatuses | null;
@@ -87,59 +85,53 @@ export function UnstagedPanel({ statuses, loading }: UnstagedPanelProps) {
 
   return (
     <div className="unstaged-panel file-section flex h-full flex-col overflow-hidden">
-      <div className="section-header border-border bg-bg-well text-text-muted flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
-        <div className="section-header-title flex w-full items-center gap-2">
-          <span className="section-title font-medium">Unstaged</span>
-          <span className="text-text-muted ml-1 text-xs">(Del to discard)</span>
-          <span className="section-count bg-bg-hover ml-auto rounded-full px-1.5 py-px text-xs">
-            {unstaged.length}
-          </span>
-        </div>
-        <div className="section-actions mt-1 flex min-h-6 items-center gap-1">
-          {hasSelectedUnstaged && (
-            <>
-              <YaggButton
-                className={SECTION_ACTION_BTN}
-                onClick={handleStageSelected}
-                title={`Stage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
-                aria-label={`Stage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+      <SectionHeader
+        title="Unstaged"
+        hint="(Del to discard)"
+        count={unstaged.length}
+        actions={
+          <>
+            {hasSelectedUnstaged && (
+              <>
+                <SectionActionButton
+                  onClick={handleStageSelected}
+                  title={`Stage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                  ariaLabel={`Stage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                >
+                  <IconPlus size={12} stroke={2} aria-hidden />
+                  <span>{selectedCount}</span>
+                </SectionActionButton>
+                <SectionActionButton
+                  onClick={handleDeleteSelectedUnstaged}
+                  title={`Delete ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                  ariaLabel={`Delete ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                >
+                  <IconTrash size={12} stroke={2} aria-hidden />
+                  <span>{selectedCount}</span>
+                </SectionActionButton>
+                <SectionActionButton
+                  onClick={clearFileSelection}
+                  title="Clear selection"
+                  ariaLabel="Clear selection"
+                >
+                  <IconDeselect size={12} stroke={2} aria-hidden />
+                  <span>{selectedCount}</span>
+                </SectionActionButton>
+              </>
+            )}
+            {unstaged.length > 0 && (
+              <SectionActionButton
+                onClick={handleStageAll}
+                title="Stage all changes"
+                ariaLabel="Stage all unstaged files"
               >
                 <IconPlus size={12} stroke={2} aria-hidden />
-                <span>{selectedCount}</span>
-              </YaggButton>
-              <YaggButton
-                className={SECTION_ACTION_BTN}
-                onClick={handleDeleteSelectedUnstaged}
-                title={`Delete ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
-                aria-label={`Delete ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
-              >
-                <IconTrash size={12} stroke={2} aria-hidden />
-                <span>{selectedCount}</span>
-              </YaggButton>
-              <YaggButton
-                className={SECTION_ACTION_BTN}
-                onClick={clearFileSelection}
-                title="Clear selection"
-                aria-label="Clear selection"
-              >
-                <IconDeselect size={12} stroke={2} aria-hidden />
-                <span>{selectedCount}</span>
-              </YaggButton>
-            </>
-          )}
-          {unstaged.length > 0 && (
-            <YaggButton
-              className={SECTION_ACTION_BTN}
-              onClick={handleStageAll}
-              title="Stage all changes"
-              aria-label="Stage all unstaged files"
-            >
-              <IconPlus size={12} stroke={2} aria-hidden />
-              <span>All</span>
-            </YaggButton>
-          )}
-        </div>
-      </div>
+                <span>All</span>
+              </SectionActionButton>
+            )}
+          </>
+        }
+      />
       <div className="section-content min-h-0 flex-1 overflow-y-auto">
         {unstaged.length === 0 ? (
           <div className="empty-section text-text-muted p-4 text-center text-xs">
@@ -163,6 +155,13 @@ export function UnstagedPanel({ statuses, loading }: UnstagedPanelProps) {
           >
             {unstaged.map((file, i) => {
               const isConflicted = file.status === "conflicted";
+              const extraMenuItems = isConflicted
+                ? getConflictMenuItems(file.path, { stageFile, resolveConflict })
+                : getUnstagedFileMenuItems(file.path, selectedUnstagedPaths, {
+                    revertFile,
+                    deleteFile,
+                    deleteFiles,
+                  });
               return (
                 <KeyboardList.Item key={file.path} index={i}>
                   <FileItem
@@ -175,46 +174,7 @@ export function UnstagedPanel({ statuses, loading }: UnstagedPanelProps) {
                     }
                     onSelectWithModifiers={handleUnstagedSelectWithModifiers}
                     onDoubleClick={() => stageFile(file.path)}
-                    extraMenuItems={
-                      isConflicted
-                        ? [
-                            {
-                              label: "Accept Ours",
-                              onClick: () => resolveConflict(file.path, "ours"),
-                            },
-                            {
-                              label: "Accept Theirs",
-                              onClick: () => resolveConflict(file.path, "theirs"),
-                            },
-                            {
-                              label: "Accept Both",
-                              onClick: () => resolveConflict(file.path, "both"),
-                            },
-                            {
-                              label: "Mark Resolved (stage)",
-                              onClick: () => stageFile(file.path),
-                            },
-                          ]
-                        : selectedUnstagedPaths.length > 1 &&
-                            selectedUnstagedPaths.includes(file.path)
-                          ? [
-                              {
-                                label: "Discard changes",
-                                onClick: () => revertFile(file.path),
-                              },
-                              {
-                                label: `Delete ${selectedUnstagedPaths.length} files`,
-                                onClick: () => deleteFiles(selectedUnstagedPaths),
-                              },
-                            ]
-                          : [
-                              {
-                                label: "Discard changes",
-                                onClick: () => revertFile(file.path),
-                              },
-                              { label: "Delete file", onClick: () => deleteFile(file.path) },
-                            ]
-                    }
+                    extraMenuItems={extraMenuItems}
                   />
                 </KeyboardList.Item>
               );

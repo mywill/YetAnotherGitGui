@@ -860,7 +860,7 @@ test.describe("Stash Operations", () => {
     const stashItem = page.locator(".stash-item").first();
     await stashItem.click();
 
-    // Stash details panel should show in inspector
+    // Stash details panel should show inline in the view
     const stashDetails = page.locator(".stash-details-panel");
     await expect(stashDetails).toBeVisible({ timeout: 10000 });
   });

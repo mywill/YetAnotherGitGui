@@ -6,34 +6,12 @@ import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { CommitFileDiff } from "./CommitFileDiff";
 import { YaggButton } from "../common/YaggButton";
+import { STATUS_COLORS, getStatusLetter } from "../../utils/statusColors";
 
 interface CommitFileItemProps {
   file: CommitFileChange;
   commitHash: string;
 }
-
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  added: {
-    bg: "color-mix(in srgb, var(--color-status-added) var(--badge-bg-mix), transparent)",
-    color: "var(--color-status-added)",
-  },
-  deleted: {
-    bg: "color-mix(in srgb, var(--color-status-deleted) var(--badge-bg-mix), transparent)",
-    color: "var(--color-status-deleted)",
-  },
-  modified: {
-    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
-    color: "var(--color-status-modified)",
-  },
-  renamed: {
-    bg: "color-mix(in srgb, var(--color-badge-branch) var(--badge-bg-mix), transparent)",
-    color: "var(--color-badge-branch)",
-  },
-  copied: {
-    bg: "color-mix(in srgb, var(--color-badge-remote) var(--badge-bg-mix), transparent)",
-    color: "var(--color-badge-remote)",
-  },
-};
 
 export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
   const expandedCommitFiles = useRepositoryStore((s) => s.expandedCommitFiles);
@@ -69,7 +47,7 @@ export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
     [commitHash, file.path, revertCommitFile, showConfirm]
   );
 
-  const statusIcon = getStatusIcon(file.status);
+  const statusIcon = getStatusLetter(file.status);
   const statusClass = `status-${file.status}`;
   const statusStyle = STATUS_COLORS[file.status];
 
@@ -129,21 +107,4 @@ export function CommitFileItem({ file, commitHash }: CommitFileItemProps) {
       )}
     </div>
   );
-}
-
-function getStatusIcon(status: string): string {
-  switch (status) {
-    case "added":
-      return "A";
-    case "deleted":
-      return "D";
-    case "modified":
-      return "M";
-    case "renamed":
-      return "R";
-    case "copied":
-      return "C";
-    default:
-      return "?";
-  }
 }

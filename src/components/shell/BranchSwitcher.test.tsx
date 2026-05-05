@@ -48,9 +48,10 @@ describe("BranchSwitcher", () => {
   it("opens popover with 'Switch branch' header on click", () => {
     render(<BranchSwitcher branchName="main" isDetached={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
-    const dialog = screen.getByRole("dialog", { name: "Switch branch" });
-    expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("Switch branch");
+    const trigger = screen.getByRole("button", { name: "Switch branch" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("listbox", { name: "Branches" })).toBeInTheDocument();
+    expect(screen.getByText("Switch branch")).toBeInTheDocument();
   });
 
   it("lists local branches only, with HEAD first", () => {
@@ -100,7 +101,7 @@ describe("BranchSwitcher", () => {
     fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
     const input = screen.getByLabelText("Filter branches");
     fireEvent.keyDown(input, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it("Enter on current branch closes without checkout", () => {
@@ -111,6 +112,6 @@ describe("BranchSwitcher", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(showConfirm).not.toHaveBeenCalled();
     expect(checkoutBranch).not.toHaveBeenCalled();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });

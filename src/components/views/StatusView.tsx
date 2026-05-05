@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { StagedPanel } from "../files/StagedPanel";
 import { UnstagedPanel } from "../files/UnstagedPanel";
 import { UntrackedPanel } from "../files/UntrackedPanel";
@@ -7,15 +7,18 @@ import { DiffViewPanel } from "../diff/DiffViewPanel";
 import { YaggResizer } from "../common/YaggResizer";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useResizeObserver } from "../../hooks/useResizeObserver";
+import {
+  STATUS_LEFT_DEFAULT,
+  STATUS_LEFT_MIN,
+  STATUS_LEFT_MAX,
+  STATUS_PANE_MIN,
+  STATUS_PANE_MAX,
+  LAYOUT_KEYS,
+} from "../shell/layoutConstants";
 
-const LEFT_DEFAULT = 280;
-const LEFT_MIN = 120;
-const LEFT_MAX = 100000;
-
-const PANE_MIN = 80;
-const PANE_MAX = 100000;
-const STAGED_KEY = "workspace.split.status.staged";
-const UNTRACKED_KEY = "workspace.split.status.untracked";
+const STAGED_KEY = LAYOUT_KEYS.statusStaged;
+const UNTRACKED_KEY = LAYOUT_KEYS.statusUntracked;
 
 export function StatusView() {
   const fileStatuses = useRepositoryStore((s) => s.fileStatuses);
@@ -25,36 +28,23 @@ export function StatusView() {
   const diffLoading = useRepositoryStore((s) => s.diffLoading);
 
   const leftWidth = useSettingsStore(
-    (s) => s.layoutSizes["workspace.split.workcopy"] ?? LEFT_DEFAULT
+    (s) => s.layoutSizes[LAYOUT_KEYS.statusLeft] ?? STATUS_LEFT_DEFAULT
   );
   const stagedSize = useSettingsStore((s) => s.layoutSizes[STAGED_KEY]);
   const untrackedSize = useSettingsStore((s) => s.layoutSizes[UNTRACKED_KEY]);
   const setLayoutSize = useSettingsStore((s) => s.setLayoutSize);
 
-  // Track rendered pixel sizes so the resizer drag baseline is correct even
-  // before either pane has a stored size, and so we can pin the opposite pane
-  // when the user first drags.
+  // Measure rendered pixel sizes so the resizer drag baseline is correct
+  // before either pane has a stored size, and so we can pin the opposite
+  // pane when the user first drags.
   const stagedRef = useRef<HTMLDivElement>(null);
   const untrackedRef = useRef<HTMLDivElement>(null);
-  const [measured, setMeasured] = useState({ staged: 0, untracked: 0 });
-
-  useEffect(() => {
-    const stagedEl = stagedRef.current;
-    const untrackedEl = untrackedRef.current;
-    if (!stagedEl || !untrackedEl) return;
-    const update = () => {
-      setMeasured({ staged: stagedEl.offsetHeight, untracked: untrackedEl.offsetHeight });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(stagedEl);
-    ro.observe(untrackedEl);
-    return () => ro.disconnect();
-  }, []);
+  const stagedMeasured = useResizeObserver(stagedRef);
+  const untrackedMeasured = useResizeObserver(untrackedRef);
 
   const handleLeftResize = useCallback(
     (next: number) => {
-      setLayoutSize("workspace.split.workcopy", next);
+      setLayoutSize(LAYOUT_KEYS.statusLeft, next);
     },
     [setLayoutSize]
   );
@@ -64,21 +54,21 @@ export function StatusView() {
       setLayoutSize(STAGED_KEY, next);
       // Pin untracked at its current rendered height on the first drag so
       // the unstaged middle pane is the only one that absorbs the change.
-      if (untrackedSize === undefined && measured.untracked > 0) {
-        setLayoutSize(UNTRACKED_KEY, measured.untracked);
+      if (untrackedSize === undefined && untrackedMeasured.height > 0) {
+        setLayoutSize(UNTRACKED_KEY, untrackedMeasured.height);
       }
     },
-    [setLayoutSize, untrackedSize, measured.untracked]
+    [setLayoutSize, untrackedSize, untrackedMeasured.height]
   );
 
   const handleUntrackedResize = useCallback(
     (next: number) => {
       setLayoutSize(UNTRACKED_KEY, next);
-      if (stagedSize === undefined && measured.staged > 0) {
-        setLayoutSize(STAGED_KEY, measured.staged);
+      if (stagedSize === undefined && stagedMeasured.height > 0) {
+        setLayoutSize(STAGED_KEY, stagedMeasured.height);
       }
     },
-    [setLayoutSize, stagedSize, measured.staged]
+    [setLayoutSize, stagedSize, stagedMeasured.height]
   );
 
   return (
@@ -102,11 +92,11 @@ export function StatusView() {
         </div>
         <YaggResizer
           orientation="horizontal"
-          size={stagedSize ?? measured.staged}
+          size={stagedSize ?? stagedMeasured.height}
           onSizeChange={handleStagedResize}
-          min={PANE_MIN}
-          max={PANE_MAX}
-          defaultSize={PANE_MIN * 3}
+          min={STATUS_PANE_MIN}
+          max={STATUS_PANE_MAX}
+          defaultSize={STATUS_PANE_MIN * 3}
           ariaLabel="Resize staged section"
           panelSide="up"
           panelId="status-staged-pane"
@@ -119,11 +109,11 @@ export function StatusView() {
         </div>
         <YaggResizer
           orientation="horizontal"
-          size={untrackedSize ?? measured.untracked}
+          size={untrackedSize ?? untrackedMeasured.height}
           onSizeChange={handleUntrackedResize}
-          min={PANE_MIN}
-          max={PANE_MAX}
-          defaultSize={PANE_MIN * 2}
+          min={STATUS_PANE_MIN}
+          max={STATUS_PANE_MAX}
+          defaultSize={STATUS_PANE_MIN * 2}
           ariaLabel="Resize untracked section"
           panelSide="down"
           panelId="status-untracked-pane"
@@ -145,9 +135,9 @@ export function StatusView() {
         orientation="vertical"
         size={leftWidth}
         onSizeChange={handleLeftResize}
-        min={LEFT_MIN}
-        max={LEFT_MAX}
-        defaultSize={LEFT_DEFAULT}
+        min={STATUS_LEFT_MIN}
+        max={STATUS_LEFT_MAX}
+        defaultSize={STATUS_LEFT_DEFAULT}
         ariaLabel="Resize file panel"
         panelId="status-left-panel"
       />

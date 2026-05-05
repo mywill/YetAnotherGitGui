@@ -45,11 +45,11 @@ vi.mock("./components/common/SettingsMenu", () => ({
   SettingsMenu: () => <div data-testid="settings-menu">SettingsMenu</div>,
 }));
 
-vi.mock("./components/layout/FileStatusCounts", () => ({
+vi.mock("./components/shell/FileStatusCounts", () => ({
   FileStatusCounts: () => <div data-testid="file-status-counts">FileStatusCounts</div>,
 }));
 
-vi.mock("./components/layout/StatusBar", () => ({
+vi.mock("./components/shell/StatusBar", () => ({
   StatusBar: () => <div data-testid="status-bar">StatusBar</div>,
 }));
 

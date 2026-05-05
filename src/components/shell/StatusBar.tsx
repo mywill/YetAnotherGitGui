@@ -1,7 +1,9 @@
+import clsx from "clsx";
 import { IconGitBranch, IconTerminal2 } from "@tabler/icons-react";
 import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
 import { useTerminalStore } from "../../stores/terminalStore";
 import { usePlatform } from "../../hooks/usePlatform";
+import { YaggButton } from "../common/YaggButton";
 import { BranchSwitcher } from "./BranchSwitcher";
 
 const STATE_LABELS: Record<string, string> = {
@@ -81,12 +83,14 @@ export function StatusBar() {
           </div>
         )}
 
-        <button
-          className={`status-bar-terminal-toggle flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors ${
+        <YaggButton
+          variant="ghost"
+          className={clsx(
+            "status-bar-terminal-toggle flex items-center gap-1 border-none px-1.5 py-0.5 text-xs",
             terminalIsOpen
               ? "bg-bg-selected text-text-primary"
-              : "text-text-muted hover:bg-bg-hover hover:text-text-primary"
-          }`}
+              : "text-text-muted hover:bg-bg-hover hover:text-text-primary bg-transparent"
+          )}
           onClick={toggleTerminal}
           title={`Terminal (${modKey}+\`)`}
           aria-label={`Toggle terminal (${modKey}+\`)`}
@@ -94,7 +98,7 @@ export function StatusBar() {
         >
           <IconTerminal2 size={12} stroke={1.75} className="shrink-0" aria-hidden />
           <span>Terminal</span>
-        </button>
+        </YaggButton>
       </div>
     </footer>
   );

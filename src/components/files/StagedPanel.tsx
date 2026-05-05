@@ -4,11 +4,8 @@ import type { FileStatuses } from "../../types";
 import { FileItem } from "./FileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore, makeSelectionKey } from "../../stores/selectionStore";
-import { YaggButton } from "../common/YaggButton";
 import { KeyboardList } from "../common/KeyboardList";
-
-const SECTION_ACTION_BTN =
-  "section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex h-6 items-center gap-1 bg-transparent px-2 text-xs";
+import { SectionHeader, SectionActionButton } from "./SectionHeader";
 
 interface StagedPanelProps {
   statuses: FileStatuses | null;
@@ -74,49 +71,44 @@ export function StagedPanel({ statuses, loading }: StagedPanelProps) {
 
   return (
     <div className="staged-panel file-section flex h-full flex-col overflow-hidden">
-      <div className="section-header border-border bg-bg-well text-text-muted flex shrink-0 flex-col items-start border-b px-3 py-1 text-xs">
-        <div className="section-header-title flex w-full items-center gap-2">
-          <span className="section-title font-medium">Staged</span>
-          <span className="section-count bg-bg-hover ml-auto rounded-full px-1.5 py-px text-xs">
-            {staged.length}
-          </span>
-        </div>
-        <div className="section-actions mt-1 flex min-h-6 items-center gap-1">
-          {hasSelectedStaged && (
-            <>
-              <YaggButton
-                className={SECTION_ACTION_BTN}
-                onClick={handleUnstageSelected}
-                title={`Unstage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
-                aria-label={`Unstage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+      <SectionHeader
+        title="Staged"
+        count={staged.length}
+        actions={
+          <>
+            {hasSelectedStaged && (
+              <>
+                <SectionActionButton
+                  onClick={handleUnstageSelected}
+                  title={`Unstage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                  ariaLabel={`Unstage ${selectedCount} selected file${selectedCount === 1 ? "" : "s"}`}
+                >
+                  <IconMinus size={12} stroke={2} aria-hidden />
+                  <span>{selectedCount}</span>
+                </SectionActionButton>
+                <SectionActionButton
+                  onClick={clearFileSelection}
+                  title="Clear selection"
+                  ariaLabel="Clear selection"
+                >
+                  <IconDeselect size={12} stroke={2} aria-hidden />
+                  <span>{selectedCount}</span>
+                </SectionActionButton>
+              </>
+            )}
+            {staged.length > 0 && (
+              <SectionActionButton
+                onClick={handleUnstageAll}
+                title="Unstage all changes"
+                ariaLabel="Unstage all staged files"
               >
                 <IconMinus size={12} stroke={2} aria-hidden />
-                <span>{selectedCount}</span>
-              </YaggButton>
-              <YaggButton
-                className={SECTION_ACTION_BTN}
-                onClick={clearFileSelection}
-                title="Clear selection"
-                aria-label="Clear selection"
-              >
-                <IconDeselect size={12} stroke={2} aria-hidden />
-                <span>{selectedCount}</span>
-              </YaggButton>
-            </>
-          )}
-          {staged.length > 0 && (
-            <YaggButton
-              className={SECTION_ACTION_BTN}
-              onClick={handleUnstageAll}
-              title="Unstage all changes"
-              aria-label="Unstage all staged files"
-            >
-              <IconMinus size={12} stroke={2} aria-hidden />
-              <span>All</span>
-            </YaggButton>
-          )}
-        </div>
-      </div>
+                <span>All</span>
+              </SectionActionButton>
+            )}
+          </>
+        }
+      />
       <div className="section-content min-h-0 flex-1 overflow-y-auto">
         {staged.length === 0 ? (
           <div className="empty-section text-text-muted p-4 text-center text-xs">

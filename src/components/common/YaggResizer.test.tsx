@@ -26,7 +26,6 @@ describe("YaggResizer", () => {
       layoutSizes: {},
       density: "compact",
       theme: "dark",
-      inspectorVisible: true,
       loaded: true,
     });
   });

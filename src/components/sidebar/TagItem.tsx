@@ -8,6 +8,7 @@ import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
+import { SidebarListItem } from "./SidebarListItem";
 
 interface TagItemProps {
   tag: TagInfo;
@@ -90,12 +91,12 @@ export function TagItem({ tag }: TagItemProps) {
 
   return (
     <>
-      <div
-        className="tag-item text-text-primary hover:bg-bg-hover min-h-row flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150"
+      <SidebarListItem
+        itemClass="tag-item"
+        title={tag.message || tag.name}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        title={tag.message || tag.name}
       >
         <TagIcon />
         <span className="tag-item-name min-w-0 shrink truncate font-mono">{tag.name}</span>
@@ -114,7 +115,7 @@ export function TagItem({ tag }: TagItemProps) {
             {dateText}
           </span>
         )}
-      </div>
+      </SidebarListItem>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}

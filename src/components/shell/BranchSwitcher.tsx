@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { IconChevronDown } from "@tabler/icons-react";
+import type { BranchInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import { matchesQuery } from "../../hooks/useCommandPaletteSearch";
+import { useFilteredListNav } from "../../hooks/useFilteredListNav";
 
 interface BranchSwitcherProps {
   branchName: string;
   isDetached: boolean;
 }
+
+const getBranchLabel = (b: BranchInfo) => b.name;
 
 export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) => {
   const branches = useRepositoryStore((s) => s.branches);
@@ -16,8 +19,6 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -33,40 +34,13 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
     });
   }, [branches]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim();
-    if (!q) return orderedLocals;
-    return orderedLocals.filter((b) => matchesQuery(b.name, q));
-  }, [orderedLocals, query]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query, open]);
-
   const close = useCallback(() => {
     setOpen(false);
-    setQuery("");
     triggerRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    inputRef.current?.focus();
-
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      if (containerRef.current && target && !containerRef.current.contains(target)) {
-        close();
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open, close]);
-
   const activate = useCallback(
-    async (index: number) => {
-      const branch = filtered[index];
-      if (!branch) return;
+    async (branch: BranchInfo) => {
       if (branch.is_head) {
         close();
         return;
@@ -83,39 +57,39 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
       }
       triggerRef.current?.focus();
     },
-    [filtered, checkoutBranch, showConfirm, close]
+    [checkoutBranch, showConfirm, close]
   );
 
-  const onInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
+  const { query, setQuery, filtered, activeIndex, setActiveIndex, handleKeyDown } =
+    useFilteredListNav<BranchInfo>({
+      items: orderedLocals,
+      getLabel: getBranchLabel,
+      open,
+      onActivate: activate,
+      onEscape: () => {
+        setQuery("");
         close();
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveIndex((i) => (filtered.length === 0 ? 0 : Math.min(i + 1, filtered.length - 1)));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveIndex((i) => Math.max(0, i - 1));
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        setActiveIndex(0);
-      } else if (e.key === "End") {
-        e.preventDefault();
-        if (filtered.length > 0) setActiveIndex(filtered.length - 1);
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        void activate(activeIndex);
+      },
+    });
+
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    inputRef.current?.focus();
+
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (containerRef.current && target && !containerRef.current.contains(target)) {
+        close();
       }
-    },
-    [filtered.length, activeIndex, activate, close]
-  );
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open, close, setQuery]);
 
   const onTriggerClick = useCallback(() => {
     setOpen((o) => !o);
   }, []);
-
-  const triggerLabel = isDetached ? branchName : branchName;
 
   return (
     <div ref={containerRef} className="branch-switcher relative inline-flex">
@@ -123,7 +97,7 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
         ref={triggerRef}
         type="button"
         onClick={onTriggerClick}
-        aria-haspopup="dialog"
+        aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Switch branch"
         title="Switch branch"
@@ -134,17 +108,13 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
           isDetached && "cursor-default"
         )}
       >
-        <span className="branch-indicator truncate">{triggerLabel}</span>
+        <span className="branch-indicator truncate">{branchName}</span>
         {!isDetached && (
           <IconChevronDown size={10} stroke={2} className="shrink-0 opacity-70" aria-hidden />
         )}
       </button>
       {open && (
-        <div
-          role="dialog"
-          aria-label="Switch branch"
-          className="branch-switcher-popover border-border bg-bg-panel absolute bottom-full left-0 z-50 mb-1 flex max-h-80 w-64 flex-col rounded-md border shadow-lg"
-        >
+        <div className="branch-switcher-popover border-border bg-bg-panel absolute bottom-full left-0 z-50 mb-1 flex max-h-80 w-64 flex-col rounded-md border shadow-lg">
           <div className="border-border border-b px-2 py-1.5">
             <div className="text-text-muted text-2xs mb-1 font-mono font-medium tracking-widest uppercase">
               Switch branch
@@ -154,18 +124,20 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={onInputKeyDown}
+              onKeyDown={handleKeyDown}
               placeholder="Filter branches"
               aria-label="Filter branches"
+              aria-controls="branch-switcher-listbox"
+              aria-activedescendant={
+                filtered[activeIndex] ? `branch-switcher-${filtered[activeIndex].name}` : undefined
+              }
               className="text-2xs font-inherit bg-bg-well text-text-primary border-border focus-ring px-card-x w-full rounded border py-1"
             />
           </div>
           <div
+            id="branch-switcher-listbox"
             role="listbox"
             aria-label="Branches"
-            aria-activedescendant={
-              filtered[activeIndex] ? `branch-switcher-${filtered[activeIndex].name}` : undefined
-            }
             className="min-h-0 flex-1 overflow-y-auto py-1"
           >
             {filtered.length === 0 && (
@@ -179,7 +151,7 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
                 aria-selected={i === activeIndex}
                 aria-current={b.is_head ? "true" : undefined}
                 onMouseEnter={() => setActiveIndex(i)}
-                onClick={() => void activate(i)}
+                onClick={() => void activate(b)}
                 className={clsx(
                   "branch-switcher-item flex cursor-pointer items-center gap-2 px-3 py-1 text-xs",
                   i === activeIndex && "bg-bg-hover",

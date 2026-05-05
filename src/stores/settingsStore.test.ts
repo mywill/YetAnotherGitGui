@@ -14,7 +14,6 @@ describe("settingsStore", () => {
       density: "compact",
       textSize: "medium",
       theme: "dark",
-      inspectorVisible: true,
       layoutSizes: {},
       loaded: false,
     });
@@ -34,7 +33,6 @@ describe("settingsStore", () => {
       expect(state.density).toBe("compact");
       expect(state.textSize).toBe("medium");
       expect(state.theme).toBe("dark");
-      expect(state.inspectorVisible).toBe(true);
       expect(state.layoutSizes).toEqual({});
       expect(state.loaded).toBe(false);
     });
@@ -46,8 +44,7 @@ describe("settingsStore", () => {
       vi.mocked(readSettings).mockResolvedValue({
         density: "spacious",
         theme: "light",
-        inspectorVisible: false,
-        layoutSizes: { "workspace.inspector": 350 },
+        layoutSizes: { "history.details": 350 },
       });
 
       await useSettingsStore.getState().load();
@@ -55,8 +52,7 @@ describe("settingsStore", () => {
       const state = useSettingsStore.getState();
       expect(state.density).toBe("spacious");
       expect(state.theme).toBe("light");
-      expect(state.inspectorVisible).toBe(false);
-      expect(state.layoutSizes).toEqual({ "workspace.inspector": 350 });
+      expect(state.layoutSizes).toEqual({ "history.details": 350 });
       expect(state.loaded).toBe(true);
       expect(document.documentElement.dataset.density).toBe("spacious");
       expect(document.documentElement.dataset.theme).toBe("light");
@@ -71,7 +67,6 @@ describe("settingsStore", () => {
       const state = useSettingsStore.getState();
       expect(state.density).toBe("compact");
       expect(state.theme).toBe("dark");
-      expect(state.inspectorVisible).toBe(true);
       expect(state.loaded).toBe(true);
     });
 
@@ -132,24 +127,17 @@ describe("settingsStore", () => {
     });
   });
 
-  describe("setInspectorVisible", () => {
-    it("updates inspector visibility", () => {
-      useSettingsStore.getState().setInspectorVisible(false);
-      expect(useSettingsStore.getState().inspectorVisible).toBe(false);
-    });
-  });
-
   describe("setLayoutSize", () => {
     it("sets a layout size by key", () => {
-      useSettingsStore.getState().setLayoutSize("workspace.inspector", 400);
-      expect(useSettingsStore.getState().layoutSizes["workspace.inspector"]).toBe(400);
+      useSettingsStore.getState().setLayoutSize("history.details", 400);
+      expect(useSettingsStore.getState().layoutSizes["history.details"]).toBe(400);
     });
 
     it("merges with existing layout sizes", () => {
-      useSettingsStore.getState().setLayoutSize("workspace.inspector", 400);
+      useSettingsStore.getState().setLayoutSize("history.details", 400);
       useSettingsStore.getState().setLayoutSize("workspace.terminal", 200);
       const sizes = useSettingsStore.getState().layoutSizes;
-      expect(sizes["workspace.inspector"]).toBe(400);
+      expect(sizes["history.details"]).toBe(400);
       expect(sizes["workspace.terminal"]).toBe(200);
     });
   });

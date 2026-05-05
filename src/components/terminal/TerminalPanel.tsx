@@ -1,6 +1,8 @@
 import { useCallback } from "react";
+import { IconX } from "@tabler/icons-react";
 import { useTerminalStore } from "../../stores/terminalStore";
 import { YaggResizer } from "../common/YaggResizer";
+import { YaggButton } from "../common/YaggButton";
 import { TerminalInstance } from "./TerminalInstance";
 
 const TERMINAL_DEFAULT = 200;
@@ -39,13 +41,14 @@ export function TerminalPanel() {
       >
         <div className="terminal-header bg-bg-well flex h-7 shrink-0 items-center justify-between px-3">
           <span className="text-text-muted text-xs">Terminal</span>
-          <button
-            className="terminal-close text-text-muted hover:text-text-primary cursor-pointer text-xs"
+          <YaggButton
+            variant="ghost"
+            className="terminal-close border-none bg-transparent p-1"
             onClick={closeTerminal}
             aria-label="Close terminal"
           >
-            ✕
-          </button>
+            <IconX size={12} stroke={2} aria-hidden />
+          </YaggButton>
         </div>
         <TerminalInstance />
       </div>

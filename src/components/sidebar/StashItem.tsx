@@ -8,6 +8,7 @@ import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
 import { cleanStashMessage } from "../../utils/stashMessage";
+import { SidebarListItem } from "./SidebarListItem";
 
 interface StashItemProps {
   stash: StashInfo;
@@ -95,15 +96,13 @@ export function StashItem({ stash }: StashItemProps) {
 
   return (
     <>
-      <div
-        className={clsx(
-          "stash-item group text-text-primary hover:bg-bg-hover min-h-row flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
-          isSelected && "is-selected bg-bg-selected hover:bg-bg-selected-hover"
-        )}
+      <SidebarListItem
+        itemClass="stash-item group"
+        isSelected={isSelected}
+        title={stash.message}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        title={stash.message}
       >
         <StashIcon />
         <span className="stash-item-name text-text-primary shrink-0 font-mono">{stashName}</span>
@@ -115,7 +114,7 @@ export function StashItem({ stash }: StashItemProps) {
         >
           {getShortMessage()}
         </span>
-      </div>
+      </SidebarListItem>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}

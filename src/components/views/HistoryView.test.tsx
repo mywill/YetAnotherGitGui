@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { HistoryView } from "./HistoryView";
 import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { mockStore } from "../../test/mockStores";
 
 // Mock the repository store
@@ -17,14 +18,29 @@ vi.mock("../graph/CommitGraph", () => ({
   ),
 }));
 
+vi.mock("../history/CommitDetailsPanel", () => ({
+  CommitDetailsPanel: ({ details, loading }: { details: unknown; loading: boolean }) => (
+    <div data-testid="commit-details-panel">
+      CommitDetailsPanel(details={details ? "yes" : "no"}, loading={loading ? "yes" : "no"})
+    </div>
+  ),
+}));
+
+vi.mock("../common/YaggResizer", () => ({
+  YaggResizer: () => <div data-testid="yagg-resizer">Resizer</div>,
+}));
+
 describe("HistoryView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useSettingsStore.setState({ layoutSizes: {} });
   });
 
   function setupStore(overrides: Record<string, unknown> = {}, isEmptyRepo = false) {
     const state = {
       commits: [],
+      selectedCommitDetails: null,
+      commitDetailsLoading: false,
       hasMoreCommits: false,
       loadMoreCommits: vi.fn(),
       ...overrides,
@@ -57,6 +73,34 @@ describe("HistoryView", () => {
     expect(screen.getByText(/2 commits/)).toBeInTheDocument();
   });
 
+  it("renders commit details panel inline", () => {
+    setupStore();
+
+    render(<HistoryView />);
+
+    expect(screen.getByTestId("commit-details-panel")).toBeInTheDocument();
+  });
+
+  it("renders resizer between graph and details", () => {
+    setupStore();
+
+    render(<HistoryView />);
+
+    expect(screen.getByTestId("yagg-resizer")).toBeInTheDocument();
+  });
+
+  it("passes selectedCommitDetails and commitDetailsLoading to CommitDetailsPanel", () => {
+    setupStore({
+      selectedCommitDetails: { hash: "abc" },
+      commitDetailsLoading: true,
+    });
+
+    render(<HistoryView />);
+
+    expect(screen.getByTestId("commit-details-panel").textContent).toContain("details=yes");
+    expect(screen.getByTestId("commit-details-panel").textContent).toContain("loading=yes");
+  });
+
   it("has correct CSS classes for layout", () => {
     setupStore();
 
@@ -64,6 +108,7 @@ describe("HistoryView", () => {
 
     expect(container.querySelector(".history-view")).toBeInTheDocument();
     expect(container.querySelector(".history-graph")).toBeInTheDocument();
+    expect(container.querySelector(".history-details")).toBeInTheDocument();
   });
 
   describe("empty repo", () => {
@@ -83,6 +128,14 @@ describe("HistoryView", () => {
       render(<HistoryView />);
 
       expect(screen.queryByTestId("commit-graph")).not.toBeInTheDocument();
+    });
+
+    it("does not show commit details panel when repo is empty", () => {
+      setupStore({}, true);
+
+      render(<HistoryView />);
+
+      expect(screen.queryByTestId("commit-details-panel")).not.toBeInTheDocument();
     });
 
     it("has history-view class on empty state", () => {

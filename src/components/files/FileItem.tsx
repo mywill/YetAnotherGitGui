@@ -1,10 +1,12 @@
 import { memo, useCallback } from "react";
 import clsx from "clsx";
-import type { FileStatus, FileStatusType } from "../../types";
+import { IconCheck } from "@tabler/icons-react";
+import type { FileStatus } from "../../types";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useContextMenu } from "../../hooks/useContextMenu";
+import { STATUS_COLORS, getStatusLetter } from "../../utils/statusColors";
 
 interface FileItemProps {
   file: FileStatus;
@@ -18,43 +20,6 @@ interface FileItemProps {
   extraMenuItems?: ContextMenuItem[];
 }
 
-const STATUS_ICONS: Record<FileStatusType, string> = {
-  modified: "M",
-  added: "A",
-  deleted: "D",
-  renamed: "R",
-  copied: "C",
-  untracked: "?",
-  conflicted: "!",
-};
-
-const STATUS_STYLE: Record<string, { color: string; bg: string }> = {
-  modified: {
-    color: "var(--color-status-modified)",
-    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
-  },
-  added: {
-    color: "var(--color-status-added)",
-    bg: "color-mix(in srgb, var(--color-status-added) var(--badge-bg-mix), transparent)",
-  },
-  deleted: {
-    color: "var(--color-status-deleted)",
-    bg: "color-mix(in srgb, var(--color-status-deleted) var(--badge-bg-mix), transparent)",
-  },
-  renamed: {
-    color: "var(--color-status-modified)",
-    bg: "color-mix(in srgb, var(--color-status-modified) var(--badge-bg-mix), transparent)",
-  },
-  untracked: {
-    color: "var(--color-status-untracked)",
-    bg: "color-mix(in srgb, var(--color-status-untracked) var(--badge-bg-mix), transparent)",
-  },
-  conflicted: {
-    color: "var(--color-status-conflicted)",
-    bg: "color-mix(in srgb, var(--color-status-conflicted) var(--badge-bg-mix), transparent)",
-  },
-};
-
 export const FileItem = memo(function FileItem({
   file,
   isStaged,
@@ -66,9 +31,10 @@ export const FileItem = memo(function FileItem({
   onDoubleClick,
   extraMenuItems,
 }: FileItemProps) {
-  // Avoid subscribing to repositoryInfo here — it would re-render every
-  // FileItem whenever any repository state changes. Read it lazily inside
-  // the context menu callback instead.
+  // Intentionally NOT subscribing to repositoryInfo: a long file list would
+  // re-render every row whenever any repository state changes. The repo path
+  // is read lazily via useRepositoryStore.getState() in the context-menu
+  // callback below — context menus open from a click, so the value is fresh.
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(
@@ -154,28 +120,20 @@ export const FileItem = memo(function FileItem({
           role="presentation"
           title={isStaged ? "Unstage file" : "Stage file"}
         >
-          {isStaged && (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-              <path
-                d="M8.5 2.5L4 7.5L1.5 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
+          {isStaged && <IconCheck size={10} stroke={1.5} aria-hidden />}
         </span>
         <span
           className="status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold"
           style={
-            STATUS_STYLE[file.status]
-              ? { color: STATUS_STYLE[file.status].color, background: STATUS_STYLE[file.status].bg }
+            STATUS_COLORS[file.status]
+              ? {
+                  color: STATUS_COLORS[file.status].color,
+                  background: STATUS_COLORS[file.status].bg,
+                }
               : undefined
           }
         >
-          {STATUS_ICONS[file.status]}
+          {getStatusLetter(file.status)}
         </span>
         <span className="file-name shrink-0 font-mono font-medium">{fileName}</span>
         {dirPath && (
@@ -186,10 +144,7 @@ export const FileItem = memo(function FileItem({
         {isUntracked && (
           <span
             className="untracked-badge text-status-untracked text-2xs shrink-0 rounded px-1.5 py-px"
-            style={{
-              background:
-                "color-mix(in srgb, var(--color-status-untracked) var(--badge-bg-mix), transparent)",
-            }}
+            style={{ background: STATUS_COLORS.untracked.bg }}
           >
             new
           </span>

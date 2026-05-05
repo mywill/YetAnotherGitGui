@@ -9,6 +9,7 @@ import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
+import { SidebarListItem } from "./SidebarListItem";
 
 interface BranchItemProps {
   branch: BranchInfo;
@@ -131,17 +132,17 @@ export function BranchItem({ branch }: BranchItemProps) {
 
   return (
     <>
-      <div
-        className={clsx(
-          "branch-item text-text-primary hover:bg-bg-hover min-h-row flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
+      <SidebarListItem
+        itemClass="branch-item"
+        modifiers={clsx(
           branch.is_head && "is-current",
           branch.is_remote && "is-remote text-text-muted"
         )}
+        ariaCurrent={branch.is_head ? "true" : undefined}
+        title={branch.name}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        title={branch.name}
-        aria-current={branch.is_head ? "true" : undefined}
       >
         <BranchIcon isRemote={branch.is_remote} />
         <span className="branch-item-name min-w-0 shrink truncate font-mono">{displayName}</span>
@@ -179,7 +180,7 @@ export function BranchItem({ branch }: BranchItemProps) {
             {dateText}
           </span>
         )}
-      </div>
+      </SidebarListItem>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
