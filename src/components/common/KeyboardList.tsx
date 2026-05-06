@@ -57,9 +57,12 @@ function KeyboardListItem({ index, children, className }: KeyboardListItemProps)
 
   const handleMouseDown = useCallback(
     (e: MouseEvent) => {
+      // Mousedown fires before the click-induced focus event reaches the list.
+      // Suppress that focus-driven onActiveChange for any button — the row's
+      // own onClick handler is the source of truth for selection on click.
+      skipNextFocus.current = true;
       if (e.button === 2) {
         setActiveIndex(index);
-        skipNextFocus.current = true;
       }
     },
     [index, setActiveIndex, skipNextFocus]
