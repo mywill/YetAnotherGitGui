@@ -48,7 +48,7 @@ export const CurrentBranch = () => {
   const stateLabel = repoState && repoState !== "clean" ? (STATE_LABELS[repoState] ?? null) : null;
 
   return (
-    <div className="current-branch border-border bg-bg-well text-text-primary flex items-center gap-2 border-b px-3 py-2">
+    <div className="current-branch border-border bg-bg-well text-text-primary py-card-y flex items-center gap-2 border-b px-3">
       <IconGitBranch size={14} stroke={1.75} className="text-badge-branch shrink-0" aria-hidden />
       <span
         className="branch-name min-w-0 shrink truncate font-mono font-medium"

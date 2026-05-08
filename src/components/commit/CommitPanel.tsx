@@ -35,7 +35,7 @@ export function CommitPanel() {
   );
 
   return (
-    <div className="commit-panel flex h-full flex-col gap-2 p-2">
+    <div className="commit-panel gap-section p-card-y flex h-full flex-col">
       <div className="commit-header text-text-muted text-2xs font-mono font-medium tracking-widest uppercase">
         Commit
       </div>

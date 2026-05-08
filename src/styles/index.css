@@ -113,24 +113,31 @@
   --font-mono:
     "JetBrains Mono Variable", "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
 
-  /* ── Text sizes (rem-based so they scale with [data-text-size]) ── */
-  --text-display: 1.375rem; /* 22px @ 16px root */
-  --text-prose: 0.875rem; /* 14px */
-  --text-body: 0.8125rem; /* 13px */
-  --text-2xs: 0.625rem; /* 10px */
-  --text-3xs: 0.5625rem; /* 9px */
+  /* ── Text sizes (integer px, overridden per [data-text-size] tier) ── */
+  /* Defined in px (not rem) so values always land on whole pixels — */
+  /* fractional pixel sizes from rem multiplication produce blurry   */
+  /* text under sub-pixel rendering. Per-tier overrides live below.  */
+  --text-display: 22px;
+  --text-prose: 14px;
+  --text-body: 13px;
+  --text-2xs: 10px;
+  --text-3xs: 9px;
   --text-code: 0.9em;
   --text-submenu-arrow: 0.7em;
 
   /* ── Density spacing (defaults = Compact) ──                     */
   /* These feed Tailwind's --spacing-* namespace, so density tokens */
-  /* become utilities: h-row, min-h-row, px-card-x, py-card-y,      */
-  /* gap-section, w-rail, etc.                                      */
+  /* become utilities: h-row, min-h-row, py-row-pad, px-card-x,     */
+  /* py-card-y, gap-section, p-section, w-rail, size-nav-btn, etc.  */
   --spacing-row: 22px;
+  --spacing-row-pad: 2px;
   --spacing-card-y: 6px;
   --spacing-card-x: 10px;
-  --spacing-section-gap: 12px;
+  --spacing-section: 12px;
   --spacing-rail: 44px;
+  --spacing-nav-btn: 32px;
+  --spacing-header-y: 6px;
+  --spacing-list-pad: 8px;
 
   /* ── Shadows ── */
   --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -219,29 +226,48 @@
 
 /* ─── Density: spacing only. Text size lives on [data-text-size]. ─── */
 [data-density="comfortable"] {
-  --spacing-row: 26px;
+  --spacing-row: 28px;
+  --spacing-row-pad: 5px;
   --spacing-card-y: 8px;
   --spacing-card-x: 12px;
-  --spacing-section-gap: 16px;
+  --spacing-section: 16px;
   --spacing-rail: 48px;
+  --spacing-nav-btn: 36px;
+  --spacing-header-y: 7px;
+  --spacing-list-pad: 10px;
 }
 
 [data-density="spacious"] {
-  --spacing-row: 31px;
+  --spacing-row: 36px;
+  --spacing-row-pad: 8px;
   --spacing-card-y: 10px;
   --spacing-card-x: 14px;
-  --spacing-section-gap: 20px;
+  --spacing-section: 20px;
   --spacing-rail: 52px;
+  --spacing-nav-btn: 40px;
+  --spacing-header-y: 8px;
+  --spacing-list-pad: 12px;
 }
 
-/* ─── Text size: scales html font-size so all rem-based utilities grow. ─── */
-/* Medium = base (16px root, no selector needed).                          */
+/* ─── Text size: scales html font-size so rem-based utilities grow. ─── */
+/* Medium = base (16px root, no selector needed). Each tier also pins  */
+/* the custom --text-* tokens to integer pixels so text stays crisp.   */
 [data-text-size="small"] {
   font-size: 14px;
+  --text-display: 19px;
+  --text-prose: 12px;
+  --text-body: 11px;
+  --text-2xs: 9px;
+  --text-3xs: 8px;
 }
 
 [data-text-size="large"] {
   font-size: 18px;
+  --text-display: 25px;
+  --text-prose: 16px;
+  --text-body: 15px;
+  --text-2xs: 11px;
+  --text-3xs: 10px;
 }
 
 /* ─── Base layer: resets ─── */
@@ -265,6 +291,9 @@
     font-size: var(--text-body);
     color: var(--color-text-primary);
     background-color: var(--color-bg-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   button {

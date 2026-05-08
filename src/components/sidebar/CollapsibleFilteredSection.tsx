@@ -44,7 +44,7 @@ export function CollapsibleFilteredSection<T extends { name: string }>({
   return (
     <div className="collapsible-section filterable-section border-border border-b">
       <div
-        className="section-header-row flex items-center gap-2 px-3 py-1.5"
+        className="section-header-row py-header-y flex items-center gap-2 px-3"
         role="group"
         aria-label={`${title} section`}
       >

@@ -34,7 +34,7 @@ export function SidebarListItem({
   return (
     <div
       className={clsx(
-        "text-text-primary hover:bg-bg-hover min-h-row flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
+        "text-text-primary hover:bg-bg-hover min-h-row py-row-pad flex cursor-pointer items-center gap-2 pr-3 pl-7 text-xs transition-colors duration-150",
         itemClass,
         modifiers,
         isSelected && "is-selected bg-bg-selected hover:bg-bg-selected-hover"

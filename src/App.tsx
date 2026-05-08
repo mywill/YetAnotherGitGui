@@ -164,7 +164,7 @@ export function App() {
         )}
         <div className="header-right app-region-no-drag flex h-full shrink-0 items-center gap-2">
           <YaggButton
-            className="flex h-6.5 items-center justify-center px-1.5 leading-normal"
+            variant="icon"
             onClick={openCommandPalette}
             title={`Search (${modKey}+K)`}
             aria-label="Search"
@@ -172,7 +172,7 @@ export function App() {
             <IconSearch size={14} stroke={1.75} aria-hidden />
           </YaggButton>
           <YaggButton
-            className="flex h-6.5 items-center justify-center px-1.5 leading-normal"
+            variant="icon"
             onClick={refreshRepository}
             disabled={isLoading}
             title={`Refresh (F5 or ${modKey}+R)`}

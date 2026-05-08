@@ -135,7 +135,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   if (diff.is_binary) {
     return (
       <div className="diff-view-panel binary flex h-full flex-col">
-        <div className="diff-header border-border bg-bg-well flex shrink-0 items-center border-b px-3 py-2">
+        <div className="diff-header border-border bg-bg-well py-card-y flex shrink-0 items-center border-b px-3">
           <span className="diff-path text-xs font-medium">{diff.path}</span>
         </div>
         <div className="binary-message text-text-muted flex flex-1 items-center justify-center">
@@ -148,7 +148,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
   if (diff.hunks.length === 0) {
     return (
       <div className="diff-view-panel empty flex h-full flex-col">
-        <div className="diff-header border-border bg-bg-well flex shrink-0 items-center border-b px-3 py-2">
+        <div className="diff-header border-border bg-bg-well py-card-y flex shrink-0 items-center border-b px-3">
           <span className="diff-path text-xs font-medium">{diff.path}</span>
         </div>
         <div className="no-changes text-text-muted flex flex-1 items-center justify-center">
@@ -203,7 +203,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
 
   return (
     <div className="diff-view-panel flex h-full flex-col overflow-hidden">
-      <div className="diff-header border-border bg-bg-well flex shrink-0 items-center gap-2 border-b px-3 py-2">
+      <div className="diff-header border-border bg-bg-well py-card-y flex shrink-0 items-center gap-2 border-b px-3">
         <span className="diff-path text-xs font-medium">{diff.path}</span>
         <span className="diff-status text-text-muted text-xs">
           {isConflicted

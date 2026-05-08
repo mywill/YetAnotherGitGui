@@ -98,7 +98,7 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
   return (
     <div ref={containerRef} className="commit-details-panel flex h-full flex-col overflow-hidden">
       <div
-        className="commit-info border-border shrink-0 overflow-y-auto border-b p-3"
+        className="commit-info border-border px-card-x py-card-y shrink-0 overflow-y-auto border-b"
         style={{ height: infoHeight }}
       >
         <div className="commit-hash mb-2 flex items-center gap-2">
@@ -157,7 +157,7 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
       />
 
       <div className="files-section flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="files-header border-border bg-bg-well text-text-muted text-2xs flex items-center justify-between border-b px-3 py-2 font-mono font-medium tracking-widest uppercase">
+        <div className="files-header border-border bg-bg-well text-text-muted text-2xs py-card-y flex items-center justify-between border-b px-3 font-mono font-medium tracking-widest uppercase">
           <span>Files changed</span>
           <span className="file-count bg-bg-hover rounded-full px-2 py-px font-mono text-xs font-normal tracking-normal normal-case">
             {details.files_changed.length}

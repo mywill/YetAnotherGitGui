@@ -55,7 +55,13 @@ const sizeClasses: Record<YaggButtonSize, string> = {
 };
 
 // Variants that should not get size classes (they have their own layout)
-const skipSizeVariants = new Set<YaggButtonVariant>(["menu-item", "text-link", "icon", "tab"]);
+const skipSizeVariants = new Set<YaggButtonVariant>([
+  "menu-item",
+  "text-link",
+  "icon",
+  "tab",
+  "ghost",
+]);
 
 export const YaggButton = forwardRef<HTMLButtonElement, YaggButtonProps>(function YaggButton(
   {
