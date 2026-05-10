@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useSettingsStore } from "./settingsStore";
+import { useNotificationStore } from "./notificationStore";
 
 // Mock the settings service
 vi.mock("../services/settings", () => ({
@@ -172,6 +173,60 @@ describe("settingsStore", () => {
       // Should have called once after debounce, not three times
       expect(callsAfterDebounce - callsBeforeDebounce).toBe(1);
       vi.useRealTimers();
+    });
+  });
+
+  describe("persistence error surfacing", () => {
+    beforeEach(() => {
+      useNotificationStore.setState({ notifications: [] });
+    });
+
+    it("shows an error toast when writeSettings rejects", async () => {
+      const { writeSettings } = await import("../services/settings");
+      vi.mocked(writeSettings).mockRejectedValueOnce(new Error("disk full"));
+
+      vi.useFakeTimers();
+      useSettingsStore.getState().setTheme("light");
+      await vi.advanceTimersByTimeAsync(0);
+      vi.useRealTimers();
+
+      // Let the rejected promise propagate.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const toasts = useNotificationStore.getState().notifications;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].type).toBe("error");
+      expect(toasts[0].message).toContain("Failed to save settings");
+      expect(toasts[0].message).toContain("disk full");
+    });
+
+    it("debounces identical errors within 5s", async () => {
+      const { writeSettings } = await import("../services/settings");
+      vi.mocked(writeSettings).mockRejectedValue(new Error("permission denied"));
+
+      // Two changes back-to-back with the same failure should produce ONE toast.
+      useSettingsStore.getState().setTheme("light");
+      // Allow microtasks/macrotasks to run for the first persist+catch.
+      await new Promise((r) => setTimeout(r, 5));
+      useSettingsStore.getState().setTheme("dark");
+      await new Promise((r) => setTimeout(r, 5));
+
+      const toasts = useNotificationStore.getState().notifications;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].message).toContain("permission denied");
+    });
+
+    it("propagates non-Error rejections via String() conversion", async () => {
+      const { writeSettings } = await import("../services/settings");
+      vi.mocked(writeSettings).mockRejectedValueOnce("Invalid path: /nope");
+
+      useSettingsStore.getState().setDensity("spacious");
+      await new Promise((r) => setTimeout(r, 5));
+
+      const toasts = useNotificationStore.getState().notifications;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].message).toContain("Invalid path: /nope");
     });
   });
 });

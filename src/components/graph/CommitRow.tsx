@@ -9,7 +9,7 @@ import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import { useVirtualizedFocus } from "../common/KeyboardListVirtualized";
+import { useVirtualizedFocus } from "../common/virtualizedFocus";
 import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface CommitRowProps {

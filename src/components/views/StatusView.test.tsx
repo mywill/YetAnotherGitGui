@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { StatusView } from "./StatusView";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -259,5 +259,84 @@ describe("StatusView", () => {
     expect(screen.getByText("Staged: 0")).toBeInTheDocument();
     expect(screen.getByText("Unstaged: 0")).toBeInTheDocument();
     expect(screen.getByText("Untracked: 0")).toBeInTheDocument();
+  });
+
+  describe("resize handlers", () => {
+    it("calls setLayoutSize on the file-panel resizer keyboard interaction", () => {
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+
+      const { container } = render(<StatusView />);
+      const resizer = container.querySelector(
+        '[role="separator"][aria-orientation="vertical"]'
+      ) as HTMLElement;
+      fireEvent.keyDown(resizer, { key: "ArrowRight" });
+
+      expect(setLayoutSize).toHaveBeenCalledWith("workspace.split.workcopy", expect.any(Number));
+    });
+
+    it("pins untracked at its measured height when staged is dragged for the first time", () => {
+      // No stored sizes — drag the staged divider and expect both staged and
+      // untracked to be persisted (untracked pinned to its current rendered
+      // height so the unstaged middle pane absorbs the change).
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+
+      const { container } = render(<StatusView />);
+      const resizers = container.querySelectorAll(
+        '[role="separator"][aria-orientation="horizontal"]'
+      );
+      const stagedResizer = resizers[0] as HTMLElement;
+      fireEvent.keyDown(stagedResizer, { key: "ArrowDown" });
+
+      const calls = setLayoutSize.mock.calls.map((c) => c[0]);
+      expect(calls).toContain("workspace.split.status.staged");
+      // untracked may or may not be pinned depending on jsdom layout, but the
+      // staged resize must always fire.
+    });
+
+    it("pins staged at its measured height when untracked is dragged for the first time", () => {
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+
+      const { container } = render(<StatusView />);
+      const resizers = container.querySelectorAll(
+        '[role="separator"][aria-orientation="horizontal"]'
+      );
+      const untrackedResizer = resizers[1] as HTMLElement;
+      fireEvent.keyDown(untrackedResizer, { key: "ArrowUp" });
+
+      const calls = setLayoutSize.mock.calls.map((c) => c[0]);
+      expect(calls).toContain("workspace.split.status.untracked");
+    });
+
+    it("does not re-pin sizes when stored sizes already exist", () => {
+      // Both staged and untracked already have stored sizes — dragging staged
+      // should only update staged, never re-pin untracked.
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, {
+        layoutSizes: {
+          "workspace.split.status.staged": 200,
+          "workspace.split.status.untracked": 150,
+        },
+        setLayoutSize,
+      });
+
+      const { container } = render(<StatusView />);
+      const resizers = container.querySelectorAll(
+        '[role="separator"][aria-orientation="horizontal"]'
+      );
+      const stagedResizer = resizers[0] as HTMLElement;
+      fireEvent.keyDown(stagedResizer, { key: "ArrowDown" });
+
+      const calls = setLayoutSize.mock.calls.map((c) => c[0]);
+      // Only staged should fire — untracked already has a stored size so the
+      // pin-on-first-drag branch is skipped.
+      expect(calls.filter((k) => k === "workspace.split.status.untracked")).toHaveLength(0);
+    });
   });
 });

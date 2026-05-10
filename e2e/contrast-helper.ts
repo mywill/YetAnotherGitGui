@@ -14,6 +14,22 @@ export interface ContrastScanResult {
 }
 
 /**
+ * Wait for any active CSS animations / transitions on the targeted region (or
+ * the whole page) to finish before measuring. Without this, axe-core can read
+ * a half-faded toast or panel and report a spurious AA failure — see the
+ * notification-toast slideUp animation in src/styles/index.css.
+ */
+async function waitForAnimationsToSettle(page: Page, selector?: string): Promise<void> {
+  await page.evaluate(async (sel) => {
+    const root = sel ? document.querySelector(sel) : document.body;
+    if (!root) return;
+    const candidates: Element[] = [root, ...root.querySelectorAll("*")];
+    const animations = candidates.flatMap((el) => el.getAnimations({ subtree: false }));
+    await Promise.all(animations.map((a) => a.finished.catch(() => undefined)));
+  }, selector ?? null);
+}
+
+/**
  * Scan a region for WCAG AA color-contrast issues.
  *
  * Runs only the `color-contrast` rule (4.5:1 normal text, 3:1 large text).
@@ -23,6 +39,8 @@ export interface ContrastScanResult {
  * toast green/red). AA stays the enforced bar; AAA is tracked manually.
  */
 export async function scanForContrast(page: Page, selector?: string): Promise<ContrastScanResult> {
+  await waitForAnimationsToSettle(page, selector);
+
   let builder = new AxeBuilder({ page }).withRules(["color-contrast"]);
   if (selector) {
     builder = builder.include(selector);

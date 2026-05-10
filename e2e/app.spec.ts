@@ -9,6 +9,7 @@ import {
   expandBranchSection,
 } from "./helpers";
 import { assertContrastClean } from "./contrast-helper";
+import { setThemeAndWait, setDensityAndWait } from "./waitHelpers";
 
 /**
  * E2E tests for Yet Another Git Gui
@@ -441,32 +442,20 @@ test.describe("Accessibility - axe-core", () => {
   });
 
   test("light mode should pass overall color contrast checks", async ({ page }) => {
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setTheme("light");
-    });
-    await page.waitForTimeout(200);
+    await setThemeAndWait(page, "light");
     await assertContrastClean(page);
   });
 
   test("light mode commit graph should pass color contrast checks", async ({ page }) => {
     await switchToHistoryView(page);
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setTheme("light");
-    });
-    await page.waitForTimeout(200);
+    await setThemeAndWait(page, "light");
     await assertContrastClean(page, ".commit-graph");
   });
 
   test("dark mode (default) should pass overall color contrast checks", async ({ page }) => {
     // Theme defaults to dark; assert the explicit dark scan separately from the
     // baseline so the dark-mode coverage isn't lost if defaults change.
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setTheme("dark");
-    });
-    await page.waitForTimeout(200);
+    await setThemeAndWait(page, "dark");
     await assertContrastClean(page);
   });
 
@@ -573,20 +562,12 @@ test.describe("Accessibility - axe-core", () => {
   });
 
   test("comfortable density should pass overall color contrast checks", async ({ page }) => {
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setDensity("comfortable");
-    });
-    await page.waitForTimeout(200);
+    await setDensityAndWait(page, "comfortable");
     await assertContrastClean(page);
   });
 
   test("spacious density should pass overall color contrast checks", async ({ page }) => {
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setDensity("spacious");
-    });
-    await page.waitForTimeout(200);
+    await setDensityAndWait(page, "spacious");
     await assertContrastClean(page);
   });
 
@@ -599,7 +580,7 @@ test.describe("Accessibility - axe-core", () => {
       setLayoutSize("workspace.split.status.staged", 80);
       setLayoutSize("workspace.split.status.unstaged", 80);
     });
-    await page.waitForTimeout(200);
+    // assertContrastClean self-settles animations + uses auto-retrying axe.
     await assertContrastClean(page, ".status-left");
 
     // Drive the staged pane very large to confirm the unstaged/untracked area
@@ -610,7 +591,6 @@ test.describe("Accessibility - axe-core", () => {
       setLayoutSize("workspace.split.status.staged", 600);
       setLayoutSize("workspace.split.status.unstaged", 80);
     });
-    await page.waitForTimeout(200);
     await assertContrastClean(page, ".status-left");
   });
 });
@@ -1128,12 +1108,12 @@ test.describe("File Context Menus", () => {
     const contextMenu = page.locator(".context-menu");
     await expect(contextMenu).toBeVisible();
 
-    // Hover over each context menu item (the real bug trigger)
+    // Hover over each context menu item (the real bug trigger). Playwright's
+    // hover() waits for the element to be actionable, so no extra wait needed.
     const menuItems = contextMenu.locator(".context-menu-item");
     const menuCount = await menuItems.count();
     for (let i = 0; i < menuCount; i++) {
       await menuItems.nth(i).hover();
-      await page.waitForTimeout(100);
     }
 
     // No file should be selected after right-click + hovering menu items

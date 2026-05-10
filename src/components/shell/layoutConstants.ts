@@ -15,11 +15,6 @@ export const HISTORY_DETAILS_DEFAULT = 360;
 export const HISTORY_DETAILS_MIN = 180;
 export const HISTORY_DETAILS_EDGE_RESERVE = 400;
 
-/** Stash view: left list column. */
-export const STASH_LIST_MIN = 180;
-export const STASH_LIST_EDGE_RESERVE = 240;
-export const STASH_LIST_FRACTION = 0.4;
-
 /** Layout-size keys persisted via settingsStore.layoutSizes. */
 export const LAYOUT_KEYS = {
   statusLeft: "workspace.split.workcopy",

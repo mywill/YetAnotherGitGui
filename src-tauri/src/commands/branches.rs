@@ -503,4 +503,102 @@ mod tests {
 
         assert!(result.is_err());
     }
+
+    /// Mirror of `delete_branch` (line 184) — exercises the is_remote routing
+    /// and the "cannot delete currently checked-out branch" guard.
+    fn delete_branch_logic(
+        repo: &Repository,
+        branch_name: &str,
+        is_remote: bool,
+    ) -> Result<(), AppError> {
+        if is_remote {
+            let refname = format!("refs/remotes/{}", branch_name);
+            let mut reference = repo.find_reference(&refname)?;
+            reference.delete()?;
+        } else {
+            if let Ok(head) = repo.head() {
+                if head.is_branch() {
+                    if let Some(head_name) = head.shorthand() {
+                        if head_name == branch_name {
+                            return Err(AppError::Git(git2::Error::from_str(
+                                "Cannot delete the currently checked out branch",
+                            )));
+                        }
+                    }
+                }
+            }
+            let mut branch = repo.find_branch(branch_name, BranchType::Local)?;
+            branch.delete()?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_delete_branch_refuses_current_branch() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        let head_name = repo.head().unwrap().shorthand().unwrap().to_string();
+        let result = delete_branch_logic(&repo, &head_name, false);
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("currently checked out"),
+            "expected guard message, got: {err_msg}"
+        );
+    }
+
+    #[test]
+    fn test_delete_branch_remote_path_deletes_remote_tracking_ref() {
+        let (temp_dir, repo) = create_test_repo();
+        let oid = create_initial_commit(&repo, &temp_dir);
+
+        // Create a remote-tracking ref like origin/feature.
+        repo.reference(
+            "refs/remotes/origin/feature",
+            oid,
+            true,
+            "set up remote tracking for test",
+        )
+        .unwrap();
+        assert!(repo
+            .find_reference("refs/remotes/origin/feature")
+            .is_ok());
+
+        let result = delete_branch_logic(&repo, "origin/feature", true);
+        assert!(result.is_ok(), "expected delete to succeed, got {result:?}");
+        assert!(repo
+            .find_reference("refs/remotes/origin/feature")
+            .is_err());
+    }
+
+    #[test]
+    fn test_delete_branch_remote_path_errors_when_ref_missing() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        let result = delete_branch_logic(&repo, "origin/never-existed", true);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_checkout_branch_logic_routes_through_set_head() {
+        // Mirror of `checkout_branch` (line 162) — verify the wrapper-style
+        // sequence of find_branch + checkout_tree + set_head.
+        let (temp_dir, repo) = create_test_repo();
+        let oid = create_initial_commit(&repo, &temp_dir);
+        let commit = repo.find_commit(oid).unwrap();
+        repo.branch("audit-test", &commit, false).unwrap();
+
+        let branch = repo.find_branch("audit-test", BranchType::Local).unwrap();
+        let reference = branch.get();
+        let commit = reference.peel_to_commit().unwrap();
+        let tree = commit.tree().unwrap();
+        repo.checkout_tree(tree.as_object(), None).unwrap();
+        let refname = reference.name().unwrap();
+        repo.set_head(refname).unwrap();
+
+        assert_eq!(repo.head().unwrap().shorthand(), Some("audit-test"));
+    }
 }

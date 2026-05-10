@@ -501,5 +501,118 @@ describe("CommitFileDiff", () => {
 
       expect(mockLoadCommitDiffHunk).toHaveBeenCalledWith("abc123", "large.ts", 0);
     });
+
+    it("Load All loads every collapsed hunk in order", async () => {
+      const diff: FileDiff = {
+        path: "large.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: false,
+            lines: [],
+          },
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: true,
+            lines: [{ content: "x", line_type: "context", old_lineno: 50, new_lineno: 50 }],
+          },
+          {
+            header: "@@ -200,5 +200,6 @@",
+            old_start: 200,
+            old_lines: 5,
+            new_start: 200,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 60,
+      };
+
+      render(<CommitFileDiff diff={diff} commitHash="abc123" filePath="large.ts" />);
+      fireEvent.click(screen.getByText("Load All"));
+
+      await waitFor(() => {
+        expect(mockLoadCommitDiffHunk).toHaveBeenCalledTimes(2);
+      });
+      expect(mockLoadCommitDiffHunk).toHaveBeenNthCalledWith(1, "abc123", "large.ts", 0);
+      expect(mockLoadCommitDiffHunk).toHaveBeenNthCalledWith(2, "abc123", "large.ts", 2);
+    });
+
+    it("Load All is a no-op when commitHash or filePath is missing", async () => {
+      const diff: FileDiff = {
+        path: "large.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: false,
+            lines: [],
+          },
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: true,
+            lines: [{ content: "x", line_type: "context", old_lineno: 50, new_lineno: 50 }],
+          },
+        ],
+        is_binary: false,
+        total_lines: 30,
+      };
+
+      // Render without commitHash/filePath. The truncation bar still renders;
+      // clicking Load All should do nothing.
+      render(<CommitFileDiff diff={diff} />);
+      fireEvent.click(screen.getByText("Load All"));
+      // micro-wait
+      await new Promise((r) => setTimeout(r, 5));
+      expect(mockLoadCommitDiffHunk).not.toHaveBeenCalled();
+    });
+
+    it("uses singular 'hunk' wording when exactly one hunk is collapsed", () => {
+      const diff: FileDiff = {
+        path: "large.ts",
+        hunks: [
+          {
+            header: "@@ -1,3 +1,4 @@",
+            old_start: 1,
+            old_lines: 3,
+            new_start: 1,
+            new_lines: 4,
+            is_loaded: true,
+            lines: [{ content: "x", line_type: "context", old_lineno: 1, new_lineno: 1 }],
+          },
+          {
+            header: "@@ -50,5 +50,6 @@",
+            old_start: 50,
+            old_lines: 5,
+            new_start: 50,
+            new_lines: 6,
+            is_loaded: false,
+            lines: [],
+          },
+        ],
+        is_binary: false,
+        total_lines: 30,
+      };
+
+      render(<CommitFileDiff diff={diff} commitHash="abc123" filePath="large.ts" />);
+      expect(screen.getByText(/1 hunk collapsed/)).toBeInTheDocument();
+    });
   });
 });

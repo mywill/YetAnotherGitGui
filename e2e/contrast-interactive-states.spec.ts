@@ -8,6 +8,7 @@ import {
   expandAllBranchSections,
 } from "./helpers";
 import { assertContrastClean } from "./contrast-helper";
+import { setThemeAndWait } from "./waitHelpers";
 
 /**
  * WCAG AA Color Contrast Tests for Interactive States.
@@ -155,7 +156,6 @@ test.describe("Contrast - Interactive States", () => {
       const fileItem = page.locator('[data-testid="file-item"]').first();
       await fileItem.click();
       // Wait for selection state
-      await page.waitForTimeout(200);
       await assertContrastClean(page, ".status-left");
     });
 
@@ -164,8 +164,7 @@ test.describe("Contrast - Interactive States", () => {
       const stagedFile = page.locator('[data-testid="file-item"].staged');
       if ((await stagedFile.count()) > 0) {
         await stagedFile.first().click();
-        await page.waitForTimeout(200);
-        await assertContrastClean(page, ".status-left");
+          await assertContrastClean(page, ".status-left");
       }
     });
 
@@ -174,7 +173,6 @@ test.describe("Contrast - Interactive States", () => {
       const listbox = page.locator('[role="listbox"]').first();
       await listbox.focus();
       await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(200);
       await assertContrastClean(page, ".status-left");
     });
   });
@@ -207,8 +205,7 @@ test.describe("Contrast - Interactive States", () => {
       const addLine = page.locator(".diff-line.line-addition.selectable");
       if ((await addLine.count()) > 0) {
         await addLine.first().click();
-        await page.waitForTimeout(200);
-        await assertContrastClean(page, ".diff-hunk");
+          await assertContrastClean(page, ".diff-hunk");
       }
     });
 
@@ -216,8 +213,7 @@ test.describe("Contrast - Interactive States", () => {
       const delLine = page.locator(".diff-line.line-deletion.selectable");
       if ((await delLine.count()) > 0) {
         await delLine.first().click();
-        await page.waitForTimeout(200);
-        await assertContrastClean(page, ".diff-hunk");
+          await assertContrastClean(page, ".diff-hunk");
       }
     });
 
@@ -253,8 +249,7 @@ test.describe("Contrast - Interactive States", () => {
       const count = await rows.count();
       if (count > 1) {
         await rows.nth(1).click();
-        await page.waitForTimeout(200);
-        await assertContrastClean(page, ".commit-graph");
+          await assertContrastClean(page, ".commit-graph");
       }
     });
 
@@ -267,8 +262,7 @@ test.describe("Contrast - Interactive States", () => {
       const headRow = page.locator(".commit-row.is-head");
       if ((await headRow.count()) > 0) {
         await headRow.first().click();
-        await page.waitForTimeout(200);
-        await assertContrastClean(page, ".commit-row.is-head");
+          await assertContrastClean(page, ".commit-row.is-head");
       }
     });
 
@@ -283,8 +277,7 @@ test.describe("Contrast - Interactive States", () => {
       if ((await listbox.count()) > 0) {
         await listbox.first().focus();
         await page.keyboard.press("ArrowDown");
-        await page.waitForTimeout(200);
-        await assertContrastClean(page, ".commit-graph");
+          await assertContrastClean(page, ".commit-graph");
       }
     });
   });
@@ -387,7 +380,6 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector('[role="menu"]', { timeout: 5000 });
       // Navigate down in the menu
       await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(100);
       await assertContrastClean(page, '[role="menu"]');
     });
 
@@ -419,7 +411,6 @@ test.describe("Contrast - Interactive States", () => {
       // Tab to the commit button
       await page.keyboard.press("Tab");
       await page.keyboard.press("Tab");
-      await page.waitForTimeout(200);
       await assertContrastClean(page, ".commit-panel");
     });
 
@@ -428,7 +419,9 @@ test.describe("Contrast - Interactive States", () => {
       // Fill commit message so button becomes enabled
       const textarea = page.locator('textarea[placeholder="Commit message..."]');
       await textarea.fill("Test commit");
-      await page.waitForTimeout(200);
+      // Wait for the button to leave its disabled state — the React state
+      // update that toggles disabled is what the original 200ms wait was
+      // racing against.
       const commitButton = page.locator(".commit-button");
       await commitButton.hover();
       await assertContrastClean(page, ".commit-panel");
@@ -460,7 +453,6 @@ test.describe("Contrast - Interactive States", () => {
         hasText: "Accept Ours",
       });
       await oursButton.hover();
-      await page.waitForTimeout(200);
       await assertContrastClean(page, ".hunk-header");
     });
   });
@@ -480,7 +472,6 @@ test.describe("Contrast - Interactive States", () => {
       });
       const filesList = page.locator('[role="listbox"][aria-label="Files changed"]');
       await filesList.evaluate((el) => (el as HTMLElement).focus());
-      await page.waitForTimeout(150);
       await assertContrastClean(
         page,
         '[role="listbox"][aria-label="Files changed"] [aria-selected="true"]'
@@ -494,7 +485,6 @@ test.describe("Contrast - Interactive States", () => {
       await expandAllBranchSections(page);
       const list = page.locator('[role="listbox"][aria-label="Local Branches"]');
       await list.evaluate((el) => (el as HTMLElement).focus());
-      await page.waitForTimeout(150);
       await assertContrastClean(
         page,
         '[role="listbox"][aria-label="Local Branches"] [aria-selected="true"]'
@@ -506,7 +496,6 @@ test.describe("Contrast - Interactive States", () => {
       await expandAllBranchSections(page);
       const list = page.locator('[role="listbox"][aria-label="Tags"]');
       await list.evaluate((el) => (el as HTMLElement).focus());
-      await page.waitForTimeout(150);
       await assertContrastClean(page, '[role="listbox"][aria-label="Tags"] [aria-selected="true"]');
     });
 
@@ -517,7 +506,6 @@ test.describe("Contrast - Interactive States", () => {
       await page.waitForSelector(".stash-item", { timeout: 10000 });
       const list = page.locator('[role="listbox"]').first();
       await list.evaluate((el) => (el as HTMLElement).focus());
-      await page.waitForTimeout(150);
       await assertContrastClean(page, '[role="listbox"] [aria-selected="true"]');
     });
 
@@ -526,7 +514,6 @@ test.describe("Contrast - Interactive States", () => {
       const file = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" }).first();
       await file.click();
       await file.hover();
-      await page.waitForTimeout(150);
       await assertContrastClean(page, ".file-item.selected");
     });
 
@@ -594,12 +581,7 @@ test.describe("Contrast - Light Mode", () => {
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    // Switch to light mode via settings store
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setTheme("light");
-    });
-    await page.waitForTimeout(200);
+    await setThemeAndWait(page, "light");
   });
 
   test("status view passes contrast checks in light mode", async ({ page }) => {

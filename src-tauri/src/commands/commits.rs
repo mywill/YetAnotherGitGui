@@ -177,4 +177,61 @@ mod tests {
 
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_get_commit_graph_paginates() {
+        // Mirror of `get_commit_graph` body: get_commits + collect_refs +
+        // build_commit_graph. Verifies skip/limit pagination math.
+        let (temp_dir, repo) = create_test_repo();
+        for i in 0..5 {
+            let _ = create_commit_with_file(
+                &repo,
+                &temp_dir,
+                &format!("f{i}.txt"),
+                &format!("c{i}"),
+                &format!("commit {i}"),
+            );
+        }
+
+        let commits = git::get_commits(&repo, 0, 3).unwrap();
+        let refs = git::collect_refs(&repo).unwrap();
+        let graph = git::build_commit_graph(commits, refs);
+
+        assert_eq!(graph.len(), 3, "limit=3 should return 3 entries");
+    }
+
+    #[test]
+    fn test_get_commit_graph_skip_past_end_returns_empty() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+
+        let commits = git::get_commits(&repo, 100, 10).unwrap();
+        assert!(
+            commits.is_empty(),
+            "skip past end should yield empty result"
+        );
+    }
+
+    #[test]
+    fn test_get_commit_diff_hunk_logic() {
+        // Mirror of `get_commit_diff_hunk` body — exercises the wrapper path
+        // for fetching a single hunk from a commit's file diff.
+        let (temp_dir, repo) = create_test_repo();
+        let initial = create_initial_commit(&repo, &temp_dir);
+        // Add a follow-up commit with a multi-line file so a hunk exists.
+        let _ = create_commit_with_file(
+            &repo,
+            &temp_dir,
+            "initial.txt",
+            "initial content\nadded line\n",
+            "edit",
+        );
+
+        // Diff against the initial commit should produce at least one hunk.
+        let head = repo.head().unwrap().target().unwrap();
+        assert_ne!(head, initial);
+
+        let result = git::get_commit_diff_hunk(&repo, &head.to_string(), "initial.txt", 0);
+        assert!(result.is_ok(), "expected hunk 0 to load, got {result:?}");
+    }
 }

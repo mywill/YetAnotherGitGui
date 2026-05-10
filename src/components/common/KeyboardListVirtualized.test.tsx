@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useRef } from "react";
-import { KeyboardListVirtualized, useVirtualizedFocus } from "./KeyboardListVirtualized";
+import { KeyboardListVirtualized } from "./KeyboardListVirtualized";
+import { useVirtualizedFocus } from "./virtualizedFocus";
 import type { ListImperativeAPI } from "react-window";
 
 const mockScrollToRow = vi.fn();

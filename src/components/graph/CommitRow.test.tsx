@@ -56,8 +56,8 @@ vi.mock("../../services/clipboard", () => ({
   copyToClipboard: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock useVirtualizedFocus
-vi.mock("../common/KeyboardListVirtualized", () => ({
+// Mock useVirtualizedFocus (lives in ../common/virtualizedFocus).
+vi.mock("../common/virtualizedFocus", () => ({
   useVirtualizedFocus: () => ({ focusedIndex: -1 }),
 }));
 

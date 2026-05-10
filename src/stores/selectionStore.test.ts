@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useSelectionStore, makeSelectionKey } from "./selectionStore";
+import { useSelectionStore, makeSelectionKey, parseSelectionKey } from "./selectionStore";
 
 describe("selectionStore", () => {
   beforeEach(() => {
@@ -251,6 +251,110 @@ describe("selectionStore", () => {
         expect(isFileSelected("file1.ts", false)).toBe(true);
         expect(isFileSelected("file1.ts", true)).toBe(false);
       });
+    });
+  });
+
+  describe("parseSelectionKey", () => {
+    it("parses a staged key", () => {
+      expect(parseSelectionKey("staged:src/main.ts")).toEqual({
+        path: "src/main.ts",
+        staged: true,
+      });
+    });
+
+    it("parses an unstaged key", () => {
+      expect(parseSelectionKey("unstaged:src/main.ts")).toEqual({
+        path: "src/main.ts",
+        staged: false,
+      });
+    });
+
+    it("preserves path segments containing colons", () => {
+      // The key uses indexOf(":") so only the first colon is the separator —
+      // a path with colons (e.g. Windows drive letters) should round-trip.
+      expect(parseSelectionKey("unstaged:C:/repo/file.ts")).toEqual({
+        path: "C:/repo/file.ts",
+        staged: false,
+      });
+    });
+
+    it("returns null for malformed keys with no separator", () => {
+      expect(parseSelectionKey("nopeNoColon")).toBeNull();
+    });
+
+    it("treats unknown prefixes as 'not staged'", () => {
+      // Defensive: anything that's not literally "staged" before the colon
+      // is treated as unstaged. Keeps round-trip stable through makeSelectionKey.
+      expect(parseSelectionKey("garbage:foo.ts")).toEqual({
+        path: "foo.ts",
+        staged: false,
+      });
+    });
+  });
+
+  describe("shift+click cross-section guard", () => {
+    const unstaged = ["a.ts", "b.ts", "c.ts"];
+
+    it("falls back to single-select when the previous selection was in a different section", () => {
+      const { selectFile, toggleFileSelection } = useSelectionStore.getState();
+
+      // Anchor lives in the STAGED section.
+      selectFile("staged-1.ts", true);
+      useSelectionStore.setState({
+        lastSelectedFilePath: "staged-1.ts",
+        lastSelectedFileStaged: true,
+      });
+
+      // Shift+click in the UNSTAGED section. The cross-section guard at line
+      // 67 must skip the range expansion and just select the clicked row.
+      toggleFileSelection("c.ts", false, false, true, unstaged);
+
+      const state = useSelectionStore.getState();
+      // Only c.ts is selected — the range did NOT expand from staged-1.ts.
+      expect(state.selectedFilePaths.size).toBe(1);
+      expect(state.selectedFilePaths.has(makeSelectionKey("c.ts", false))).toBe(true);
+      expect(state.selectedFilePaths.has(makeSelectionKey("staged-1.ts", true))).toBe(false);
+    });
+
+    it("preserves prior selection when shift-range indices cannot be resolved", () => {
+      // Anchor is in unstaged, BUT the supplied allFilePaths is a different
+      // listing (e.g. stale) that doesn't contain the anchor. The range
+      // expansion bails (indexOf returns -1), so the existing selection
+      // survives unchanged.
+      const { toggleFileSelection } = useSelectionStore.getState();
+
+      toggleFileSelection("a.ts", false, false, false, unstaged);
+      toggleFileSelection("c.ts", false, false, true, ["x.ts", "y.ts", "z.ts"]);
+
+      const state = useSelectionStore.getState();
+      // a.ts is still selected; the new shift-click did not add c.ts because
+      // c.ts isn't in the supplied list and the anchor isn't either.
+      expect(state.selectedFilePaths.has(makeSelectionKey("a.ts", false))).toBe(true);
+      expect(state.lastSelectedFilePath).toBe("c.ts");
+    });
+  });
+
+  describe("scroll-to-commit interactions", () => {
+    it("selectAndScrollToCommit sets hash, scroll target, and switches to history view", () => {
+      const { selectAndScrollToCommit } = useSelectionStore.getState();
+      selectAndScrollToCommit("deadbeef");
+
+      const state = useSelectionStore.getState();
+      expect(state.selectedCommitHash).toBe("deadbeef");
+      expect(state.scrollToCommit).toBe("deadbeef");
+      expect(state.activeView).toBe("history");
+    });
+
+    it("clearScrollToCommit clears just the scroll target", () => {
+      const { selectAndScrollToCommit, clearScrollToCommit } = useSelectionStore.getState();
+      selectAndScrollToCommit("deadbeef");
+      clearScrollToCommit();
+
+      const state = useSelectionStore.getState();
+      // Scroll target cleared, but selection + view should remain.
+      expect(state.scrollToCommit).toBeNull();
+      expect(state.selectedCommitHash).toBe("deadbeef");
+      expect(state.activeView).toBe("history");
     });
   });
 });

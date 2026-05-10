@@ -2,6 +2,7 @@ import { test } from "./fixtures";
 import { tauriMocks } from "./tauri-mocks";
 import { switchToBranchesView, expandAllBranchSections } from "./helpers";
 import { assertManualContrast } from "./contrast-helper";
+import { setThemeAndWait } from "./waitHelpers";
 
 /**
  * Regression tests for previously-broken WCAG AA color-contrast cases. Each
@@ -41,11 +42,7 @@ test.describe("Contrast regressions (token-pair guards)", () => {
   });
 
   test("text-warning on bg-warning-bg passes AA in light mode", async ({ page }) => {
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setTheme("light");
-    });
-    await page.waitForTimeout(200);
+    await setThemeAndWait(page, "light");
     await page.evaluate(() => {
       const el = document.createElement("div");
       el.className = "synthetic-warning-pair bg-warning-bg rounded px-2 py-1";
@@ -60,11 +57,7 @@ test.describe("Contrast regressions (token-pair guards)", () => {
   });
 
   test("text-text-muted on bg-bg-hover passes AA in light mode", async ({ page }) => {
-    await page.evaluate(async () => {
-      const mod = await import("/src/stores/settingsStore.ts");
-      mod.useSettingsStore.getState().setTheme("light");
-    });
-    await page.waitForTimeout(200);
+    await setThemeAndWait(page, "light");
     await page.evaluate(() => {
       const el = document.createElement("div");
       el.className = "synthetic-hover-row bg-bg-hover px-2 py-1";
@@ -92,11 +85,7 @@ test.describe("Contrast regressions (token-pair guards)", () => {
     for (const surface of ["bg-panel", "bg-rail", "bg-canvas"] as const) {
       const surfaceClass = `bg-${surface}`;
       test(`text-accent-cyan on ${surfaceClass} passes AA in ${theme} mode`, async ({ page }) => {
-        await page.evaluate(async (t) => {
-          const mod = await import("/src/stores/settingsStore.ts");
-          mod.useSettingsStore.getState().setTheme(t);
-        }, theme);
-        await page.waitForTimeout(200);
+        await setThemeAndWait(page, theme);
         await page.evaluate((cls) => {
           const el = document.createElement("div");
           el.className = `synthetic-cyan-${cls} ${cls} px-2 py-1`;
@@ -111,11 +100,7 @@ test.describe("Contrast regressions (token-pair guards)", () => {
       });
 
       test(`text-accent-magenta on ${surfaceClass} passes AA in ${theme} mode`, async ({ page }) => {
-        await page.evaluate(async (t) => {
-          const mod = await import("/src/stores/settingsStore.ts");
-          mod.useSettingsStore.getState().setTheme(t);
-        }, theme);
-        await page.waitForTimeout(200);
+        await setThemeAndWait(page, theme);
         await page.evaluate((cls) => {
           const el = document.createElement("div");
           el.className = `synthetic-magenta-${cls} ${cls} px-2 py-1`;
@@ -131,11 +116,7 @@ test.describe("Contrast regressions (token-pair guards)", () => {
     }
 
     test(`text-success on bg-panel passes AA in ${theme} mode`, async ({ page }) => {
-      await page.evaluate(async (t) => {
-        const mod = await import("/src/stores/settingsStore.ts");
-        mod.useSettingsStore.getState().setTheme(t);
-      }, theme);
-      await page.waitForTimeout(200);
+      await setThemeAndWait(page, theme);
       await page.evaluate(() => {
         const el = document.createElement("div");
         el.className = "synthetic-success bg-bg-panel px-2 py-1";

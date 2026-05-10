@@ -1,8 +1,45 @@
+use std::path::{Path, PathBuf};
+
 use tauri::State;
 
 use crate::error::AppError;
 use crate::git;
 use crate::state::AppState;
+
+/// Resolve a frontend-supplied repo-relative path to an absolute path inside
+/// the working directory, rejecting any input that would escape it.
+///
+/// The function canonicalizes the parent directory (which must exist) and
+/// re-attaches the basename, then verifies the result is still under the
+/// workdir's canonical path. This catches `..`, absolute paths, and symlink
+/// escapes via the parent. The target file itself is allowed to not exist —
+/// callers like `delete_file` need to surface a real `Io::NotFound` when the
+/// frontend asks to delete an already-gone file.
+fn resolve_repo_path(workdir: &Path, user_path: &str) -> Result<PathBuf, AppError> {
+    let workdir_canonical = workdir
+        .canonicalize()
+        .map_err(|e| AppError::InvalidPath(format!("Cannot canonicalize workdir: {e}")))?;
+
+    let requested = workdir.join(user_path);
+    let parent = requested
+        .parent()
+        .ok_or_else(|| AppError::InvalidPath(format!("Path has no parent: {user_path}")))?;
+    let basename = requested
+        .file_name()
+        .ok_or_else(|| AppError::InvalidPath(format!("Path has no file name: {user_path}")))?;
+    let parent_canonical = parent
+        .canonicalize()
+        .map_err(|e| AppError::InvalidPath(format!("Cannot resolve '{user_path}': {e}")))?;
+    let resolved = parent_canonical.join(basename);
+
+    if !resolved.starts_with(&workdir_canonical) {
+        return Err(AppError::InvalidPath(format!(
+            "Path '{user_path}' escapes the repository working directory"
+        )));
+    }
+
+    Ok(resolved)
+}
 
 #[tauri::command]
 pub async fn get_file_statuses(state: State<'_, AppState>) -> Result<git::FileStatuses, AppError> {
@@ -141,7 +178,7 @@ pub fn delete_file(path: String, state: State<AppState>) -> Result<(), AppError>
     let workdir = repo
         .workdir()
         .ok_or(AppError::InvalidPath("No working directory".to_string()))?;
-    let file_path = workdir.join(&path);
+    let file_path = resolve_repo_path(workdir, &path)?;
     std::fs::remove_file(file_path)?;
     Ok(())
 }
@@ -154,7 +191,8 @@ pub fn delete_files(paths: Vec<String>, state: State<AppState>) -> Result<(), Ap
         .workdir()
         .ok_or(AppError::InvalidPath("No working directory".to_string()))?;
     for path in &paths {
-        std::fs::remove_file(workdir.join(path))?;
+        let resolved = resolve_repo_path(workdir, path)?;
+        std::fs::remove_file(resolved)?;
     }
     Ok(())
 }
@@ -358,5 +396,191 @@ mod tests {
             repo_lock.as_ref().ok_or(AppError::NoRepository);
 
         assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------------
+    // SECURITY: delete_file / delete_files path-traversal regression guards
+    //
+    // These tests guard against the path-traversal vulnerability discovered
+    // and closed during the uiRedesign pre-merge audit. Before the fix, both
+    // delete_file (line 138) and delete_files (line 150) constructed the
+    // target as `workdir.join(user_input)` + std::fs::remove_file, so a
+    // relative `../sentinel.txt` or absolute `/tmp/marker` would delete
+    // files outside the working directory. The fix routes both commands
+    // through `resolve_repo_path`, which canonicalizes the parent dir and
+    // verifies the resolved path is still under workdir.
+    //
+    // The wrappers below mirror the production functions exactly (calling
+    // `resolve_repo_path` then `remove_file`) so we can exercise the
+    // security-relevant code path without spinning up a Tauri runtime.
+    // ---------------------------------------------------------------------
+
+    /// Mirror of `delete_files` (the production fn at line 149) for tests
+    /// that don't have an `AppState`. Must stay in sync.
+    fn delete_files_logic(repo: &Repository, paths: &[String]) -> Result<(), AppError> {
+        let workdir = repo
+            .workdir()
+            .ok_or(AppError::InvalidPath("No working directory".to_string()))?;
+        for path in paths {
+            let resolved = resolve_repo_path(workdir, path)?;
+            std::fs::remove_file(resolved)?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn delete_files_rejects_relative_path_traversal() {
+        // Set up: an outer temp dir contains both the repo and a sentinel file.
+        // The frontend passes "../sentinel.txt" — workdir.join() resolves it
+        // *outside* the repo, and remove_file deletes the sentinel.
+        let outer = tempfile::tempdir().unwrap();
+        let sentinel = outer.path().join("sentinel.txt");
+        fs::write(&sentinel, "MUST NOT BE DELETED").unwrap();
+        assert!(sentinel.exists());
+
+        let repo_path = outer.path().join("repo");
+        fs::create_dir(&repo_path).unwrap();
+        let repo = Repository::init(&repo_path).unwrap();
+
+        let result = delete_files_logic(&repo, &["../sentinel.txt".to_string()]);
+
+        // After the fix: the command refuses to traverse outside workdir,
+        // returns InvalidPath, and the sentinel survives.
+        assert!(
+            matches!(result, Err(AppError::InvalidPath(_))),
+            "expected InvalidPath rejection, got {result:?}"
+        );
+        assert!(
+            sentinel.exists(),
+            "REGRESSION: delete_files deleted a file outside repo workdir via '../' traversal"
+        );
+    }
+
+    #[test]
+    fn delete_files_rejects_absolute_paths() {
+        // Path::join with an absolute path *replaces* the base entirely.
+        // So workdir.join("/tmp/marker") becomes "/tmp/marker".
+        let outer = tempfile::tempdir().unwrap();
+        let abs_marker = outer.path().join("abs_marker.txt");
+        fs::write(&abs_marker, "MUST NOT BE DELETED").unwrap();
+
+        let repo_path = outer.path().join("repo");
+        fs::create_dir(&repo_path).unwrap();
+        let repo = Repository::init(&repo_path).unwrap();
+
+        let result =
+            delete_files_logic(&repo, &[abs_marker.to_string_lossy().into_owned()]);
+
+        assert!(
+            matches!(result, Err(AppError::InvalidPath(_))),
+            "expected InvalidPath rejection, got {result:?}"
+        );
+        assert!(
+            abs_marker.exists(),
+            "REGRESSION: delete_files accepted an absolute path and deleted a file outside the repo"
+        );
+    }
+
+    #[test]
+    fn delete_files_rejects_symlink_escape() {
+        // Defense-in-depth: a symlink inside the repo pointing outside.
+        // Rust's std::fs::remove_file unlinks the symlink itself rather than
+        // following it, so the target outside survives even without the
+        // resolve_repo_path check. This test catches a future regression
+        // where the implementation switches to fs::canonicalize+remove or
+        // fs::remove_dir_all (either of which would follow the link).
+        // (Skipped on platforms without symlink support — Linux/macOS only.)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::symlink;
+
+            let outer = tempfile::tempdir().unwrap();
+            let target = outer.path().join("symlink_target.txt");
+            fs::write(&target, "MUST NOT BE DELETED").unwrap();
+
+            let repo_path = outer.path().join("repo");
+            fs::create_dir(&repo_path).unwrap();
+            let repo = Repository::init(&repo_path).unwrap();
+
+            let link_inside_repo = repo_path.join("link_to_target");
+            symlink(&target, &link_inside_repo).unwrap();
+
+            let _ = delete_files_logic(&repo, &["link_to_target".to_string()]);
+
+            assert!(
+                target.exists(),
+                "REGRESSION: delete_files followed a symlink and deleted a file outside the repo"
+            );
+        }
+    }
+
+    /// Mirror of `delete_file` (the production fn at line 138) for tests
+    /// that don't have an `AppState`. Must stay in sync.
+    fn delete_file_logic(repo: &Repository, path: &str) -> Result<(), AppError> {
+        let workdir = repo
+            .workdir()
+            .ok_or(AppError::InvalidPath("No working directory".to_string()))?;
+        let file_path = resolve_repo_path(workdir, path)?;
+        std::fs::remove_file(file_path)?;
+        Ok(())
+    }
+
+    /// Mirror of `discard_hunk` (line 78) — exercises the wrapper.
+    fn discard_hunk_logic(
+        repo: &Repository,
+        path: &str,
+        hunk_index: usize,
+        line_indices: Option<Vec<usize>>,
+    ) -> Result<(), AppError> {
+        git::discard_hunk(repo, path, hunk_index, line_indices)
+    }
+
+    #[test]
+    fn discard_hunk_logic_returns_error_for_nonexistent_file() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+        let result = discard_hunk_logic(&repo, "missing.txt", 0, None);
+        assert!(result.is_err());
+    }
+
+    /// Mirror of `revert_commit_file_lines` (line 124).
+    fn revert_commit_file_lines_logic(
+        repo: &Repository,
+        hash: &str,
+        path: &str,
+        hunk_index: usize,
+        line_indices: Vec<usize>,
+    ) -> Result<(), AppError> {
+        git::revert_commit_file_lines(repo, hash, path, hunk_index, line_indices)
+    }
+
+    #[test]
+    fn revert_commit_file_lines_rejects_invalid_hash() {
+        let (temp_dir, repo) = create_test_repo();
+        create_initial_commit(&repo, &temp_dir);
+        let result = revert_commit_file_lines_logic(&repo, "deadbeef", "initial.txt", 0, vec![0]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_file_rejects_relative_path_traversal() {
+        let outer = tempfile::tempdir().unwrap();
+        let sentinel = outer.path().join("sentinel.txt");
+        fs::write(&sentinel, "MUST NOT BE DELETED").unwrap();
+
+        let repo_path = outer.path().join("repo");
+        fs::create_dir(&repo_path).unwrap();
+        let repo = Repository::init(&repo_path).unwrap();
+
+        let result = delete_file_logic(&repo, "../sentinel.txt");
+
+        assert!(
+            matches!(result, Err(AppError::InvalidPath(_))),
+            "expected InvalidPath rejection, got {result:?}"
+        );
+        assert!(
+            sentinel.exists(),
+            "REGRESSION: delete_file deleted a file outside repo workdir via '../' traversal"
+        );
     }
 }

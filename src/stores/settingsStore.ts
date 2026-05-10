@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { readSettings, writeSettings } from "../services/settings";
 import type { SettingsData } from "../services/settings";
+import { useNotificationStore } from "./notificationStore";
+import { cleanErrorMessage } from "../utils/errorMessages";
 
 export type Density = "compact" | "comfortable" | "spacious";
 export type TextSize = "small" | "medium" | "large";
@@ -42,6 +44,22 @@ const DEFAULTS: Omit<
 // Module-level so concurrent setter calls coalesce into one persist write.
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Suppress duplicate "settings save failed" toasts when the user keeps poking
+// settings on a broken disk. Tracks the last shown error message + timestamp.
+const PERSIST_ERROR_DEBOUNCE_MS = 5000;
+let lastPersistErrorMessage: string | null = null;
+let lastPersistErrorAt = 0;
+
+function notifyPersistError(message: string) {
+  const now = Date.now();
+  if (message === lastPersistErrorMessage && now - lastPersistErrorAt < PERSIST_ERROR_DEBOUNCE_MS) {
+    return;
+  }
+  lastPersistErrorMessage = message;
+  lastPersistErrorAt = now;
+  useNotificationStore.getState().showError(`Failed to save settings: ${message}`);
+}
+
 function applyToDOM(density: Density, textSize: TextSize, theme: Theme) {
   document.documentElement.dataset.density = density;
   document.documentElement.dataset.textSize = textSize;
@@ -62,8 +80,9 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
       layoutSizes,
       sectionExpanded,
     };
-    writeSettings(data).catch(() => {
-      // Persist is best-effort — don't crash the app
+    writeSettings(data).catch((err: unknown) => {
+      const raw = err instanceof Error ? err.message : String(err);
+      notifyPersistError(cleanErrorMessage(raw));
     });
   }, delay);
 }

@@ -128,6 +128,11 @@ export function KeyboardList({
 
   const prevCountRef = useRef(0);
 
+  // Intentionally runs every render: itemRefs is a mutable Map mutated by
+  // child registerItem callbacks, and we need to clamp activeIndex / fire
+  // onActiveChange when the count shrinks. Keying on [activeIndex] would
+  // miss the very item-mount/unmount changes we care about.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const count = itemRefs.current.size;
     const prevCount = prevCountRef.current;

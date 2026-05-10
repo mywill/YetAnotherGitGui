@@ -2106,4 +2106,194 @@ describe("repositoryStore", () => {
       expect(isEmptyRepo()).toBe(false);
     });
   });
+
+  describe("resolveConflict", () => {
+    it("calls git.resolveConflict, reloads statuses, and clears conflict diff", async () => {
+      useRepositoryStore.setState({
+        currentDiff: { path: "merge.txt", hunks: [], is_binary: false, total_lines: 0 },
+        currentDiffPath: "merge.txt",
+        currentDiffIsConflicted: true,
+      });
+      vi.mocked(git.resolveConflict).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { resolveConflict } = useRepositoryStore.getState();
+      await resolveConflict("merge.txt", "ours");
+
+      expect(git.resolveConflict).toHaveBeenCalledWith("merge.txt", "ours");
+      expect(git.getFileStatuses).toHaveBeenCalled();
+      expect(useRepositoryStore.getState().currentDiff).toBeNull();
+      expect(useRepositoryStore.getState().currentDiffPath).toBeNull();
+      expect(useRepositoryStore.getState().currentDiffIsConflicted).toBe(false);
+    });
+
+    it("surfaces an error toast on failure", async () => {
+      vi.mocked(git.resolveConflict).mockRejectedValue(new Error("Conflict resolution failed"));
+
+      const { resolveConflict } = useRepositoryStore.getState();
+      await resolveConflict("merge.txt", "theirs");
+
+      expect(mockShowError).toHaveBeenCalledWith("Error: Conflict resolution failed");
+    });
+  });
+
+  describe("loadDiffHunk", () => {
+    it("merges a freshly loaded hunk into the current diff", async () => {
+      const baseDiff = {
+        path: "test.ts",
+        hunks: [
+          {
+            header: "@@",
+            old_start: 1,
+            old_lines: 1,
+            new_start: 1,
+            new_lines: 1,
+            lines: [],
+            is_loaded: false,
+          },
+          {
+            header: "@@",
+            old_start: 5,
+            old_lines: 1,
+            new_start: 5,
+            new_lines: 1,
+            lines: [],
+            is_loaded: true,
+          },
+        ],
+        is_binary: false,
+        total_lines: 0,
+      };
+      useRepositoryStore.setState({ currentDiff: baseDiff });
+
+      const loadedHunk = {
+        header: "@@",
+        old_start: 1,
+        old_lines: 1,
+        new_start: 1,
+        new_lines: 1,
+        lines: [{ content: "x", line_type: "addition", old_lineno: null, new_lineno: 1 }],
+        is_loaded: true,
+      };
+      vi.mocked(git.getDiffHunk).mockResolvedValue(loadedHunk);
+
+      const { loadDiffHunk } = useRepositoryStore.getState();
+      await loadDiffHunk("test.ts", false, 0);
+
+      const next = useRepositoryStore.getState().currentDiff;
+      expect(next?.hunks[0]).toEqual(loadedHunk);
+      expect(next?.hunks[1]).toEqual(baseDiff.hunks[1]);
+    });
+
+    it("ignores the load when the user has switched to a different file", async () => {
+      useRepositoryStore.setState({
+        currentDiff: { path: "other.ts", hunks: [], is_binary: false, total_lines: 0 },
+      });
+      vi.mocked(git.getDiffHunk).mockResolvedValue({
+        header: "@@",
+        old_start: 1,
+        old_lines: 1,
+        new_start: 1,
+        new_lines: 1,
+        lines: [],
+        is_loaded: true,
+      });
+
+      const { loadDiffHunk } = useRepositoryStore.getState();
+      await loadDiffHunk("test.ts", false, 0);
+
+      // currentDiff should remain pointing at other.ts; no hunks rewritten.
+      expect(useRepositoryStore.getState().currentDiff?.path).toBe("other.ts");
+    });
+
+    it("surfaces an error toast on failure", async () => {
+      vi.mocked(git.getDiffHunk).mockRejectedValue(new Error("Hunk load failed"));
+
+      const { loadDiffHunk } = useRepositoryStore.getState();
+      await loadDiffHunk("test.ts", false, 0);
+
+      expect(mockShowError).toHaveBeenCalledWith("Error: Hunk load failed");
+    });
+  });
+
+  describe("loadCommitDiffHunk", () => {
+    it("replaces the targeted hunk inside commitFileDiffs", async () => {
+      const baseDiff = {
+        path: "file.ts",
+        hunks: [
+          {
+            header: "@@",
+            old_start: 1,
+            old_lines: 1,
+            new_start: 1,
+            new_lines: 1,
+            lines: [],
+            is_loaded: false,
+          },
+          {
+            header: "@@",
+            old_start: 5,
+            old_lines: 1,
+            new_start: 5,
+            new_lines: 1,
+            lines: [],
+            is_loaded: false,
+          },
+        ],
+        is_binary: false,
+        total_lines: 0,
+      };
+      useRepositoryStore.setState({
+        commitFileDiffs: new Map([["file.ts", baseDiff]]),
+      });
+      const loadedHunk = {
+        header: "@@",
+        old_start: 5,
+        old_lines: 1,
+        new_start: 5,
+        new_lines: 1,
+        lines: [{ content: "y", line_type: "context", old_lineno: 5, new_lineno: 5 }],
+        is_loaded: true,
+      };
+      vi.mocked(git.getCommitDiffHunk).mockResolvedValue(loadedHunk);
+
+      const { loadCommitDiffHunk } = useRepositoryStore.getState();
+      await loadCommitDiffHunk("abc123", "file.ts", 1);
+
+      const updated = useRepositoryStore.getState().commitFileDiffs.get("file.ts");
+      expect(updated?.hunks[1]).toEqual(loadedHunk);
+      expect(updated?.hunks[0]).toEqual(baseDiff.hunks[0]);
+    });
+
+    it("is a no-op when the file is not currently in commitFileDiffs", async () => {
+      useRepositoryStore.setState({ commitFileDiffs: new Map() });
+      vi.mocked(git.getCommitDiffHunk).mockResolvedValue({
+        header: "@@",
+        old_start: 1,
+        old_lines: 1,
+        new_start: 1,
+        new_lines: 1,
+        lines: [],
+        is_loaded: true,
+      });
+
+      const { loadCommitDiffHunk } = useRepositoryStore.getState();
+      await loadCommitDiffHunk("abc", "missing.ts", 0);
+
+      expect(useRepositoryStore.getState().commitFileDiffs.size).toBe(0);
+    });
+
+    it("surfaces an error toast on failure", async () => {
+      vi.mocked(git.getCommitDiffHunk).mockRejectedValue(new Error("Commit hunk load failed"));
+
+      const { loadCommitDiffHunk } = useRepositoryStore.getState();
+      await loadCommitDiffHunk("abc", "file.ts", 0);
+
+      expect(mockShowError).toHaveBeenCalledWith("Error: Commit hunk load failed");
+    });
+  });
 });

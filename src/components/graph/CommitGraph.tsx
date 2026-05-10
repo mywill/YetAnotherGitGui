@@ -72,12 +72,14 @@ export function CommitGraph({ commits }: CommitGraphProps) {
 
   // Row height follows density × text-size. Read the computed --spacing-row
   // value from the root so changing density/textSize reflows the list.
+  // density and textSize aren't read inside this body — they're declared as
+  // dependencies so that switching density/text-size re-runs the DOM read.
   const rowHeight = useMemo(() => {
     if (typeof window === "undefined") return 28;
     const raw = getComputedStyle(document.documentElement).getPropertyValue("--spacing-row").trim();
     const px = parseFloat(raw);
     return Number.isFinite(px) && px > 0 ? px : 28;
-    // Depend on density + textSize so this recomputes when those change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [density, textSize]);
 
   // Track container width with ResizeObserver (for column resizer positions)
