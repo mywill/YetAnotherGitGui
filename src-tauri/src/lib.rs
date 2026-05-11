@@ -1,11 +1,9 @@
 mod commands;
 pub mod crash_handler;
-mod error;
-mod git;
+pub mod error;
+pub mod git;
 mod state;
 pub mod terminal;
-#[cfg(test)]
-mod test_utils;
 pub mod update_logger;
 
 use state::AppState;

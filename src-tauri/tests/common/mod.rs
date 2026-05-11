@@ -1,3 +1,15 @@
+//! Shared setup helpers for integration tests under `src-tauri/tests/`.
+//!
+//! Each integration test file in `src-tauri/tests/` is its own crate and
+//! includes this module via `mod common;`. The helpers build a real `git2`
+//! repository inside a `tempfile::TempDir` so behavior tests run against an
+//! actual on-disk repo rather than a mock.
+//!
+//! `#[allow(dead_code)]` because not every integration binary uses every
+//! helper; without the allow, unused-helper warnings would fire per-binary.
+
+#![allow(dead_code)]
+
 use git2::Repository;
 use std::fs;
 use std::path::Path;
@@ -7,7 +19,6 @@ pub fn create_test_repo() -> (TempDir, Repository) {
     let temp_dir = TempDir::new().unwrap();
     let repo = Repository::init(temp_dir.path()).unwrap();
 
-    // Configure user for commits
     let mut config = repo.config().unwrap();
     config.set_str("user.name", "Test User").unwrap();
     config.set_str("user.email", "test@example.com").unwrap();

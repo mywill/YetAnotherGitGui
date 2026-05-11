@@ -211,181 +211,8 @@ pub fn resolve_conflict(
 mod tests {
     use super::*;
     use crate::state::AppState;
-    use crate::test_utils::*;
     use git2::Repository;
-
     use std::fs;
-
-    #[test]
-    fn test_get_file_statuses_logic() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Create an untracked file
-        let file_path = temp_dir.path().join("untracked.txt");
-        fs::write(&file_path, "untracked").unwrap();
-
-        let result = git::get_file_statuses(&repo);
-        assert!(result.is_ok());
-
-        let statuses = result.unwrap();
-        assert_eq!(statuses.untracked.len(), 1);
-    }
-
-    #[test]
-    fn test_stage_file_logic() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Create a new file
-        let file_path = temp_dir.path().join("new.txt");
-        fs::write(&file_path, "new content").unwrap();
-
-        let result = git::stage_file(&repo, "new.txt");
-        assert!(result.is_ok());
-
-        // Verify it's staged
-        let statuses = git::get_file_statuses(&repo).unwrap();
-        assert!(statuses.staged.iter().any(|s| s.path == "new.txt"));
-    }
-
-    #[test]
-    fn test_unstage_file_logic() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Create and stage a file
-        let file_path = temp_dir.path().join("staged.txt");
-        fs::write(&file_path, "staged").unwrap();
-
-        git::stage_file(&repo, "staged.txt").unwrap();
-
-        // Verify it's staged
-        let statuses = git::get_file_statuses(&repo).unwrap();
-        assert!(statuses.staged.iter().any(|s| s.path == "staged.txt"));
-
-        // Unstage it
-        let result = git::unstage_file(&repo, "staged.txt");
-        assert!(result.is_ok());
-
-        // Verify it's unstaged
-        let statuses = git::get_file_statuses(&repo).unwrap();
-        assert!(statuses.staged.is_empty());
-    }
-
-    #[test]
-    fn test_revert_file_logic() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Modify the file
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "modified content").unwrap();
-
-        // Verify it's modified
-        let content = fs::read_to_string(&file_path).unwrap();
-        assert_eq!(content, "modified content");
-
-        // Revert it
-        let head = repo.head().unwrap().peel_to_tree().unwrap();
-        repo.checkout_tree(
-            head.as_object(),
-            Some(
-                git2::build::CheckoutBuilder::new()
-                    .force()
-                    .path("initial.txt"),
-            ),
-        )
-        .unwrap();
-
-        // Verify content is reverted
-        let content = fs::read_to_string(&file_path).unwrap();
-        assert_eq!(content, "initial content");
-    }
-
-    #[test]
-    fn test_delete_file_logic() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Create a file to delete
-        let file_path = temp_dir.path().join("to_delete.txt");
-        fs::write(&file_path, "delete me").unwrap();
-
-        assert!(file_path.exists());
-
-        // Delete it
-        let workdir = repo.workdir().unwrap();
-        let full_path = workdir.join("to_delete.txt");
-        fs::remove_file(full_path).unwrap();
-
-        assert!(!file_path.exists());
-    }
-
-    #[test]
-    fn test_delete_files_logic() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        let names = ["a.txt", "b.txt", "c.txt"];
-        for name in &names {
-            fs::write(temp_dir.path().join(name), "content").unwrap();
-        }
-        for name in &names {
-            assert!(temp_dir.path().join(name).exists());
-        }
-
-        let workdir = repo.workdir().unwrap();
-        for name in &names {
-            fs::remove_file(workdir.join(name)).unwrap();
-        }
-
-        for name in &names {
-            assert!(!temp_dir.path().join(name).exists());
-        }
-    }
-
-    #[test]
-    fn test_revert_file_empty_repo() {
-        let (temp_dir, _repo) = create_test_repo();
-
-        // Create a file in an empty repo (no commits)
-        let file_path = temp_dir.path().join("new.txt");
-        fs::write(&file_path, "hello\n").unwrap();
-
-        // Open repo fresh to simulate the command handler
-        let repo = Repository::open(temp_dir.path()).unwrap();
-
-        // Reverting should fail with a descriptive error, not a cryptic git2 crash
-        let head_result = repo.head();
-        assert!(head_result.is_err() || repo.head().unwrap().peel_to_tree().is_err());
-
-        // The actual revert_file command logic: repo.head()?.peel_to_tree()?
-        // should produce an error containing "no commits yet"
-        let result: Result<(), AppError> = (|| {
-            let head = repo
-                .head()
-                .ok()
-                .and_then(|h| h.peel_to_tree().ok())
-                .ok_or_else(|| {
-                    AppError::InvalidPath("Cannot revert: no commits yet".to_string())
-                })?;
-            repo.checkout_tree(
-                head.as_object(),
-                Some(git2::build::CheckoutBuilder::new().force().path("new.txt")),
-            )?;
-            Ok(())
-        })();
-
-        // For now, test the expected behavior: error with descriptive message
-        assert!(result.is_err());
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("no commits yet"),
-            "Expected 'no commits yet' in error, got: {}",
-            err_msg
-        );
-    }
 
     #[test]
     fn test_no_repository_error() {
@@ -468,8 +295,7 @@ mod tests {
         fs::create_dir(&repo_path).unwrap();
         let repo = Repository::init(&repo_path).unwrap();
 
-        let result =
-            delete_files_logic(&repo, &[abs_marker.to_string_lossy().into_owned()]);
+        let result = delete_files_logic(&repo, &[abs_marker.to_string_lossy().into_owned()]);
 
         assert!(
             matches!(result, Err(AppError::InvalidPath(_))),
@@ -523,43 +349,6 @@ mod tests {
         let file_path = resolve_repo_path(workdir, path)?;
         std::fs::remove_file(file_path)?;
         Ok(())
-    }
-
-    /// Mirror of `discard_hunk` (line 78) — exercises the wrapper.
-    fn discard_hunk_logic(
-        repo: &Repository,
-        path: &str,
-        hunk_index: usize,
-        line_indices: Option<Vec<usize>>,
-    ) -> Result<(), AppError> {
-        git::discard_hunk(repo, path, hunk_index, line_indices)
-    }
-
-    #[test]
-    fn discard_hunk_logic_returns_error_for_nonexistent_file() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-        let result = discard_hunk_logic(&repo, "missing.txt", 0, None);
-        assert!(result.is_err());
-    }
-
-    /// Mirror of `revert_commit_file_lines` (line 124).
-    fn revert_commit_file_lines_logic(
-        repo: &Repository,
-        hash: &str,
-        path: &str,
-        hunk_index: usize,
-        line_indices: Vec<usize>,
-    ) -> Result<(), AppError> {
-        git::revert_commit_file_lines(repo, hash, path, hunk_index, line_indices)
-    }
-
-    #[test]
-    fn revert_commit_file_lines_rejects_invalid_hash() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-        let result = revert_commit_file_lines_logic(&repo, "deadbeef", "initial.txt", 0, vec![0]);
-        assert!(result.is_err());
     }
 
     #[test]
