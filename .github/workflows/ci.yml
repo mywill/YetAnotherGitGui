@@ -238,7 +238,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri app
+      # PR builds (incl. dependabot) don't have access to the signing
+      # secret, so disable updater artifact generation. We still
+      # exercise compile + deb/rpm/AppImage bundling.
+      - name: Build Tauri app (PR — unsigned)
+        if: github.event_name == 'pull_request'
+        run: pnpm tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Build Tauri app (signed)
+        if: github.event_name != 'pull_request'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
