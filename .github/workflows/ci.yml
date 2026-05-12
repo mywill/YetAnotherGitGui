@@ -62,6 +62,33 @@ jobs:
       - name: Check Prettier formatting
         run: pnpm format:check
 
+  check-tauri-versions:
+    name: Check Tauri Version Alignment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tauri crate and @tauri-apps/api versions align
+        run: |
+          info=$(pnpm tauri info 2>&1)
+          echo "$info"
+          if echo "$info" | grep -qi "version mismatched"; then
+            echo "::error::Tauri Rust crate and @tauri-apps/* JS packages have mismatched major/minor versions. Run 'pnpm update @tauri-apps/api@latest' (and any other mismatched @tauri-apps/* packages) to align them."
+            exit 1
+          fi
+
   lint-rust:
     name: Lint Rust
     runs-on: ubuntu-latest
@@ -174,14 +201,15 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
   # ===================
-  # BUILD STAGE (main branch only)
+  # BUILD STAGE
+  # Linux: every PR + main (catches Tauri/CI build regressions early)
+  # macOS: main only (slower, signs artifacts)
   # ===================
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-22.04
-    needs: [test-frontend, test-e2e, test-rust]
-    if: github.ref == 'refs/heads/main'
+    needs: [check-tauri-versions, test-frontend, test-e2e, test-rust]
     steps:
       - uses: actions/checkout@v4
 
