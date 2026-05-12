@@ -11,6 +11,11 @@ updates:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
     groups:
+      # Keep all @tauri-apps/* packages in one PR so JS bumps land
+      # together and stay aligned with the cargo-side tauri group.
+      tauri:
+        patterns:
+          - "@tauri-apps/*"
       development:
         dependency-type: "development"
         patterns:
@@ -30,6 +35,14 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
+      # Tauri crate + plugins must move together with @tauri-apps/* on
+      # the npm side. Dependabot can't span ecosystems in a single PR,
+      # but matching groups land in lockstep on the same schedule.
+      tauri:
+        patterns:
+          - "tauri"
+          - "tauri-build"
+          - "tauri-plugin-*"
       rust-dependencies:
         patterns:
           - "*"
