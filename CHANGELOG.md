@@ -1,3 +1,17 @@
+# [1.11.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.10.2...v1.11.0) (2026-05-12)
+
+
+### Bug Fixes
+
+*  issue with multi select now works ([d9829ea](https://github.com/mywill/YetAnotherGitGui/commit/d9829ea478dec34bbb3a9429ff2b009571945a7b))
+* test fix ([316b06f](https://github.com/mywill/YetAnotherGitGui/commit/316b06f8ae2be1adc88ceaf05abe43926d21499b))
+
+
+### Features
+
+* first pass at the UI redesign ([f509c37](https://github.com/mywill/YetAnotherGitGui/commit/f509c37c9ea0d854695e097fc1631f8c99f0a754))
+* fixed the delete flow and updated it to support multiple files to be deleted at a time ([c61b630](https://github.com/mywill/YetAnotherGitGui/commit/c61b630b628198ea13270205f37e0bc629fbc175))
+
 ## [1.10.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.10.1...v1.10.2) (2026-05-03)
 
 
