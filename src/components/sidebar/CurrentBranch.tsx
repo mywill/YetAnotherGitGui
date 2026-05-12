@@ -1,7 +1,33 @@
+import { useCallback, useEffect, useRef } from "react";
+import clsx from "clsx";
+import { IconGitBranch, IconSearch } from "@tabler/icons-react";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useBranchFilterStore } from "../../stores/branchFilterStore";
 
-export function CurrentBranch() {
+export const CurrentBranch = () => {
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
+  const query = useBranchFilterStore((s) => s.query);
+  const setQuery = useBranchFilterStore((s) => s.setQuery);
+  const clear = useBranchFilterStore((s) => s.clear);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Clear filter on unmount so it doesn't leak across view switches.
+  useEffect(() => () => clear(), [clear]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        if (query) {
+          clear();
+        } else {
+          (e.currentTarget as HTMLInputElement).blur();
+        }
+      }
+    },
+    [clear, query]
+  );
 
   if (!repositoryInfo) {
     return null;
@@ -15,38 +41,57 @@ export function CurrentBranch() {
   const STATE_LABELS: Record<string, string> = {
     merge: "MERGING",
     rebase: "REBASING",
-    "cherry-pick": "CHERRY\u2011PICKING",
+    "cherry-pick": "CHERRY‑PICKING",
     revert: "REVERTING",
     bisect: "BISECTING",
   };
   const stateLabel = repoState && repoState !== "clean" ? (STATE_LABELS[repoState] ?? null) : null;
 
   return (
-    <div className="current-branch border-border bg-bg-tertiary text-text-primary flex items-center gap-2 border-b px-3 py-2">
-      <BranchIcon />
-      <span className="branch-name truncate font-medium" title={branchName}>
+    <div className="current-branch border-border bg-bg-well text-text-primary py-card-y flex items-center gap-2 border-b px-3">
+      <IconGitBranch size={14} stroke={1.75} className="text-badge-branch shrink-0" aria-hidden />
+      <span
+        className="branch-name min-w-0 shrink truncate font-mono font-medium"
+        title={branchName}
+      >
         {branchName}
       </span>
       {stateLabel && (
-        <span className="repo-state-label text-warning bg-warning-bg text-2xs rounded px-1.5 py-0.5 font-bold">
+        <span className="repo-state-label text-warning bg-warning-bg text-2xs shrink-0 rounded px-1.5 py-0.5 font-bold">
           {stateLabel}
         </span>
       )}
+      <div className="branch-filter-wrap relative flex min-w-0 flex-1 items-center pr-1">
+        <span
+          className="text-text-muted pointer-events-none absolute left-1.5 inline-flex size-3 shrink-0 items-center justify-center"
+          aria-hidden="true"
+        >
+          <IconSearch size={10} stroke={1.8} aria-hidden />
+        </span>
+        <input
+          ref={inputRef}
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Filter branches & tags"
+          aria-label="Filter branches and tags"
+          className={clsx(
+            "branch-filter-input text-2xs border-border bg-bg-canvas/60 hover:bg-bg-canvas focus:border-text-muted focus-ring w-full min-w-0 rounded border py-0.5 pr-5 pl-6 font-mono transition-colors duration-150"
+          )}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={clear}
+            aria-label="Clear filter"
+            className="text-text-muted hover:text-text-primary focus-ring absolute right-0.5 inline-flex size-4 items-center justify-center rounded"
+            tabIndex={-1}
+          >
+            {"×"}
+          </button>
+        )}
+      </div>
     </div>
   );
-}
-
-function BranchIcon() {
-  return (
-    <svg
-      className="text-badge-branch shrink-0"
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-    >
-      <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM4 5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm7 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM5 8v2.5a.5.5 0 0 0 .5.5h5.5V13h-5a1.5 1.5 0 0 1-1.5-1.5V8h.5z" />
-      <path d="M11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm1 2.5V10h-1V7.5h1z" />
-    </svg>
-  );
-}
+};

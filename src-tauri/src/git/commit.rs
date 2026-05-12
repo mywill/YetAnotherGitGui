@@ -195,203 +195,49 @@ fn commit_to_info(commit: &git2::Commit) -> CommitInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::*;
     use std::fs;
     use std::path::Path;
+    use tempfile::TempDir;
 
+    // Only test that genuinely needs private access — exercises commit_to_info
+    // (private helper). Behavior tests for `get_commits` / `get_commit_details`
+    // live in tests/commits.rs. The setup is inlined here (rather than using
+    // common::create_test_repo) so this is the last consumer of that helper —
+    // src/test_utils.rs is no longer needed.
     #[test]
-    fn test_get_commits_empty_repo() {
-        let (_temp_dir, repo) = create_test_repo();
+    fn test_commit_to_info_multiline_message() {
+        let temp_dir = TempDir::new().unwrap();
+        let repo = git2::Repository::init(temp_dir.path()).unwrap();
+        {
+            let mut config = repo.config().unwrap();
+            config.set_str("user.name", "Test User").unwrap();
+            config.set_str("user.email", "test@example.com").unwrap();
+        }
 
-        let commits = get_commits(&repo, 0, 10).unwrap();
-
-        assert!(commits.is_empty());
-    }
-
-    #[test]
-    fn test_get_commits_single_commit() {
-        let (temp_dir, repo) = create_test_repo();
-        let oid = create_commit_with_file(&repo, &temp_dir, "file.txt", "content", "First commit");
-
-        let commits = get_commits(&repo, 0, 10).unwrap();
-
-        assert_eq!(commits.len(), 1);
-        assert_eq!(commits[0].hash, oid.to_string());
-        assert_eq!(commits[0].message, "First commit");
-        assert_eq!(commits[0].author_name, "Test User");
-        assert_eq!(commits[0].author_email, "test@example.com");
-    }
-
-    #[test]
-    fn test_get_commits_multiple_commits() {
-        let (temp_dir, repo) = create_test_repo();
-
-        create_commit_with_file(&repo, &temp_dir, "file1.txt", "content1", "First commit");
-        create_commit_with_file(&repo, &temp_dir, "file2.txt", "content2", "Second commit");
-        create_commit_with_file(&repo, &temp_dir, "file3.txt", "content3", "Third commit");
-
-        let commits = get_commits(&repo, 0, 10).unwrap();
-
-        assert_eq!(commits.len(), 3);
-        // Commits should be in reverse chronological order
-        assert_eq!(commits[0].message, "Third commit");
-        assert_eq!(commits[1].message, "Second commit");
-        assert_eq!(commits[2].message, "First commit");
-    }
-
-    #[test]
-    fn test_get_commits_with_skip() {
-        let (temp_dir, repo) = create_test_repo();
-
-        create_commit_with_file(&repo, &temp_dir, "file1.txt", "content1", "First commit");
-        create_commit_with_file(&repo, &temp_dir, "file2.txt", "content2", "Second commit");
-        create_commit_with_file(&repo, &temp_dir, "file3.txt", "content3", "Third commit");
-
-        let commits = get_commits(&repo, 1, 10).unwrap();
-
-        assert_eq!(commits.len(), 2);
-        assert_eq!(commits[0].message, "Second commit");
-        assert_eq!(commits[1].message, "First commit");
-    }
-
-    #[test]
-    fn test_get_commits_with_limit() {
-        let (temp_dir, repo) = create_test_repo();
-
-        create_commit_with_file(&repo, &temp_dir, "file1.txt", "content1", "First commit");
-        create_commit_with_file(&repo, &temp_dir, "file2.txt", "content2", "Second commit");
-        create_commit_with_file(&repo, &temp_dir, "file3.txt", "content3", "Third commit");
-
-        let commits = get_commits(&repo, 0, 2).unwrap();
-
-        assert_eq!(commits.len(), 2);
-        assert_eq!(commits[0].message, "Third commit");
-        assert_eq!(commits[1].message, "Second commit");
-    }
-
-    #[test]
-    fn test_get_commits_short_hash() {
-        let (temp_dir, repo) = create_test_repo();
-        let oid = create_commit_with_file(&repo, &temp_dir, "file.txt", "content", "Commit");
-
-        let commits = get_commits(&repo, 0, 10).unwrap();
-
-        let full_hash = oid.to_string();
-        assert_eq!(commits[0].short_hash, &full_hash[..7]);
-    }
-
-    #[test]
-    fn test_get_commits_parent_hashes() {
-        let (temp_dir, repo) = create_test_repo();
-
-        let first_oid =
-            create_commit_with_file(&repo, &temp_dir, "file1.txt", "content1", "First commit");
-        create_commit_with_file(&repo, &temp_dir, "file2.txt", "content2", "Second commit");
-
-        let commits = get_commits(&repo, 0, 10).unwrap();
-
-        // First commit (most recent) should have first_oid as parent
-        assert_eq!(commits[0].parent_hashes, vec![first_oid.to_string()]);
-        // Second commit (oldest) should have no parents
-        assert!(commits[1].parent_hashes.is_empty());
-    }
-
-    #[test]
-    fn test_get_commit_details() {
-        let (temp_dir, repo) = create_test_repo();
-        let oid = create_commit_with_file(
-            &repo,
-            &temp_dir,
-            "test_file.txt",
-            "content",
-            "Detailed commit message\n\nWith more details",
-        );
-
-        let details = get_commit_details(&repo, &oid.to_string()).unwrap();
-
-        assert_eq!(details.hash, oid.to_string());
-        assert_eq!(
-            details.message,
-            "Detailed commit message\n\nWith more details"
-        );
-        assert_eq!(details.author_name, "Test User");
-        assert_eq!(details.author_email, "test@example.com");
-        assert_eq!(details.committer_name, "Test User");
-        assert_eq!(details.committer_email, "test@example.com");
-        assert!(details
-            .files_changed
-            .iter()
-            .any(|f| f.path == "test_file.txt"));
-    }
-
-    #[test]
-    fn test_get_commit_details_invalid_hash() {
-        let (_temp_dir, repo) = create_test_repo();
-
-        let result = get_commit_details(&repo, "invalid_hash");
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_get_commit_details_nonexistent_commit() {
-        let (temp_dir, repo) = create_test_repo();
-        create_commit_with_file(&repo, &temp_dir, "file.txt", "content", "Commit");
-
-        // Valid format but doesn't exist
-        let result = get_commit_details(&repo, "0000000000000000000000000000000000000000");
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_get_commit_details_files_changed() {
-        let (temp_dir, repo) = create_test_repo();
-
-        // First commit
-        create_commit_with_file(&repo, &temp_dir, "file1.txt", "content1", "First commit");
-
-        // Second commit that modifies file1 and adds file2
-        let file1_path = temp_dir.path().join("file1.txt");
-        fs::write(&file1_path, "modified content").unwrap();
-        let file2_path = temp_dir.path().join("file2.txt");
-        fs::write(&file2_path, "new file").unwrap();
+        let file_path = temp_dir.path().join("file.txt");
+        fs::write(&file_path, "content").unwrap();
 
         let mut index = repo.index().unwrap();
-        index.add_path(Path::new("file1.txt")).unwrap();
-        index.add_path(Path::new("file2.txt")).unwrap();
+        index.add_path(Path::new("file.txt")).unwrap();
         index.write().unwrap();
 
         let sig = repo.signature().unwrap();
         let tree_id = index.write_tree().unwrap();
         let tree = repo.find_tree(tree_id).unwrap();
-        let parent = repo.head().unwrap().peel_to_commit().unwrap();
 
         let oid = repo
-            .commit(Some("HEAD"), &sig, &sig, "Second commit", &tree, &[&parent])
+            .commit(
+                Some("HEAD"),
+                &sig,
+                &sig,
+                "First line\nSecond line\nThird line",
+                &tree,
+                &[],
+            )
             .unwrap();
-
-        let details = get_commit_details(&repo, &oid.to_string()).unwrap();
-
-        assert!(details.files_changed.iter().any(|f| f.path == "file1.txt"));
-        assert!(details.files_changed.iter().any(|f| f.path == "file2.txt"));
-    }
-
-    #[test]
-    fn test_commit_to_info_multiline_message() {
-        let (temp_dir, repo) = create_test_repo();
-        let oid = create_commit_with_file(
-            &repo,
-            &temp_dir,
-            "file.txt",
-            "content",
-            "First line\nSecond line\nThird line",
-        );
 
         let commit = repo.find_commit(oid).unwrap();
         let info = commit_to_info(&commit);
-
-        // Should only show first line in message
         assert_eq!(info.message, "First line");
     }
 }

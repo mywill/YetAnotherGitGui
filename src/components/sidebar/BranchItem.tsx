@@ -1,5 +1,7 @@
 import { useCallback } from "react";
 import clsx from "clsx";
+import { formatDistanceToNow } from "date-fns";
+import { IconGitBranch, IconCloud } from "@tabler/icons-react";
 import type { BranchInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
@@ -7,6 +9,7 @@ import { useDialogStore } from "../../stores/dialogStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
+import { SidebarListItem } from "./SidebarListItem";
 
 interface BranchItemProps {
   branch: BranchInfo;
@@ -118,28 +121,66 @@ export function BranchItem({ branch }: BranchItemProps) {
     },
   ];
 
+  // Branches with an upstream show that. Branches without one fall back to a
+  // relative date so the row still has secondary context. Remote branches
+  // always show the date.
+  const dateText =
+    branch.last_commit_time != null ? safeFormatDistance(branch.last_commit_time) : null;
+  const showUpstream = !branch.is_remote && !!branch.upstream;
+  const showDate = !showUpstream && !!dateText;
+  const secondaryColorClass = branch.is_head ? "text-text-primary/75" : "text-text-muted";
+
   return (
     <>
-      <div
-        className={clsx(
-          "branch-item text-text-primary hover:bg-bg-hover flex cursor-pointer items-center gap-2 py-1 pr-3 pl-7 text-xs transition-colors duration-150",
-          branch.is_head && "is-current bg-badge-branch/20",
-          branch.is_remote && "is-remote text-text-secondary"
+      <SidebarListItem
+        itemClass="branch-item"
+        modifiers={clsx(
+          branch.is_head && "is-current",
+          branch.is_remote && "is-remote text-text-muted"
         )}
+        ariaCurrent={branch.is_head ? "true" : undefined}
+        title={branch.name}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        title={branch.name}
-        aria-current={branch.is_head ? "true" : undefined}
       >
         <BranchIcon isRemote={branch.is_remote} />
-        <span className="branch-item-name flex-1 truncate">{displayName}</span>
+        <span className="branch-item-name min-w-0 shrink truncate font-mono">{displayName}</span>
+        {showUpstream && (
+          <span
+            className={clsx(
+              "branch-item-upstream text-2xs shrink-0 truncate font-mono",
+              secondaryColorClass
+            )}
+          >
+            → {branch.upstream}
+          </span>
+        )}
+        {!branch.is_remote && (branch.ahead || branch.behind) ? (
+          <span
+            className="ahead-behind text-2xs inline-flex shrink-0 items-center gap-1 font-mono"
+            aria-label={`${branch.ahead ?? 0} ahead, ${branch.behind ?? 0} behind`}
+          >
+            {branch.ahead ? <span className="text-addition">+{branch.ahead}</span> : null}
+            {branch.behind ? <span className="text-deletion">-{branch.behind}</span> : null}
+          </span>
+        ) : null}
         {branch.is_head && (
-          <span className="current-badge bg-badge-branch text-2xs rounded px-1.5 py-px font-semibold text-black">
+          <span className="current-badge text-badge-branch text-2xs shrink-0 rounded border px-1.5 py-px font-semibold">
             current
           </span>
         )}
-      </div>
+        {showDate && (
+          <span
+            className={clsx(
+              "branch-item-date text-2xs shrink-0 font-mono whitespace-nowrap",
+              secondaryColorClass
+            )}
+          >
+            {dateText}
+          </span>
+        )}
+      </SidebarListItem>
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -152,34 +193,31 @@ export function BranchItem({ branch }: BranchItemProps) {
   );
 }
 
+function safeFormatDistance(secondsSinceEpoch: number): string | null {
+  try {
+    return formatDistanceToNow(new Date(secondsSinceEpoch * 1000), { addSuffix: true });
+  } catch {
+    return null;
+  }
+}
+
 function BranchIcon({ isRemote }: { isRemote: boolean }) {
   if (isRemote) {
     return (
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 16 16"
-        fill="currentColor"
+      <IconCloud
+        size={14}
+        stroke={1.75}
         className="branch-icon text-badge-remote shrink-0"
-      >
-        <path d="M1 4.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zm2.5-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
-        <path d="M10 11.5a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0zm2.5-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
-        <path d="M3.5 7v4.5a.5.5 0 0 0 .5.5h6v-1H4.5V7h-1z" />
-        <path d="M12.5 4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm0 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" />
-      </svg>
+        aria-hidden
+      />
     );
   }
-
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="currentColor"
+    <IconGitBranch
+      size={14}
+      stroke={1.75}
       className="branch-icon text-badge-branch shrink-0"
-    >
-      <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM4 5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm7 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM5 8v2.5a.5.5 0 0 0 .5.5h5.5V13h-5a1.5 1.5 0 0 1-1.5-1.5V8h.5z" />
-      <path d="M11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm1 2.5V10h-1V7.5h1z" />
-    </svg>
+      aria-hidden
+    />
   );
 }

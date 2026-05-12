@@ -58,60 +58,7 @@ pub fn get_diff_hunk(
 mod tests {
     use super::*;
     use crate::state::AppState;
-    use crate::test_utils::*;
     use git2::Repository;
-
-    use std::fs;
-    use std::path::Path;
-
-    #[test]
-    fn test_get_file_diff_unstaged() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Modify the file
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "modified content").unwrap();
-
-        let result = git::get_file_diff(&repo, "initial.txt", false);
-        assert!(result.is_ok());
-
-        let diff = result.unwrap();
-        assert_eq!(diff.path, "initial.txt");
-    }
-
-    #[test]
-    fn test_get_file_diff_staged() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Modify and stage the file
-        let file_path = temp_dir.path().join("initial.txt");
-        fs::write(&file_path, "modified content").unwrap();
-
-        let mut index = repo.index().unwrap();
-        index.add_path(Path::new("initial.txt")).unwrap();
-        index.write().unwrap();
-
-        let result = git::get_file_diff(&repo, "initial.txt", true);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_get_untracked_file_diff() {
-        let (temp_dir, repo) = create_test_repo();
-        create_initial_commit(&repo, &temp_dir);
-
-        // Create an untracked file
-        let file_path = temp_dir.path().join("untracked.txt");
-        fs::write(&file_path, "untracked content").unwrap();
-
-        let result = git::get_untracked_file_diff(&repo, "untracked.txt");
-        assert!(result.is_ok());
-
-        let diff = result.unwrap();
-        assert_eq!(diff.path, "untracked.txt");
-    }
 
     #[test]
     fn test_no_repository_error() {

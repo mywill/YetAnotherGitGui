@@ -1,6 +1,7 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { tauriMocks } from "./tauri-mocks";
+import { switchToStatusView, switchToHistoryView } from "./helpers";
 
 test.describe("Terminal Panel", () => {
   test.beforeEach(async ({ page }) => {
@@ -13,9 +14,7 @@ test.describe("Terminal Panel", () => {
     await expect(page.locator(".terminal-panel")).not.toBeVisible();
   });
 
-  test("terminal button in status bar toggles terminal panel", async ({
-    page,
-  }) => {
+  test("terminal button in status bar toggles terminal panel", async ({ page }) => {
     // Click the Terminal button in the header
     const terminalButton = page.locator(".status-bar button", {
       hasText: "Terminal",
@@ -29,9 +28,7 @@ test.describe("Terminal Panel", () => {
     await expect(page.locator(".terminal-panel")).not.toBeVisible();
   });
 
-  test("terminal panel has header with label and close button", async ({
-    page,
-  }) => {
+  test("terminal panel has header with label and close button", async ({ page }) => {
     const terminalButton = page.locator(".status-bar button", {
       hasText: "Terminal",
     });
@@ -65,7 +62,19 @@ test.describe("Terminal Panel", () => {
       hasText: "Terminal",
     });
     await terminalButton.click();
-    await expect(page.locator(".terminal-resizer")).toBeVisible();
+    await expect(page.locator('[aria-label="Resize terminal panel"]')).toBeVisible();
+  });
+
+  test("terminal mount/unmount cycle does not produce page errors", async ({ page }) => {
+    const terminalButton = page.locator(".status-bar button", { hasText: "Terminal" });
+    await terminalButton.click();
+    await expect(page.locator(".terminal-panel")).toBeVisible();
+
+    await switchToHistoryView(page);
+    await switchToStatusView(page);
+
+    await page.locator(".terminal-close").click();
+    await expect(page.locator(".terminal-panel")).not.toBeVisible();
   });
 
   test.describe("Accessibility - axe-core", () => {
@@ -76,9 +85,12 @@ test.describe("Terminal Panel", () => {
       await terminalButton.click();
       await expect(page.locator(".terminal-panel")).toBeVisible();
 
-      const results = await new AxeBuilder({ page })
-        .include(".terminal-panel")
-        .analyze();
+      // xterm.js renders the terminal contents to a <canvas>, so axe contrast
+      // rules don't apply to the rendered text. Default ruleset is intentional
+      // here — covers panel chrome (resize handle, header) without trying to
+      // sample colors from the canvas. Not upgraded to AAA contrast for that
+      // reason.
+      const results = await new AxeBuilder({ page }).include(".terminal-panel").analyze();
       expect(results.violations).toEqual([]);
     });
   });

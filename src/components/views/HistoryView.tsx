@@ -1,8 +1,17 @@
-import { useState, useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { CommitGraph } from "../graph/CommitGraph";
 import { CommitDetailsPanel } from "../history/CommitDetailsPanel";
 import { DetailsPanelEmpty } from "../common/DetailsPanelStates";
+import { YaggResizer } from "../common/YaggResizer";
 import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { useResizeObserver } from "../../hooks/useResizeObserver";
+import {
+  HISTORY_DETAILS_DEFAULT,
+  HISTORY_DETAILS_MIN,
+  HISTORY_DETAILS_EDGE_RESERVE,
+  LAYOUT_KEYS,
+} from "../shell/layoutConstants";
 
 export function HistoryView() {
   const commits = useRepositoryStore((s) => s.commits);
@@ -10,11 +19,24 @@ export function HistoryView() {
   const commitDetailsLoading = useRepositoryStore((s) => s.commitDetailsLoading);
   const isEmptyRepo = useIsEmptyRepo();
 
-  const [detailsWidth, setDetailsWidth] = useState(400);
+  const storedDetailsWidth = useSettingsStore((s) => s.layoutSizes[LAYOUT_KEYS.historyDetails]);
+  const setLayoutSize = useSettingsStore((s) => s.setLayoutSize);
 
-  const handleResize = useCallback((delta: number) => {
-    setDetailsWidth((w) => Math.max(300, Math.min(600, w - delta)));
-  }, []);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width: containerW } = useResizeObserver(containerRef);
+
+  const detailsMax = Math.max(HISTORY_DETAILS_MIN, containerW - HISTORY_DETAILS_EDGE_RESERVE);
+  const detailsWidth = Math.min(
+    detailsMax,
+    Math.max(HISTORY_DETAILS_MIN, storedDetailsWidth ?? HISTORY_DETAILS_DEFAULT)
+  );
+
+  const handleDetailsResize = useCallback(
+    (next: number) => {
+      setLayoutSize(LAYOUT_KEYS.historyDetails, next);
+    },
+    [setLayoutSize]
+  );
 
   if (isEmptyRepo) {
     return (
@@ -28,54 +50,27 @@ export function HistoryView() {
   }
 
   return (
-    <div className="history-view flex min-h-0 flex-1 overflow-hidden">
-      <div className="history-graph bg-bg-primary min-h-0 min-w-100 flex-1 overflow-hidden">
+    <div ref={containerRef} className="history-view flex min-h-0 flex-1 overflow-hidden">
+      <div className="history-graph bg-bg-canvas min-h-0 min-w-100 flex-1 overflow-hidden">
         <CommitGraph commits={commits} />
       </div>
-      <Resizer onResize={handleResize} />
+      <YaggResizer
+        orientation="vertical"
+        size={detailsWidth}
+        onSizeChange={handleDetailsResize}
+        min={HISTORY_DETAILS_MIN}
+        max={detailsMax}
+        defaultSize={HISTORY_DETAILS_DEFAULT}
+        ariaLabel="Resize commit details"
+        panelSide="right"
+      />
       <div
-        className="history-details border-border bg-bg-secondary max-w-150 min-w-75 overflow-hidden border-l"
+        id="history-details-panel"
+        className="history-details border-border bg-bg-panel flex shrink-0 flex-col overflow-hidden border-l"
         style={{ width: detailsWidth }}
       >
         <CommitDetailsPanel details={selectedCommitDetails} loading={commitDetailsLoading} />
       </div>
     </div>
-  );
-}
-
-interface ResizerProps {
-  onResize: (delta: number) => void;
-}
-
-function Resizer({ onResize }: ResizerProps) {
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-
-      const handleMouseMove = (e: MouseEvent) => {
-        onResize(e.clientX - startX);
-      };
-
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    [onResize]
-  );
-
-  return (
-    <div
-      className="history-resizer bg-border hover:bg-bg-selected w-1 shrink-0 cursor-col-resize transition-colors duration-150"
-      onMouseDown={handleMouseDown}
-    />
   );
 }

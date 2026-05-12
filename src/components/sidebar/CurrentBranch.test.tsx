@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { CurrentBranch } from "./CurrentBranch";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useBranchFilterStore } from "../../stores/branchFilterStore";
 import { mockStore } from "../../test/mockStores";
 
 // Mock the repository store
@@ -161,6 +162,68 @@ describe("CurrentBranch", () => {
     });
   });
 
+  describe("repo state label", () => {
+    function setupWithState(state: string | undefined) {
+      mockStore(useRepositoryStore, {
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: "main",
+          is_detached: false,
+          remotes: [],
+          repo_state: state,
+        },
+      });
+    }
+
+    it("shows MERGING label when repo_state is merge", () => {
+      setupWithState("merge");
+      render(<CurrentBranch />);
+      expect(screen.getByText("MERGING")).toBeInTheDocument();
+    });
+
+    it("shows REBASING label when repo_state is rebase", () => {
+      setupWithState("rebase");
+      render(<CurrentBranch />);
+      expect(screen.getByText("REBASING")).toBeInTheDocument();
+    });
+
+    it("shows CHERRY-PICKING label when repo_state is cherry-pick", () => {
+      setupWithState("cherry-pick");
+      render(<CurrentBranch />);
+      expect(screen.getByText(/CHERRY/)).toBeInTheDocument();
+    });
+
+    it("shows REVERTING label when repo_state is revert", () => {
+      setupWithState("revert");
+      render(<CurrentBranch />);
+      expect(screen.getByText("REVERTING")).toBeInTheDocument();
+    });
+
+    it("shows BISECTING label when repo_state is bisect", () => {
+      setupWithState("bisect");
+      render(<CurrentBranch />);
+      expect(screen.getByText("BISECTING")).toBeInTheDocument();
+    });
+
+    it("shows no state label when repo_state is clean", () => {
+      setupWithState("clean");
+      const { container } = render(<CurrentBranch />);
+      expect(container.querySelector(".repo-state-label")).toBeNull();
+    });
+
+    it("shows no state label for an unknown repo_state", () => {
+      setupWithState("unknown-state");
+      const { container } = render(<CurrentBranch />);
+      expect(container.querySelector(".repo-state-label")).toBeNull();
+    });
+
+    it("shows no state label when repo_state is undefined", () => {
+      setupWithState(undefined);
+      const { container } = render(<CurrentBranch />);
+      expect(container.querySelector(".repo-state-label")).toBeNull();
+    });
+  });
+
   describe("branch icon", () => {
     it("renders an SVG icon", () => {
       setupStore({
@@ -188,6 +251,53 @@ describe("CurrentBranch", () => {
       const svg = container.querySelector("svg");
       expect(svg).toHaveAttribute("width", "14");
       expect(svg).toHaveAttribute("height", "14");
+    });
+  });
+
+  describe("unified filter input", () => {
+    beforeEach(() => {
+      useBranchFilterStore.setState({ query: "" });
+    });
+
+    it("writes typed text to the shared branch filter store", () => {
+      setupStore({
+        path: "/test/repo",
+        current_branch: "main",
+        is_detached: false,
+        remotes: [],
+      });
+      render(<CurrentBranch />);
+      const input = screen.getByLabelText("Filter branches and tags") as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "feat" } });
+      expect(useBranchFilterStore.getState().query).toBe("feat");
+    });
+
+    it("renders a clear button when the filter is non-empty and clears on click", () => {
+      useBranchFilterStore.setState({ query: "feat" });
+      setupStore({
+        path: "/test/repo",
+        current_branch: "main",
+        is_detached: false,
+        remotes: [],
+      });
+      render(<CurrentBranch />);
+      const clearBtn = screen.getByLabelText("Clear filter");
+      fireEvent.click(clearBtn);
+      expect(useBranchFilterStore.getState().query).toBe("");
+    });
+
+    it("clears the filter on Escape when query has text", () => {
+      useBranchFilterStore.setState({ query: "feat" });
+      setupStore({
+        path: "/test/repo",
+        current_branch: "main",
+        is_detached: false,
+        remotes: [],
+      });
+      render(<CurrentBranch />);
+      const input = screen.getByLabelText("Filter branches and tags") as HTMLInputElement;
+      fireEvent.keyDown(input, { key: "Escape" });
+      expect(useBranchFilterStore.getState().query).toBe("");
     });
   });
 });

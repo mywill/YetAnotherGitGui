@@ -46,15 +46,15 @@ describe("terminalStore", () => {
     expect(useTerminalStore.getState().sessionId).toBeNull();
   });
 
-  it("setPanelHeight should clamp between 100 and 600", () => {
+  it("setPanelHeight enforces a minimum but no maximum", () => {
     useTerminalStore.getState().setPanelHeight(300);
     expect(useTerminalStore.getState().panelHeight).toBe(300);
 
-    useTerminalStore.getState().setPanelHeight(50);
-    expect(useTerminalStore.getState().panelHeight).toBe(100);
+    useTerminalStore.getState().setPanelHeight(10);
+    expect(useTerminalStore.getState().panelHeight).toBe(60);
 
-    useTerminalStore.getState().setPanelHeight(999);
-    expect(useTerminalStore.getState().panelHeight).toBe(600);
+    useTerminalStore.getState().setPanelHeight(5000);
+    expect(useTerminalStore.getState().panelHeight).toBe(5000);
   });
 
   it("setConnected should update isConnected", () => {

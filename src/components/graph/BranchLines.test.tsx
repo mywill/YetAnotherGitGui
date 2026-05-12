@@ -86,9 +86,9 @@ describe("BranchLines", () => {
       const tipCircle = tipContainer.querySelector("circle");
       const nonTipCircle = nonTipContainer.querySelector("circle");
 
-      // Tip gets filled with branch color, non-tip gets bg-primary fill
+      // Tip gets filled with branch color, non-tip gets bg-canvas fill
       expect(tipCircle?.getAttribute("fill")).toContain("var(--color-branch-1)");
-      expect(nonTipCircle?.getAttribute("fill")).toBe("var(--color-bg-primary)");
+      expect(nonTipCircle?.getAttribute("fill")).toBe("var(--color-bg-canvas)");
 
       // Non-tip has thicker stroke
       expect(tipCircle).toHaveAttribute("stroke-width", "1");
@@ -301,6 +301,57 @@ describe("BranchLines", () => {
 
       const path = container.querySelector("path");
       expect(path).toHaveAttribute("stroke-width", "2");
+    });
+  });
+
+  describe("dynamic row height", () => {
+    it("scales SVG height to the row height prop", () => {
+      const commit = createMockCommit();
+      const { container } = render(<BranchLines commit={commit} rowHeight={40} />);
+      const svg = container.querySelector("svg");
+      expect(svg).toHaveAttribute("height", "40");
+    });
+
+    it("centers the commit node based on row height (spacious)", () => {
+      const commit = createMockCommit({ is_tip: true });
+      const { container } = render(<BranchLines commit={commit} rowHeight={40} />);
+      const circle = container.querySelector("circle");
+      // rowHeight=40 → nodeY = 20
+      expect(circle).toHaveAttribute("cy", "20");
+    });
+
+    it("keeps pass-through lines reaching the bottom of the row at any density", () => {
+      // At spacious density (40px), the SVG and its lines must both be 40px tall
+      // so adjacent rows' graph lines connect visually without gaps.
+      const commit = createMockCommit({
+        lines: [{ from_column: 0, to_column: 0, is_merge: false, line_type: "pass_through" }],
+      });
+      const { container } = render(<BranchLines commit={commit} rowHeight={40} />);
+
+      const svg = container.querySelector("svg");
+      const line = container.querySelector("line");
+      expect(svg).toHaveAttribute("height", "40");
+      expect(line).toHaveAttribute("y1", "0");
+      expect(line).toHaveAttribute("y2", "40");
+    });
+
+    it("keeps normal continuation lines reaching the row bottom at comfortable density", () => {
+      const commit = createMockCommit({
+        column: 0,
+        lines: [{ from_column: 0, to_column: 0, is_merge: false, line_type: "to_parent" }],
+      });
+      const { container } = render(<BranchLines commit={commit} rowHeight={30} />);
+
+      const line = container.querySelector("line");
+      expect(line).toHaveAttribute("y1", "15"); // nodeY = 30/2
+      expect(line).toHaveAttribute("y2", "30"); // bottom of row
+    });
+
+    it("defaults to 28 when no rowHeight prop is supplied", () => {
+      const commit = createMockCommit();
+      const { container } = render(<BranchLines commit={commit} />);
+      const svg = container.querySelector("svg");
+      expect(svg).toHaveAttribute("height", "28");
     });
   });
 });

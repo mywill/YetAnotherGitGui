@@ -1,13 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useCallback, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import type { ListImperativeAPI } from "react-window";
+import { VirtualizedFocusContext } from "./virtualizedFocus";
 
 interface KeyboardListVirtualizedProps {
   "aria-label": string;
@@ -19,18 +12,6 @@ interface KeyboardListVirtualizedProps {
   onFocusChange?: (index: number) => void;
   children: ReactNode;
   className?: string;
-}
-
-interface VirtualizedFocusContextValue {
-  focusedIndex: number;
-}
-
-const VirtualizedFocusContext = createContext<VirtualizedFocusContextValue>({
-  focusedIndex: -1,
-});
-
-export function useVirtualizedFocus() {
-  return useContext(VirtualizedFocusContext);
 }
 
 export function KeyboardListVirtualized({

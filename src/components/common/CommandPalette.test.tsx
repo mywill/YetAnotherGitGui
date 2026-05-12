@@ -218,4 +218,114 @@ describe("CommandPalette", () => {
     expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-label", "Filter categories");
     expect(screen.getByRole("listbox")).toHaveAttribute("aria-label", "Search results");
   });
+
+  it("activates a branch result and scrolls to its target commit", () => {
+    useCommandPaletteStore.getState().open();
+    useCommandPaletteStore.getState().toggleFilter("branches");
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "feature" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    fireEvent.click(screen.getByText(/feature\/login/i).closest("[role=option]")!);
+    expect(useSelectionStore.getState().selectedCommitHash).toBe("bbb222");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("activates a tag result and scrolls to its target commit", () => {
+    useCommandPaletteStore.getState().open();
+    useCommandPaletteStore.getState().toggleFilter("tags");
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "v1" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    fireEvent.click(screen.getByText(/v1\.0\.0/i).closest("[role=option]")!);
+    expect(useSelectionStore.getState().selectedCommitHash).toBe("aaa111");
+  });
+
+  it("activates a file result and switches to status view", () => {
+    useCommandPaletteStore.getState().open();
+    useCommandPaletteStore.getState().toggleFilter("files");
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "staged-file" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    fireEvent.click(screen.getAllByRole("option")[0]);
+    expect(useSelectionStore.getState().activeView).toBe("status");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("activates a stash result and switches to status view", () => {
+    useCommandPaletteStore.getState().open();
+    useCommandPaletteStore.getState().toggleFilter("stashes");
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "WIP" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    fireEvent.click(screen.getByText(/WIP on main/i).closest("[role=option]")!);
+    expect(useSelectionStore.getState().activeView).toBe("status");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("activates an author result by scrolling to one of their commits", () => {
+    useCommandPaletteStore.getState().open();
+    useCommandPaletteStore.getState().toggleFilter("authors");
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "Alice" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    const alice = screen.getAllByRole("option")[0];
+    fireEvent.click(alice);
+    // Either of the commits belongs to Alice; just confirm a selection occurred.
+    expect(useSelectionStore.getState().selectedCommitHash).not.toBeNull();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hover on a result makes it active", () => {
+    useCommandPaletteStore.getState().open();
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "a" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    const options = screen.getAllByRole("option");
+    fireEvent.mouseEnter(options[1]);
+    expect(options[1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("Ctrl+2 toggles the Branches filter chip", () => {
+    useCommandPaletteStore.getState().open();
+    render(<CommandPalette />);
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "2", ctrlKey: true });
+    const branchesChip = screen.getByRole("radio", { name: /Branches/i });
+    expect(branchesChip).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("ArrowDown stops at last result", () => {
+    useCommandPaletteStore.getState().open();
+    useCommandPaletteStore.getState().toggleFilter("commits");
+    render(<CommandPalette />);
+
+    const input = screen.getByLabelText("Search");
+    fireEvent.change(input, { target: { value: "a" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    const dialog = screen.getByRole("dialog");
+    for (let i = 0; i < 10; i++) {
+      fireEvent.keyDown(dialog, { key: "ArrowDown" });
+    }
+    const options = screen.getAllByRole("option");
+    expect(options[options.length - 1]).toHaveAttribute("aria-selected", "true");
+  });
 });

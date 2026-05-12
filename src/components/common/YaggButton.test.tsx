@@ -41,24 +41,24 @@ describe("YaggButton", () => {
   describe("variants", () => {
     it("applies default variant classes", () => {
       render(<YaggButton variant="default">Click</YaggButton>);
-      expect(screen.getByRole("button").className).toContain("bg-bg-tertiary");
+      expect(screen.getByRole("button").className).toContain("bg-bg-well");
     });
 
     it("applies outline variant classes", () => {
       render(<YaggButton variant="outline">Click</YaggButton>);
       expect(screen.getByRole("button").className).toContain("bg-transparent");
-      expect(screen.getByRole("button").className).toContain("text-text-secondary");
+      expect(screen.getByRole("button").className).toContain("text-text-muted");
     });
 
     it("applies primary variant classes", () => {
       render(<YaggButton variant="primary">Click</YaggButton>);
-      expect(screen.getByRole("button").className).toContain("bg-bg-selected");
+      expect(screen.getByRole("button").className).toContain("bg-accent-magenta");
       expect(screen.getByRole("button").className).toContain("text-white");
     });
 
     it("applies ghost variant classes", () => {
       render(<YaggButton variant="ghost">Click</YaggButton>);
-      expect(screen.getByRole("button").className).toContain("bg-bg-secondary");
+      expect(screen.getByRole("button").className).toContain("bg-bg-panel");
     });
 
     it("applies accent variant classes", () => {
@@ -76,13 +76,13 @@ describe("YaggButton", () => {
 
     it("applies selection variant classes", () => {
       render(<YaggButton variant="selection">Click</YaggButton>);
-      expect(screen.getByRole("button").className).toContain("bg-primary");
+      expect(screen.getByRole("button").className).toContain("bg-accent-magenta");
       expect(screen.getByRole("button").className).toContain("text-white");
     });
 
     it("applies text-link variant classes", () => {
       render(<YaggButton variant="text-link">Click</YaggButton>);
-      expect(screen.getByRole("button").className).toContain("text-primary");
+      expect(screen.getByRole("button").className).toContain("text-accent-cyan");
     });
 
     it("applies icon variant classes", () => {

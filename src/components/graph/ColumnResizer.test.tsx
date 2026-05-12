@@ -2,191 +2,177 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import { ColumnResizer } from "./ColumnResizer";
 
+function setupPointerCapture() {
+  // jsdom doesn't implement pointer capture; stub it on every Element
+  Element.prototype.setPointerCapture = vi.fn();
+  Element.prototype.releasePointerCapture = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn();
+}
+
 describe("ColumnResizer", () => {
   const mockOnResize = vi.fn();
 
   afterEach(() => {
     vi.clearAllMocks();
-    // Reset body styles
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
   });
 
   describe("rendering", () => {
-    it("renders a div element", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      expect(container.querySelector("div")).toBeInTheDocument();
-    });
-
-    it("has column-resizer CSS class", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      expect(container.querySelector(".column-resizer")).toBeInTheDocument();
+    it("renders a separator with aria attributes", () => {
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="Resize col" />
+      );
+      const el = container.querySelector('[role="separator"]');
+      expect(el).toBeInTheDocument();
+      expect(el).toHaveAttribute("aria-orientation", "vertical");
+      expect(el).toHaveAttribute("aria-label", "Resize col");
     });
 
     it("applies position as left style", () => {
-      const { container } = render(<ColumnResizer position={150} onResize={mockOnResize} />);
-
+      const { container } = render(
+        <ColumnResizer position={150} onResize={mockOnResize} ariaLabel="x" />
+      );
       const resizer = container.querySelector(".column-resizer");
       expect(resizer).toHaveStyle({ left: "150px" });
     });
 
-    it("updates position when prop changes", () => {
-      const { container, rerender } = render(
-        <ColumnResizer position={100} onResize={mockOnResize} />
+    it("is focusable via tabIndex", () => {
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
       );
-
-      rerender(<ColumnResizer position={200} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-      expect(resizer).toHaveStyle({ left: "200px" });
+      expect(container.querySelector(".column-resizer")).toHaveAttribute("tabindex", "0");
     });
   });
 
-  describe("drag behavior", () => {
-    it("sets col-resize cursor on mousedown", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-
-      expect(document.body.style.cursor).toBe("col-resize");
+  describe("keyboard", () => {
+    it("ArrowRight calls onResize with positive step", () => {
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" step={8} />
+      );
+      const resizer = container.querySelector(".column-resizer")!;
+      fireEvent.keyDown(resizer, { key: "ArrowRight" });
+      expect(mockOnResize).toHaveBeenCalledWith(8);
     });
 
-    it("disables user select on mousedown", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-
-      expect(document.body.style.userSelect).toBe("none");
+    it("ArrowLeft calls onResize with negative step", () => {
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" step={8} />
+      );
+      const resizer = container.querySelector(".column-resizer")!;
+      fireEvent.keyDown(resizer, { key: "ArrowLeft" });
+      expect(mockOnResize).toHaveBeenCalledWith(-8);
     });
 
-    it("calls onResize with delta during mousemove", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-
-      // Start drag at x=100
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-
-      // Move to x=120 (delta = 20)
-      fireEvent.mouseMove(document, { clientX: 120 });
-
-      expect(mockOnResize).toHaveBeenCalledWith(20);
+    it("Shift+ArrowRight uses largeStep", () => {
+      const { container } = render(
+        <ColumnResizer
+          position={100}
+          onResize={mockOnResize}
+          ariaLabel="x"
+          step={8}
+          largeStep={32}
+        />
+      );
+      const resizer = container.querySelector(".column-resizer")!;
+      fireEvent.keyDown(resizer, { key: "ArrowRight", shiftKey: true });
+      expect(mockOnResize).toHaveBeenCalledWith(32);
     });
 
-    it("calls onResize with cumulative delta for multiple moves", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-
-      // Start drag at x=100
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-
-      // First move: 100 -> 120 (delta = 20)
-      fireEvent.mouseMove(document, { clientX: 120 });
-      expect(mockOnResize).toHaveBeenCalledWith(20);
-
-      // Second move: 120 -> 130 (delta = 10)
-      fireEvent.mouseMove(document, { clientX: 130 });
-      expect(mockOnResize).toHaveBeenCalledWith(10);
-    });
-
-    it("handles negative deltas (moving left)", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-
-      // Start drag at x=100
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-
-      // Move to x=80 (delta = -20)
-      fireEvent.mouseMove(document, { clientX: 80 });
-
-      expect(mockOnResize).toHaveBeenCalledWith(-20);
-    });
-
-    it("resets cursor on mouseup", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-      expect(document.body.style.cursor).toBe("col-resize");
-
-      fireEvent.mouseUp(document);
-      expect(document.body.style.cursor).toBe("");
-    });
-
-    it("resets user select on mouseup", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-      expect(document.body.style.userSelect).toBe("none");
-
-      fireEvent.mouseUp(document);
-      expect(document.body.style.userSelect).toBe("");
-    });
-
-    it("stops calling onResize after mouseup", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-
-      // Start drag
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-      fireEvent.mouseMove(document, { clientX: 120 });
-      expect(mockOnResize).toHaveBeenCalledTimes(1);
-
-      // End drag
-      fireEvent.mouseUp(document);
-      mockOnResize.mockClear();
-
-      // Move again - should not call onResize
-      fireEvent.mouseMove(document, { clientX: 150 });
+    it("ignores unrelated keys", () => {
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
+      );
+      const resizer = container.querySelector(".column-resizer")!;
+      fireEvent.keyDown(resizer, { key: "Enter" });
       expect(mockOnResize).not.toHaveBeenCalled();
     });
-
-    it("prevents default on mousedown", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
-
-      const resizer = container.querySelector(".column-resizer");
-      const event = new MouseEvent("mousedown", {
-        clientX: 100,
-        bubbles: true,
-        cancelable: true,
-      });
-      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
-
-      resizer!.dispatchEvent(event);
-
-      expect(preventDefaultSpy).toHaveBeenCalled();
-    });
   });
 
-  describe("multiple drag sessions", () => {
-    it("handles multiple drag sessions independently", () => {
-      const { container } = render(<ColumnResizer position={100} onResize={mockOnResize} />);
+  describe("pointer drag", () => {
+    it("calls onResize with delta on pointermove after pointerdown", async () => {
+      setupPointerCapture();
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
+      );
+      const resizer = container.querySelector(".column-resizer")! as HTMLElement;
 
-      const resizer = container.querySelector(".column-resizer");
+      fireEvent.pointerDown(resizer, { clientX: 100, pointerId: 1 });
 
-      // First session
-      fireEvent.mouseDown(resizer!, { clientX: 100 });
-      fireEvent.mouseMove(document, { clientX: 120 });
-      fireEvent.mouseUp(document);
+      // Dispatch native pointermove on the element (listener attached there)
+      const move = new Event("pointermove");
+      Object.assign(move, { clientX: 120 });
+      resizer.dispatchEvent(move);
 
-      expect(mockOnResize).toHaveBeenLastCalledWith(20);
-      mockOnResize.mockClear();
+      // Wait for rAF to flush
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
 
-      // Second session - should start fresh
-      fireEvent.mouseDown(resizer!, { clientX: 200 });
-      fireEvent.mouseMove(document, { clientX: 250 });
+      expect(mockOnResize).toHaveBeenCalledWith(20);
+    });
 
-      expect(mockOnResize).toHaveBeenCalledWith(50);
+    it("calls setPointerCapture on pointerdown", () => {
+      setupPointerCapture();
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
+      );
+      const resizer = container.querySelector(".column-resizer")! as HTMLElement;
+      fireEvent.pointerDown(resizer, { clientX: 100, pointerId: 7 });
+      expect(Element.prototype.setPointerCapture).toHaveBeenCalledWith(7);
+    });
+
+    it("pointerup flushes pending delta and cancels rAF", () => {
+      setupPointerCapture();
+      const rafSpy = vi.spyOn(globalThis, "requestAnimationFrame");
+      const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame");
+
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
+      );
+      const resizer = container.querySelector(".column-resizer")! as HTMLElement;
+
+      fireEvent.pointerDown(resizer, { clientX: 100, pointerId: 1 });
+
+      const move = new Event("pointermove");
+      Object.assign(move, { clientX: 115 });
+      resizer.dispatchEvent(move);
+
+      // Don't flush rAF — fire pointerup while rAF is still scheduled
+      const up = new Event("pointerup");
+      resizer.dispatchEvent(up);
+
+      expect(cancelSpy).toHaveBeenCalled();
+      expect(mockOnResize).toHaveBeenCalledWith(15);
+
+      rafSpy.mockRestore();
+      cancelSpy.mockRestore();
+    });
+
+    it("pointercancel flushes pending delta", () => {
+      setupPointerCapture();
+      const { container } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
+      );
+      const resizer = container.querySelector(".column-resizer")! as HTMLElement;
+
+      fireEvent.pointerDown(resizer, { clientX: 50, pointerId: 2 });
+
+      const move = new Event("pointermove");
+      Object.assign(move, { clientX: 75 });
+      resizer.dispatchEvent(move);
+
+      const cancel = new Event("pointercancel");
+      resizer.dispatchEvent(cancel);
+
+      expect(mockOnResize).toHaveBeenCalledWith(25);
+    });
+
+    it("pointerdown with no ref no-ops (defensive early return)", () => {
+      const { container, unmount } = render(
+        <ColumnResizer position={100} onResize={mockOnResize} ariaLabel="x" />
+      );
+      const resizer = container.querySelector(".column-resizer")! as HTMLElement;
+      unmount();
+      // After unmount, ref should be null — firing pointerDown should not crash
+      expect(() => fireEvent.pointerDown(resizer, { clientX: 0, pointerId: 9 })).not.toThrow();
     });
   });
 });

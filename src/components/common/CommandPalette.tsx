@@ -179,7 +179,7 @@ export function CommandPalette() {
       onClick={handleBackdropClick}
     >
       <div
-        className="command-palette border-border bg-bg-secondary shadow-dialog mx-auto mt-16 flex max-h-[min(500px,70vh)] max-w-xl flex-col overflow-hidden rounded-lg border"
+        className="command-palette border-border bg-bg-panel shadow-dialog mx-auto mt-16 flex max-h-[min(500px,70vh)] max-w-xl flex-col overflow-hidden rounded-lg border"
         style={{ animation: "slideDown 0.15s ease" }}
         role="dialog"
         aria-modal="true"
@@ -192,7 +192,7 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             type="search"
-            className="flex-1 border-none bg-transparent p-0 text-sm outline-none"
+            className="focus-ring flex-1 border-none bg-transparent p-0 text-sm focus-visible:outline-offset-2"
             placeholder="Search commits, branches, tags, authors, files..."
             aria-label="Search"
             value={query}
@@ -212,7 +212,7 @@ export function CommandPalette() {
             className={`cursor-pointer rounded px-2 py-0.5 text-xs transition-colors ${
               activeFilter === "all"
                 ? "bg-bg-selected text-white"
-                : "text-text-secondary hover:bg-bg-hover"
+                : "text-text-muted hover:bg-bg-hover"
             }`}
             onClick={() => toggleFilter("all")}
           >
@@ -226,7 +226,7 @@ export function CommandPalette() {
               className={`cursor-pointer rounded px-2 py-0.5 text-xs transition-colors ${
                 activeFilter === chip.value
                   ? "bg-bg-selected text-white"
-                  : "text-text-secondary hover:bg-bg-hover"
+                  : "text-text-muted hover:bg-bg-hover"
               }`}
               onClick={() => toggleFilter(chip.value)}
             >
@@ -313,7 +313,7 @@ function ResultItem({
       role="option"
       aria-selected={isActive}
       className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs ${
-        isActive ? "bg-bg-hover text-text-primary" : "text-text-secondary hover:bg-bg-hover/50"
+        isActive ? "bg-bg-hover text-text-primary" : "text-text-muted hover:bg-bg-hover/50"
       }`}
       onClick={onClick}
       onMouseEnter={onMouseEnter}

@@ -35,11 +35,14 @@ export function CommitPanel() {
   );
 
   return (
-    <div className="commit-panel flex h-full flex-col gap-2 p-2">
-      <div className="commit-header text-text-secondary text-xs font-medium">Commit</div>
+    <div className="commit-panel gap-section p-card-y flex h-full flex-col">
+      <div className="commit-header text-text-muted text-2xs font-mono font-medium tracking-widest uppercase">
+        Commit
+      </div>
       <textarea
-        className="commit-message-input font-inherit min-h-15 flex-1"
+        className="commit-message-input font-inherit text-body bg-bg-well text-text-primary border-border focus-ring px-card-x py-card-y min-h-15 flex-1 resize-none rounded border"
         placeholder="Commit message..."
+        aria-label="Commit message"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}

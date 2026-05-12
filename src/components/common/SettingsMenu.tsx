@@ -12,7 +12,10 @@ import {
 } from "../../services/system";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useNotificationStore } from "../../stores/notificationStore";
+import { useSettingsStore } from "../../stores/settingsStore";
+import type { Density, TextSize, Theme } from "../../stores/settingsStore";
 import { usePlatform } from "../../hooks/usePlatform";
+import { IconSettings } from "@tabler/icons-react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
 import { YaggButton } from "./YaggButton";
@@ -21,6 +24,12 @@ export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const { platform } = usePlatform();
   const isMac = platform === "macos";
+  const currentTheme = useSettingsStore((s) => s.theme);
+  const setTheme = useSettingsStore((s) => s.setTheme);
+  const currentDensity = useSettingsStore((s) => s.density);
+  const setDensity = useSettingsStore((s) => s.setDensity);
+  const currentTextSize = useSettingsStore((s) => s.textSize);
+  const setTextSize = useSettingsStore((s) => s.setTextSize);
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
@@ -150,23 +159,12 @@ export function SettingsMenu() {
           aria-expanded={isOpen}
           aria-haspopup="true"
         >
-          <svg
-            className="size-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
+          <IconSettings size={14} stroke={1.75} aria-hidden />
         </YaggButton>
 
         {isOpen && (
           <div
-            className="settings-menu-dropdown border-border bg-bg-secondary shadow-menu absolute top-full right-0 z-100 mt-1 min-w-45 overflow-hidden rounded-md border"
+            className="settings-menu-dropdown border-border bg-bg-panel shadow-menu absolute top-full right-0 z-100 mt-1 min-w-45 overflow-hidden rounded-md border"
             role="menu"
           >
             {isMac && !cliInstalled && (
@@ -198,6 +196,73 @@ export function SettingsMenu() {
             {isMac && (
               <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
             )}
+            <div className="settings-menu-group px-3 py-2">
+              <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
+                Theme
+              </div>
+              <div className="flex gap-1">
+                {(["dark", "light"] as Theme[]).map((t) => (
+                  <YaggButton
+                    key={t}
+                    variant={currentTheme === t ? "selection" : "outline"}
+                    size="sm"
+                    className="text-2xs flex-1 capitalize"
+                    role="menuitemradio"
+                    aria-checked={currentTheme === t}
+                    onClick={() => {
+                      setTheme(t);
+                    }}
+                  >
+                    {t}
+                  </YaggButton>
+                ))}
+              </div>
+            </div>
+            <div className="settings-menu-group px-3 py-2">
+              <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
+                Density
+              </div>
+              <div className="flex gap-1">
+                {(["compact", "comfortable", "spacious"] as Density[]).map((d) => (
+                  <YaggButton
+                    key={d}
+                    variant={currentDensity === d ? "selection" : "outline"}
+                    size="sm"
+                    className="text-2xs flex-1 capitalize"
+                    role="menuitemradio"
+                    aria-checked={currentDensity === d}
+                    onClick={() => {
+                      setDensity(d);
+                    }}
+                  >
+                    {d}
+                  </YaggButton>
+                ))}
+              </div>
+            </div>
+            <div className="settings-menu-group px-3 py-2">
+              <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
+                Text size
+              </div>
+              <div className="flex gap-1">
+                {(["small", "medium", "large"] as TextSize[]).map((t) => (
+                  <YaggButton
+                    key={t}
+                    variant={currentTextSize === t ? "selection" : "outline"}
+                    size="sm"
+                    className="text-2xs flex-1 capitalize"
+                    role="menuitemradio"
+                    aria-checked={currentTextSize === t}
+                    onClick={() => {
+                      setTextSize(t);
+                    }}
+                  >
+                    {t}
+                  </YaggButton>
+                ))}
+              </div>
+            </div>
+            <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
             <YaggButton
               variant="menu-item"
               className="settings-menu-item px-3 py-2 text-xs"
@@ -228,31 +293,31 @@ export function SettingsMenu() {
           title="Install CLI Tool"
           message={
             <div className="cli-install-info">
-              <p className="text-text-secondary mb-2 text-xs leading-normal">
+              <p className="text-text-muted mb-2 text-xs leading-normal">
                 This will add the{" "}
-                <code className="bg-bg-tertiary text-code rounded px-1 py-px">yagg</code> command to{" "}
-                <code className="bg-bg-tertiary text-code rounded px-1 py-px">/usr/local/bin</code>.
-                You will be prompted for your administrator password.
+                <code className="bg-bg-well text-code rounded px-1 py-px">yagg</code> command to{" "}
+                <code className="bg-bg-well text-code rounded px-1 py-px">/usr/local/bin</code>. You
+                will be prompted for your administrator password.
               </p>
-              <p className="text-text-secondary mb-2 text-xs leading-normal">
+              <p className="text-text-muted mb-2 text-xs leading-normal">
                 Any terminals that are already open will need to be restarted, or you can run{" "}
-                <code className="bg-bg-tertiary text-code rounded px-1 py-px">source ~/.zshrc</code>{" "}
-                (or your shell&apos;s equivalent) to pick up the new command.
+                <code className="bg-bg-well text-code rounded px-1 py-px">source ~/.zshrc</code> (or
+                your shell&apos;s equivalent) to pick up the new command.
               </p>
-              <p className="cli-install-usage-header text-text-secondary mb-1 text-xs leading-normal font-semibold">
+              <p className="cli-install-usage-header text-text-muted mb-1 text-xs leading-normal font-semibold">
                 Usage:
               </p>
-              <ul className="cli-install-usage text-text-secondary mb-2 pl-5 text-xs leading-relaxed">
+              <ul className="cli-install-usage text-text-muted mb-2 pl-5 text-xs leading-relaxed">
                 <li>
-                  <code className="bg-bg-tertiary text-code rounded px-1 py-px">yagg</code> &mdash;
-                  open current directory
+                  <code className="bg-bg-well text-code rounded px-1 py-px">yagg</code> &mdash; open
+                  current directory
                 </li>
                 <li>
-                  <code className="bg-bg-tertiary text-code rounded px-1 py-px">yagg /path</code>{" "}
+                  <code className="bg-bg-well text-code rounded px-1 py-px">yagg /path</code>{" "}
                   &mdash; open a specific repo
                 </li>
               </ul>
-              <p className="text-text-secondary text-xs leading-normal">
+              <p className="text-text-muted text-xs leading-normal">
                 You can uninstall the CLI tool at any time from the settings gear menu.
               </p>
             </div>
@@ -282,15 +347,15 @@ export function SettingsMenu() {
           title="Update Available"
           message={
             <div className="update-dialog-content">
-              <p className="text-text-secondary mb-2 text-xs">
+              <p className="text-text-muted mb-2 text-xs">
                 Version <strong>{updateInfo.version}</strong> is available.
               </p>
               {updateInfo.notes && (
-                <div className="update-dialog-notes overflow-wrap-anywhere bg-bg-primary mb-2 max-h-75 overflow-y-auto rounded p-2 text-xs leading-normal break-words whitespace-pre-wrap">
+                <div className="update-dialog-notes overflow-wrap-anywhere bg-bg-canvas mb-2 max-h-75 overflow-y-auto rounded p-2 text-xs leading-normal break-words whitespace-pre-wrap">
                   <p className="update-dialog-notes-label text-text-primary font-semibold">
                     Release notes:
                   </p>
-                  <p className="text-text-secondary">{updateInfo.notes}</p>
+                  <p className="text-text-muted">{updateInfo.notes}</p>
                 </div>
               )}
               {updateError && (

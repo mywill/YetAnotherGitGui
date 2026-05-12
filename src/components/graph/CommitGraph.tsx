@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { List, type ListImperativeAPI, type RowComponentProps } from "react-window";
 import type { GraphCommit } from "../../types";
 import { CommitRow } from "./CommitRow";
@@ -7,14 +7,15 @@ import { KeyboardListVirtualized } from "../common/KeyboardListVirtualized";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
-const ROW_HEIGHT = 28;
 const MIN_WIDTH = 60;
 
 interface CommitRowRendererProps {
   commits: GraphCommit[];
   selectedCommitHash: string | null;
   headHash: string | null;
+  rowHeight: number;
   handleSelect: (hash: string) => void;
   handleDoubleClick: (hash: string) => void;
 }
@@ -25,6 +26,7 @@ function CommitRowRenderer({
   commits,
   selectedCommitHash,
   headHash,
+  rowHeight,
   handleSelect,
   handleDoubleClick,
 }: RowComponentProps<CommitRowRendererProps>) {
@@ -36,6 +38,7 @@ function CommitRowRenderer({
       commit={commit}
       isSelected={commit.hash === selectedCommitHash}
       isHead={commit.hash === headHash}
+      rowHeight={rowHeight}
       onSelect={() => handleSelect(commit.hash)}
       onDoubleClick={() => handleDoubleClick(commit.hash)}
     />
@@ -58,11 +61,26 @@ export function CommitGraph({ commits }: CommitGraphProps) {
   const repositoryInfo = useRepositoryStore((s) => s.repositoryInfo);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  // Column widths state
-  const [graphWidth, setGraphWidth] = useState(120);
-  const [authorWidth, setAuthorWidth] = useState(150);
-  const [dateWidth, setDateWidth] = useState(120);
+  const layoutSizes = useSettingsStore((s) => s.layoutSizes);
+  const setLayoutSize = useSettingsStore((s) => s.setLayoutSize);
+  const density = useSettingsStore((s) => s.density);
+  const textSize = useSettingsStore((s) => s.textSize);
+  const graphWidth = layoutSizes["graph.col.graph"] ?? 120;
+  const authorWidth = layoutSizes["graph.col.author"] ?? 150;
+  const dateWidth = layoutSizes["graph.col.date"] ?? 120;
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Row height follows density × text-size. Read the computed --spacing-row
+  // value from the root so changing density/textSize reflows the list.
+  // density and textSize aren't read inside this body — they're declared as
+  // dependencies so that switching density/text-size re-runs the DOM read.
+  const rowHeight = useMemo(() => {
+    if (typeof window === "undefined") return 28;
+    const raw = getComputedStyle(document.documentElement).getPropertyValue("--spacing-row").trim();
+    const px = parseFloat(raw);
+    return Number.isFinite(px) && px > 0 ? px : 28;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [density, textSize]);
 
   // Track container width with ResizeObserver (for column resizer positions)
   useEffect(() => {
@@ -79,17 +97,54 @@ export function CommitGraph({ commits }: CommitGraphProps) {
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Scroll to commit when requested
+  // Scroll to commit when requested. Tolerates:
+  //   a) listRef not yet attached (react-window mounts after view switch)
+  //   b) commits array still loading after view switch
+  //
+  // We only clear scrollToCommit on a successful scroll. If the target hash
+  // is not in the current commits, the effect stays armed — when commits
+  // reload (prop change), the effect re-runs and will find the target.
   useEffect(() => {
-    if (scrollToCommit && listRef.current) {
+    if (!scrollToCommit) return;
+    if (commits.length === 0) return; // still loading
+
+    let cancelled = false;
+    let frame = 0;
+    const maxFrames = 60;
+
+    const attempt = () => {
+      if (cancelled) return;
       const index = commits.findIndex((c) => c.hash === scrollToCommit);
-      if (index >= 0) {
-        listRef.current.scrollToRow({ index, align: "center" });
-        loadCommitDetails(scrollToCommit);
+      if (index < 0) {
+        // Not in current history view — leave scrollToCommit set so a future
+        // commits update can still honor the request. Do not clear here.
+        return;
       }
+      const list = listRef.current;
+      // react-window v2 assigns listRef.current before the DOM element attaches;
+      // `list.element` staying null means scrollToRow is a no-op. Keep retrying
+      // until the element is actually mounted.
+      if (!list || !list.element) {
+        if (frame++ < maxFrames) {
+          requestAnimationFrame(attempt);
+        }
+        return;
+      }
+      // Manually center: place the target row in the middle of the scroll viewport
+      // so there's always generous space above it (well clear of any header chrome).
+      const el = list.element;
+      const viewportH = el.clientHeight;
+      const desired = Math.max(0, index * rowHeight - (viewportH - rowHeight) / 2);
+      el.scrollTop = desired;
+      loadCommitDetails(scrollToCommit);
       clearScrollToCommit();
-    }
-  }, [scrollToCommit, commits, clearScrollToCommit, loadCommitDetails]);
+    };
+
+    attempt();
+    return () => {
+      cancelled = true;
+    };
+  }, [scrollToCommit, commits, rowHeight, clearScrollToCommit, loadCommitDetails]);
 
   const handleSelect = useCallback(
     (hash: string) => {
@@ -114,18 +169,29 @@ export function CommitGraph({ commits }: CommitGraphProps) {
     [checkoutCommit, showConfirm]
   );
 
-  // Resize handlers
-  const handleGraphResize = useCallback((delta: number) => {
-    setGraphWidth((prev) => Math.max(MIN_WIDTH, prev + delta));
-  }, []);
+  const handleGraphResize = useCallback(
+    (delta: number) => {
+      const current = useSettingsStore.getState().layoutSizes["graph.col.graph"] ?? 120;
+      setLayoutSize("graph.col.graph", Math.max(MIN_WIDTH, current + delta));
+    },
+    [setLayoutSize]
+  );
 
-  const handleMessageResize = useCallback((delta: number) => {
-    setAuthorWidth((prev) => Math.max(MIN_WIDTH, prev - delta));
-  }, []);
+  const handleMessageResize = useCallback(
+    (delta: number) => {
+      const current = useSettingsStore.getState().layoutSizes["graph.col.author"] ?? 150;
+      setLayoutSize("graph.col.author", Math.max(MIN_WIDTH, current - delta));
+    },
+    [setLayoutSize]
+  );
 
-  const handleAuthorResize = useCallback((delta: number) => {
-    setDateWidth((prev) => Math.max(MIN_WIDTH, prev - delta));
-  }, []);
+  const handleAuthorResize = useCallback(
+    (delta: number) => {
+      const current = useSettingsStore.getState().layoutSizes["graph.col.date"] ?? 120;
+      setLayoutSize("graph.col.date", Math.max(MIN_WIDTH, current - delta));
+    },
+    [setLayoutSize]
+  );
 
   // Calculate resizer positions (accounting for 24px column gaps)
   const padding = 8;
@@ -152,7 +218,7 @@ export function CommitGraph({ commits }: CommitGraphProps) {
       style={containerStyle}
     >
       <div
-        className="commit-graph-header commit-graph-grid border-border bg-bg-tertiary text-text-secondary shrink-0 items-center border-b px-2 text-xs"
+        className="commit-graph-header commit-graph-grid border-border bg-bg-well text-text-muted shrink-0 items-center border-b px-2 text-xs"
         style={{ display: "grid", height: "28px", columnGap: "24px", scrollbarGutter: "stable" }}
       >
         <div className="header-cell truncate">Graph</div>
@@ -163,9 +229,21 @@ export function CommitGraph({ commits }: CommitGraphProps) {
 
       {/* Resize handles */}
       <div className="column-resizers pointer-events-none absolute inset-x-0 top-0 h-7">
-        <ColumnResizer position={graphResizerPos} onResize={handleGraphResize} />
-        <ColumnResizer position={authorResizerPos} onResize={handleMessageResize} />
-        <ColumnResizer position={dateResizerPos} onResize={handleAuthorResize} />
+        <ColumnResizer
+          position={graphResizerPos}
+          onResize={handleGraphResize}
+          ariaLabel="Resize graph column"
+        />
+        <ColumnResizer
+          position={authorResizerPos}
+          onResize={handleMessageResize}
+          ariaLabel="Resize message column"
+        />
+        <ColumnResizer
+          position={dateResizerPos}
+          onResize={handleAuthorResize}
+          ariaLabel="Resize author column"
+        />
       </div>
 
       <KeyboardListVirtualized
@@ -180,12 +258,13 @@ export function CommitGraph({ commits }: CommitGraphProps) {
         <List
           listRef={listRef}
           rowCount={commits.length}
-          rowHeight={ROW_HEIGHT}
+          rowHeight={rowHeight}
           rowComponent={CommitRowRenderer}
           rowProps={{
             commits,
             selectedCommitHash,
             headHash: headHash ?? null,
+            rowHeight,
             handleSelect,
             handleDoubleClick,
           }}

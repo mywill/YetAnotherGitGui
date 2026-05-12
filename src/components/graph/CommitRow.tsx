@@ -9,7 +9,7 @@ import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import { useVirtualizedFocus } from "../common/KeyboardListVirtualized";
+import { useVirtualizedFocus } from "../common/virtualizedFocus";
 import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface CommitRowProps {
@@ -18,23 +18,24 @@ interface CommitRowProps {
   commit: GraphCommit;
   isSelected: boolean;
   isHead: boolean;
+  rowHeight: number;
   onSelect: () => void;
   onDoubleClick: () => void;
 }
 
 const REF_BADGE_STYLES: Record<string, { bg: string; color: string; border: string }> = {
   branch: {
-    bg: "color-mix(in srgb, var(--color-badge-branch) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-badge-branch) var(--badge-bg-mix), transparent)",
     color: "var(--color-badge-branch)",
     border: "var(--color-badge-branch)",
   },
   remotebranch: {
-    bg: "color-mix(in srgb, var(--color-badge-remote) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-badge-remote) var(--badge-bg-mix), transparent)",
     color: "var(--color-badge-remote)",
     border: "var(--color-badge-remote)",
   },
   tag: {
-    bg: "color-mix(in srgb, var(--color-badge-tag) 20%, transparent)",
+    bg: "color-mix(in srgb, var(--color-badge-tag) var(--badge-bg-mix), transparent)",
     color: "var(--color-badge-tag)",
     border: "var(--color-badge-tag)",
   },
@@ -46,6 +47,7 @@ export const CommitRow = memo(function CommitRow({
   commit,
   isSelected,
   isHead,
+  rowHeight,
   onSelect,
   onDoubleClick,
 }: CommitRowProps) {
@@ -93,8 +95,9 @@ export const CommitRow = memo(function CommitRow({
         role="option"
         aria-selected={isSelected}
         className={clsx(
-          "commit-row commit-graph-grid hover:bg-bg-hover cursor-pointer items-center px-2 text-xs transition-colors duration-100 select-none",
-          isSelected && "selected",
+          "commit-row commit-graph-grid cursor-pointer items-center px-2 text-xs transition-colors duration-100 select-none",
+          !isHead && "hover:bg-bg-hover",
+          isSelected && !isHead && "selected",
           isHead && "is-head",
           isKeyboardFocused && "is-keyboard-focused"
         )}
@@ -102,25 +105,18 @@ export const CommitRow = memo(function CommitRow({
           ...style,
           display: "grid",
           columnGap: "24px",
-          ...(isHead && !isSelected
+          ...(isHead
             ? {
-                background: "color-mix(in srgb, var(--color-badge-head) 10%, transparent)",
+                background:
+                  "color-mix(in srgb, var(--color-badge-head) var(--head-bg-mix), transparent)",
                 boxShadow: "inset 3px 0 0 var(--color-badge-head)",
               }
-            : {}),
-          ...(isSelected && !isHead
-            ? {
-                background: "color-mix(in srgb, var(--color-selection-border) 15%, transparent)",
-                boxShadow: "inset 3px 0 0 var(--color-selection-border)",
-              }
-            : {}),
-          ...(isSelected && isHead
-            ? {
-                background: "color-mix(in srgb, var(--color-badge-head) 10%, transparent)",
-                boxShadow:
-                  "inset 3px 0 0 var(--color-badge-head), inset -3px 0 0 var(--color-selection-border)",
-              }
-            : {}),
+            : isSelected
+              ? {
+                  background: "color-mix(in srgb, var(--color-selection-border) 15%, transparent)",
+                  boxShadow: "inset 3px 0 0 var(--color-selection-border)",
+                }
+              : {}),
         }}
         onClick={onSelect}
         onMouseDown={(e) => {
@@ -132,11 +128,17 @@ export const CommitRow = memo(function CommitRow({
         onContextMenu={handleContextMenu}
       >
         <div className="graph-col overflow-hidden">
-          <BranchLines commit={commit} />
+          <BranchLines commit={commit} rowHeight={rowHeight} />
         </div>
         <div className="message-col flex min-w-0 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap">
           {isHead && (
-            <span className="head-badge bg-badge-head text-2xs mr-1 shrink-0 rounded px-1.5 py-px font-bold text-white">
+            <span
+              className="head-badge text-2xs mr-1 shrink-0 rounded px-1.5 py-px font-bold"
+              style={{
+                background: "var(--color-badge-head)",
+                color: "var(--color-badge-head-text)",
+              }}
+            >
               HEAD
             </span>
           )}
@@ -146,7 +148,7 @@ export const CommitRow = memo(function CommitRow({
               <span
                 key={ref.name}
                 className={clsx(
-                  "ref-badge shrink-0 rounded px-1.5 py-px text-xs font-medium whitespace-nowrap",
+                  "ref-badge shrink-0 rounded px-1.5 py-px font-mono text-xs font-medium whitespace-nowrap",
                   `ref-${ref.ref_type}`,
                   ref.is_head && "is-head"
                 )}
@@ -155,7 +157,7 @@ export const CommitRow = memo(function CommitRow({
                   refStyle
                     ? {
                         background: ref.is_head
-                          ? "color-mix(in srgb, var(--color-badge-head) 30%, transparent)"
+                          ? "color-mix(in srgb, var(--color-badge-head) var(--badge-bg-mix), transparent)"
                           : refStyle.bg,
                         color: refStyle.color,
                         border: `1px solid ${ref.is_head ? "var(--color-badge-head)" : refStyle.border}`,
@@ -169,8 +171,8 @@ export const CommitRow = memo(function CommitRow({
           })}
           <span className="commit-message truncate">{commit.message}</span>
         </div>
-        <div className="author-col text-text-secondary truncate">{commit.author_name}</div>
-        <div className="date-col text-text-secondary text-right" title={date.toLocaleString()}>
+        <div className="author-col text-text-muted truncate">{commit.author_name}</div>
+        <div className="date-col text-text-muted text-right" title={date.toLocaleString()}>
           {timeAgo}
         </div>
       </div>

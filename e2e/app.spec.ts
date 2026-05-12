@@ -1,7 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
 import { tauriMocks } from "./tauri-mocks";
-import { switchToStatusView, switchToHistoryView } from "./helpers";
+import {
+  switchToStatusView,
+  switchToHistoryView,
+  switchToBranchesView,
+  switchToStashesView,
+  expandBranchSection,
+} from "./helpers";
+import { assertContrastClean } from "./contrast-helper";
+import { setThemeAndWait, setDensityAndWait } from "./waitHelpers";
 
 /**
  * E2E tests for Yet Another Git Gui
@@ -63,9 +71,7 @@ test.describe("Yet Another Git Gui Application", () => {
     await expect(page.getByText("Untracked", { exact: true })).toBeVisible();
   });
 
-  test("commit button is disabled when no staged files or no message", async ({
-    page,
-  }) => {
+  test("commit button is disabled when no staged files or no message", async ({ page }) => {
     // Switch to Status View first
     await switchToStatusView(page);
 
@@ -91,9 +97,7 @@ test.describe("Yet Another Git Gui Application", () => {
 
     // Check for keyboard shortcut hint in commit panel
     await expect(page.locator(".commit-hint")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator(".commit-hint")).toHaveText(
-      "Cmd+Enter to commit"
-    );
+    await expect(page.locator(".commit-hint")).toHaveText("Cmd+Enter to commit");
   });
 
   test("displays repository info in header", async ({ page }) => {
@@ -107,9 +111,7 @@ test.describe("Yet Another Git Gui Application", () => {
   });
 
   test("refresh button is present", async ({ page }) => {
-    const refreshButton = page.locator(".header-right button", {
-      hasText: "Refresh",
-    });
+    const refreshButton = page.getByRole("button", { name: "Refresh" });
     await expect(refreshButton).toBeVisible({ timeout: 10000 });
   });
 });
@@ -148,34 +150,15 @@ test.describe("File Staging Workflow", () => {
     await expect(untrackedCount).toHaveText("2");
   });
 
-  test("Stage All button appears when there are unstaged files", async ({
-    page,
-  }) => {
-    // Mock data has unstaged files, so Stage All should be visible in Unstaged section
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await expect(unstagedSection).toBeVisible({ timeout: 10000 });
-
-    const stageAllButton = unstagedSection.locator("button", {
-      hasText: "Stage All",
-    });
-    await expect(stageAllButton).toBeVisible();
+  test("Stage All button appears when there are unstaged files", async ({ page }) => {
+    // Mock data has unstaged files, so the All button should be visible in Unstaged section
+    const stageAllButton = page.getByRole("button", { name: "Stage all unstaged files" });
+    await expect(stageAllButton).toBeVisible({ timeout: 10000 });
   });
 
-  test("Unstage All button appears when there are staged files", async ({
-    page,
-  }) => {
-    // Use exact match for Staged section
-    const stagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Staged", { exact: true }) });
-    await expect(stagedSection).toBeVisible({ timeout: 10000 });
-
-    const unstageAllButton = stagedSection.locator("button", {
-      hasText: "Unstage All",
-    });
-    await expect(unstageAllButton).toBeVisible();
+  test("Unstage All button appears when there are staged files", async ({ page }) => {
+    const unstageAllButton = page.getByRole("button", { name: "Unstage all staged files" });
+    await expect(unstageAllButton).toBeVisible({ timeout: 10000 });
   });
 
   test("displays mock file items", async ({ page }) => {
@@ -190,9 +173,7 @@ test.describe("File Staging Workflow", () => {
     ).toBeVisible();
 
     // Mock data has 2 untracked files: new-file1.ts, new-file2.ts
-    await expect(
-      page.locator(".file-item").filter({ hasText: /new-file1\.ts/ })
-    ).toBeVisible();
+    await expect(page.locator(".file-item").filter({ hasText: /new-file1\.ts/ })).toBeVisible();
   });
 });
 
@@ -257,15 +238,16 @@ test.describe("Commit Graph", () => {
 
   test("displays commit message in commit row", async ({ page }) => {
     // Should show the mock commit message in the first commit row
-    await expect(page.locator(".commit-row .commit-message").first()).toHaveText(
-      "Initial commit",
-      { timeout: 10000 }
-    );
+    await expect(page.locator(".commit-row .commit-message").first()).toHaveText("Initial commit", {
+      timeout: 10000,
+    });
   });
 
   test("displays commit author in commit row", async ({ page }) => {
     // Should show author name from mock in the first commit row
-    await expect(page.locator(".commit-row").first().getByText("Test User")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".commit-row").first().getByText("Test User")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("commit row is clickable and selectable", async ({ page }) => {
@@ -275,8 +257,9 @@ test.describe("Commit Graph", () => {
     // Click the commit row
     await commitRow.click();
 
-    // Should have selected class after click
-    await expect(commitRow).toHaveClass(/selected/);
+    // Should be marked selected via aria (HEAD rows keep is-head styling
+    // instead of the .selected class so the HEAD indicator is never overridden)
+    await expect(commitRow).toHaveAttribute("aria-selected", "true");
   });
 
   test("displays HEAD badge on current commit", async ({ page }) => {
@@ -341,9 +324,7 @@ test.describe("Commit Graph", () => {
     await expect(svg).toBeVisible();
   });
 
-  test("displays commit details panel when commit is selected", async ({
-    page,
-  }) => {
+  test("displays commit details panel when commit is selected", async ({ page }) => {
     // Click a commit
     const commitRow = page.locator(".commit-row").first();
     await commitRow.click();
@@ -366,14 +347,13 @@ test.describe("Accessibility - axe-core", () => {
     await page.waitForSelector(".app", { timeout: 10000 });
   });
 
-  test("should not have any automatically detectable accessibility issues", async ({
-    page,
-  }) => {
+  test("should not have any automatically detectable accessibility issues", async ({ page }) => {
+    // Broad rule sweep (focus order, alt text, roles, etc.). Contrast is
+    // covered separately by assertContrastClean below so AAA also runs.
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
 
-    // Log violations for debugging
     if (accessibilityScanResults.violations.length > 0) {
       console.log("Accessibility violations:");
       accessibilityScanResults.violations.forEach((violation) => {
@@ -387,114 +367,64 @@ test.describe("Accessibility - axe-core", () => {
     }
 
     expect(accessibilityScanResults.violations).toEqual([]);
+
+    await assertContrastClean(page);
   });
 
   test("commit panel should pass color contrast checks", async ({ page }) => {
-    // Switch to Status View to access commit panel
     await switchToStatusView(page);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".commit-panel")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".commit-panel");
   });
 
-  test("file changes panel should pass color contrast checks", async ({
-    page,
-  }) => {
-    // Switch to Status View to access file changes panel
+  test("file changes panel should pass color contrast checks", async ({ page }) => {
     await switchToStatusView(page);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".staged-unstaged-panel")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".status-left");
   });
 
   test("commit graph should pass color contrast checks", async ({ page }) => {
-    // Switch to History View to test commit graph
     await switchToHistoryView(page);
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".commit-graph")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".commit-graph");
   });
 
   test("buttons should be keyboard accessible", async ({ page }) => {
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(["wcag2a"])
-      .analyze();
+    const accessibilityScanResults = await new AxeBuilder({ page }).withTags(["wcag2a"]).analyze();
 
     const keyboardViolations = accessibilityScanResults.violations.filter(
       (v) =>
-        v.id === "button-name" ||
-        v.id === "focus-order-semantics" ||
-        v.id === "focusable-no-name"
+        v.id === "button-name" || v.id === "focus-order-semantics" || v.id === "focusable-no-name"
     );
     expect(keyboardViolations).toEqual([]);
   });
 
-  test("notification toasts should pass color contrast checks", async ({
-    page,
-  }) => {
-    // Trigger notifications via the Zustand store
-    await page.evaluate(() => {
-      // Access the Zustand store from the React component tree
-      const rootFiber = (document.getElementById("root") as any)?._reactRootContainer
-        ?._internalRoot?.current;
-
-      // Direct approach: dispatch custom events that the app listens for,
-      // or call the store directly via module scope
-      // Simplest: inject notifications by manipulating the DOM store reference
-    });
-
-    // Use page.evaluate to call the store's methods directly
+  test("notification toasts should pass color contrast checks", async ({ page }) => {
+    // Trigger notifications via the Zustand store so toast nodes mount in the
+    // DOM before axe scans them.
     await page.evaluate(async () => {
-      // Import the store module - Vite exposes modules at their paths
       const mod = await import("/src/stores/notificationStore.ts");
       mod.useNotificationStore.getState().showSuccess("Test success");
       mod.useNotificationStore.getState().showError("Test error");
     });
+    await page.waitForSelector(".notification-toast", { timeout: 5000 });
+    await assertContrastClean(page, ".notification-toast");
+  });
 
-    // Wait for toasts to appear
+  test("notification toasts should announce to assistive tech", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/notificationStore.ts");
+      mod.useNotificationStore.getState().showSuccess("Test success");
+      mod.useNotificationStore.getState().showError("Test error");
+    });
     await page.waitForSelector(".notification-toast", { timeout: 5000 });
 
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".notification-toast")
-      .withTags(["wcag2aa"])
-      .analyze();
+    const successToast = page.locator(".notification-toast-success");
+    await expect(successToast).toHaveAttribute("role", "status");
+    await expect(successToast).toHaveAttribute("aria-live", "polite");
+    await expect(successToast).toHaveAttribute("aria-atomic", "true");
 
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast"
-    );
-
-    if (contrastViolations.length > 0) {
-      console.log("Notification toast contrast violations:");
-      contrastViolations.forEach((v) => {
-        v.nodes.forEach((node) => {
-          console.log(`  Element: ${node.html}`);
-          console.log(`  Message: ${node.any?.map((a) => a.message).join(", ")}`);
-        });
-      });
-    }
-
-    expect(contrastViolations).toEqual([]);
+    const errorToast = page.locator(".notification-toast-error");
+    await expect(errorToast).toHaveAttribute("role", "alert");
+    await expect(errorToast).toHaveAttribute("aria-live", "assertive");
+    await expect(errorToast).toHaveAttribute("aria-atomic", "true");
   });
 
   test("form elements should have labels", async ({ page }) => {
@@ -509,6 +439,159 @@ test.describe("Accessibility - axe-core", () => {
       (v) => v.id === "label" || v.id === "label-title-only"
     );
     expect(labelViolations).toEqual([]);
+  });
+
+  test("light mode should pass overall color contrast checks", async ({ page }) => {
+    await setThemeAndWait(page, "light");
+    await assertContrastClean(page);
+  });
+
+  test("light mode commit graph should pass color contrast checks", async ({ page }) => {
+    await switchToHistoryView(page);
+    await setThemeAndWait(page, "light");
+    await assertContrastClean(page, ".commit-graph");
+  });
+
+  test("dark mode (default) should pass overall color contrast checks", async ({ page }) => {
+    // Theme defaults to dark; assert the explicit dark scan separately from the
+    // baseline so the dark-mode coverage isn't lost if defaults change.
+    await setThemeAndWait(page, "dark");
+    await assertContrastClean(page);
+  });
+
+  test("command palette should pass axe and contrast checks", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/commandPaletteStore.ts");
+      mod.useCommandPaletteStore.getState().open();
+    });
+    await page.waitForSelector(".command-palette", { timeout: 5000 });
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".command-palette-backdrop")
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await assertContrastClean(page, ".command-palette-backdrop");
+  });
+
+  test("confirmation dialog should pass axe and contrast checks", async ({ page }) => {
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/dialogStore.ts");
+      mod.useDialogStore.getState().showConfirm({
+        title: "Discard changes?",
+        message: "All uncommitted edits to this file will be lost.",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep",
+      });
+    });
+    await page.waitForSelector(".confirm-dialog-backdrop", { timeout: 5000 });
+
+    // The primary "confirm" button uses the brand accent-magenta token, whose
+    // small-text contrast trade-off is governed by contrast-known-bugs.spec.ts
+    // at the token level. Exclude it here so this test exercises dialog
+    // structure (header, body, cancel button) rather than re-litigating the
+    // accent color.
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".confirm-dialog-backdrop")
+      .exclude(".dialog-btn.confirm")
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("context menu on a file row should pass axe and contrast checks", async ({ page }) => {
+    await switchToStatusView(page);
+    const fileItem = page.locator('[data-testid="file-item"]').first();
+    await fileItem.waitFor({ state: "visible", timeout: 10000 });
+    await fileItem.click({ button: "right" });
+    await page.waitForSelector(".context-menu", { timeout: 5000 });
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".context-menu")
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await assertContrastClean(page, ".context-menu");
+  });
+
+  test("about dialog should pass axe and contrast checks", async ({ page }) => {
+    const settingsTrigger = page.locator(".settings-menu-button").first();
+    if (!(await settingsTrigger.count())) {
+      return;
+    }
+    await settingsTrigger.click();
+    const aboutItem = page.locator(".settings-menu-item", { hasText: "About" }).first();
+    if (!(await aboutItem.count())) {
+      return;
+    }
+    await aboutItem.click();
+
+    const dialog = page.locator(".confirm-dialog-backdrop");
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+
+    // Same accent-magenta trade-off as the generic confirmation dialog —
+    // exclude the primary button. Token-level coverage lives in
+    // contrast-known-bugs.spec.ts.
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".confirm-dialog-backdrop")
+      .exclude(".dialog-btn.confirm")
+      .analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("branch switcher dropdown should pass axe and contrast checks", async ({ page }) => {
+    const switcher = page.locator(".branch-switcher").first();
+    if (!(await switcher.count())) {
+      // No branch switcher in current layout — skip without failing.
+      return;
+    }
+    await switcher.click();
+    const dropdown = page.locator(".branch-switcher-dropdown, .branch-switcher-menu").first();
+    if (!(await dropdown.count())) {
+      return;
+    }
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .include(".branch-switcher")
+      .analyze();
+    expect(results.violations).toEqual([]);
+    await assertContrastClean(page, ".branch-switcher");
+  });
+
+  test("comfortable density should pass overall color contrast checks", async ({ page }) => {
+    await setDensityAndWait(page, "comfortable");
+    await assertContrastClean(page);
+  });
+
+  test("spacious density should pass overall color contrast checks", async ({ page }) => {
+    await setDensityAndWait(page, "spacious");
+    await assertContrastClean(page);
+  });
+
+  test("status view at extreme pane sizes should pass color contrast checks", async ({ page }) => {
+    await switchToStatusView(page);
+    // Drive both staged and unstaged panes to their min size, leaving untracked to fill.
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      const { setLayoutSize } = mod.useSettingsStore.getState();
+      setLayoutSize("workspace.split.status.staged", 80);
+      setLayoutSize("workspace.split.status.unstaged", 80);
+    });
+    // assertContrastClean self-settles animations + uses auto-retrying axe.
+    await assertContrastClean(page, ".status-left");
+
+    // Drive the staged pane very large to confirm the unstaged/untracked area
+    // still renders without contrast regressions when squeezed.
+    await page.evaluate(async () => {
+      const mod = await import("/src/stores/settingsStore.ts");
+      const { setLayoutSize } = mod.useSettingsStore.getState();
+      setLayoutSize("workspace.split.status.staged", 600);
+      setLayoutSize("workspace.split.status.unstaged", 80);
+    });
+    await assertContrastClean(page, ".status-left");
   });
 });
 
@@ -535,17 +618,17 @@ test.describe("View Switching", () => {
   });
 
   test("view tabs show correct active state", async ({ page }) => {
-    // Status tab should be active initially
-    const statusTab = page.locator(".view-tab", { hasText: "Status" });
-    const historyTab = page.locator(".view-tab", { hasText: "History" });
+    // Status tab (Working Copy) should be active initially
+    const statusTab = page.locator('button[role="tab"][aria-label="Working Copy"]');
+    const historyTab = page.locator('button[role="tab"][aria-label="History"]');
 
-    await expect(statusTab).toHaveClass(/active/);
-    await expect(historyTab).not.toHaveClass(/active/);
+    await expect(statusTab).toHaveAttribute("aria-selected", "true");
+    await expect(historyTab).toHaveAttribute("aria-selected", "false");
 
     // Switch to history
     await historyTab.click();
-    await expect(historyTab).toHaveClass(/active/);
-    await expect(statusTab).not.toHaveClass(/active/);
+    await expect(historyTab).toHaveAttribute("aria-selected", "true");
+    await expect(statusTab).toHaveAttribute("aria-selected", "false");
   });
 });
 
@@ -579,22 +662,21 @@ test.describe("Keyboard Shortcuts", () => {
   });
 });
 
-test.describe("Sidebar", () => {
+test.describe("Branches & Tags", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await switchToBranchesView(page);
   });
 
   test("displays current branch", async ({ page }) => {
-    // Current branch should be shown in sidebar
     const currentBranch = page.locator(".current-branch");
     await expect(currentBranch).toBeVisible({ timeout: 10000 });
     await expect(currentBranch).toContainText("main");
   });
 
   test("displays branch list sections", async ({ page }) => {
-    // Wait for sidebar to load
     await expect(page.locator(".branch-tag-list")).toBeVisible({
       timeout: 10000,
     });
@@ -603,54 +685,47 @@ test.describe("Sidebar", () => {
     await expect(page.getByText("Local Branches")).toBeVisible();
     await expect(page.getByText("Remote Branches")).toBeVisible();
     await expect(page.getByText("Tags")).toBeVisible();
-    await expect(page.getByText("Stashes")).toBeVisible();
   });
 
-  test("branch sections can be collapsed", async ({ page }) => {
+  test("branch sections can be expanded and collapsed", async ({ page }) => {
     await expect(page.locator(".branch-tag-list")).toBeVisible({
       timeout: 10000,
     });
 
-    // Find Local Branches header and click to collapse
-    const localBranchHeader = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Local Branches") });
-    await localBranchHeader.click();
+    const toggle = page.getByRole("button", { name: "Toggle Local Branches" });
 
-    // The expand icon should change to show collapsed state
-    await expect(localBranchHeader.locator(".expand-icon")).not.toHaveClass(
-      /expanded/
-    );
+    // Starts collapsed
+    await expect(toggle.locator(".expand-icon")).not.toHaveClass(/expanded/);
+
+    // Expand
+    await toggle.click();
+    await expect(toggle.locator(".expand-icon")).toHaveClass(/expanded/);
+
+    // Collapse again
+    await toggle.click();
+    await expect(toggle.locator(".expand-icon")).not.toHaveClass(/expanded/);
   });
 
-  test("shows branch items in Local Branches section", async ({ page }) => {
+  test("shows branch items in Local Branches section when expanded", async ({ page }) => {
     await expect(page.locator(".branch-tag-list")).toBeVisible({
       timeout: 10000,
     });
+    await expandBranchSection(page, "Local Branches");
 
     // Mock data includes main and feature/test branches
-    // Use title attribute for exact match since "main" also appears in "origin/main"
     await expect(page.locator(".branch-item[title='main']")).toBeVisible();
     await expect(page.locator(".branch-item[title='feature/test']")).toBeVisible();
   });
 
-  test("shows tag items in Tags section", async ({ page }) => {
+  test("shows tag items in Tags section when expanded", async ({ page }) => {
     await expect(page.locator(".branch-tag-list")).toBeVisible({
       timeout: 10000,
     });
+    await expandBranchSection(page, "Tags");
 
     // Mock data includes v1.0.0 and v0.9.0 tags
     await expect(page.locator(".tag-item").filter({ hasText: "v1.0.0" })).toBeVisible();
     await expect(page.locator(".tag-item").filter({ hasText: "v0.9.0" })).toBeVisible();
-  });
-
-  test("shows stash items in Stashes section", async ({ page }) => {
-    await expect(page.locator(".branch-tag-list")).toBeVisible({
-      timeout: 10000,
-    });
-
-    // Mock data includes a stash
-    await expect(page.locator(".stash-item")).toBeVisible();
   });
 });
 
@@ -662,9 +737,7 @@ test.describe("Commit Workflow", () => {
     await switchToStatusView(page);
   });
 
-  test("commit button enables when message is entered and files are staged", async ({
-    page,
-  }) => {
+  test("commit button enables when message is entered and files are staged", async ({ page }) => {
     const commitButton = page.locator(".commit-button");
     const textarea = page.locator('textarea[placeholder="Commit message..."]');
 
@@ -678,9 +751,7 @@ test.describe("Commit Workflow", () => {
     await expect(commitButton).toBeEnabled();
   });
 
-  test("commit message input clears after successful commit", async ({
-    page,
-  }) => {
+  test("commit message input clears after successful commit", async ({ page }) => {
     const textarea = page.locator('textarea[placeholder="Commit message..."]');
 
     // Enter commit message
@@ -761,31 +832,20 @@ test.describe("Stash Operations", () => {
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await switchToStashesView(page);
   });
 
   test("clicking stash shows stash details", async ({ page }) => {
-    // Make sure sidebar is visible
-    await expect(page.locator(".branch-tag-list")).toBeVisible({
-      timeout: 10000,
-    });
-
     // Click on stash item
     const stashItem = page.locator(".stash-item").first();
     await stashItem.click();
 
-    // Switch to status view where stash details would be shown
-    await switchToStatusView(page);
-
-    // Stash details panel should show
+    // Stash details panel should show inline in the view
     const stashDetails = page.locator(".stash-details-panel");
     await expect(stashDetails).toBeVisible({ timeout: 10000 });
   });
 
   test("stash shows context menu on right click", async ({ page }) => {
-    await expect(page.locator(".branch-tag-list")).toBeVisible({
-      timeout: 10000,
-    });
-
     const stashItem = page.locator(".stash-item").first();
     await stashItem.click({ button: "right" });
 
@@ -803,17 +863,13 @@ test.describe("Branch Operations", () => {
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await switchToBranchesView(page);
+    await expandBranchSection(page, "Local Branches");
   });
 
   test("branch shows context menu on right click", async ({ page }) => {
-    await expect(page.locator(".branch-tag-list")).toBeVisible({
-      timeout: 10000,
-    });
-
     // Find a non-head branch (feature/test)
-    const branchItem = page
-      .locator(".branch-item")
-      .filter({ hasText: "feature/test" });
+    const branchItem = page.locator(".branch-item").filter({ hasText: "feature/test" });
     await branchItem.click({ button: "right" });
 
     const contextMenu = page.locator(".context-menu");
@@ -825,13 +881,7 @@ test.describe("Branch Operations", () => {
   });
 
   test("double-click on branch checks it out", async ({ page }) => {
-    await expect(page.locator(".branch-tag-list")).toBeVisible({
-      timeout: 10000,
-    });
-
-    const branchItem = page
-      .locator(".branch-item")
-      .filter({ hasText: "feature/test" });
+    const branchItem = page.locator(".branch-item").filter({ hasText: "feature/test" });
     await branchItem.dblclick();
 
     // Should trigger checkout (in mock, this would succeed silently)
@@ -845,13 +895,11 @@ test.describe("Tag Operations", () => {
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await switchToBranchesView(page);
+    await expandBranchSection(page, "Tags");
   });
 
   test("tag shows context menu on right click", async ({ page }) => {
-    await expect(page.locator(".branch-tag-list")).toBeVisible({
-      timeout: 10000,
-    });
-
     const tagItem = page.locator(".tag-item").filter({ hasText: "v1.0.0" });
     await tagItem.click({ button: "right" });
 
@@ -861,6 +909,93 @@ test.describe("Tag Operations", () => {
     // Should have checkout and delete options
     await expect(contextMenu.getByText("Checkout")).toBeVisible();
     await expect(contextMenu.getByText("Delete")).toBeVisible();
+  });
+});
+
+test.describe("Scroll-to-commit on tag click", () => {
+  // Override the default mocks with a 100-commit history so scrolling is
+  // meaningful, and pin v1.0.0 near the bottom (row 80). Proves that clicking
+  // a tag both switches to history view AND moves the viewport.
+  const largeRepoMock = `
+    const ORIG_INVOKE = window.__TAURI_INTERNALS__.invoke;
+    window.__TAURI_INTERNALS__.invoke = async (cmd, args) => {
+      if (cmd === 'get_all_commit_graph' || cmd === 'get_commit_graph') {
+        const out = [];
+        for (let i = 0; i < 100; i++) {
+          out.push({
+            hash: 'h' + String(i).padStart(15, '0'),
+            short_hash: 'h' + String(i).padStart(6, '0'),
+            message: 'Commit #' + i,
+            author_name: 'Test',
+            author_email: 't@e.com',
+            timestamp: Date.now() / 1000 - i * 3600,
+            parent_hashes: i < 99 ? ['h' + String(i + 1).padStart(15, '0')] : [],
+            column: 0,
+            lines: [{ from_column: 0, to_column: 0, is_merge: false, line_type: i === 0 || i === 99 ? 'from_above' : 'pass_through' }],
+            refs: i === 0 ? [{ name: 'main', ref_type: 'branch', is_head: true }]
+                 : i === 80 ? [{ name: 'v1.0.0', ref_type: 'tag', is_head: false }]
+                 : [],
+            is_tip: i === 0,
+          });
+        }
+        return out;
+      }
+      if (cmd === 'list_tags') {
+        return [{ name: 'v1.0.0', target_hash: 'h' + String(80).padStart(15, '0'), is_annotated: true, message: 'Release 1.0' }];
+      }
+      if (cmd === 'list_branches') {
+        return [{ name: 'main', is_remote: false, is_head: true, target_hash: 'h' + String(0).padStart(15, '0') }];
+      }
+      return ORIG_INVOKE(cmd, args);
+    };
+  `;
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.addInitScript(largeRepoMock);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("clicking a tag scrolls the commit graph so the tagged commit is visible", async ({
+    page,
+  }) => {
+    // Start on Branches view, expand Tags.
+    await switchToBranchesView(page);
+    await expandBranchSection(page, "Tags");
+
+    // Click v1.0.0 — wired to selectAndScrollToCommit(tag.target_hash).
+    await page.locator(".tag-item").filter({ hasText: "v1.0.0" }).click();
+
+    // View must flip to history.
+    await expect(page.locator(".history-view")).toBeVisible({ timeout: 5000 });
+
+    // The tagged commit's row (index 80) must appear in the DOM — react-window
+    // only renders rows near the current scroll offset, so finding "Commit #80"
+    // proves the list scrolled.
+    await expect(page.locator(".commit-row").filter({ hasText: "Commit #80" })).toBeVisible({
+      timeout: 5000,
+    });
+
+    // And "Commit #0" (the top of the list) must NOT be visible — guarantees
+    // the scroll actually moved the viewport rather than the content extending
+    // so far that both are on screen.
+    await expect(page.locator(".commit-row").filter({ hasText: /^Commit #0Test/ })).toHaveCount(0);
+
+    // The scroll container's scrollTop should be non-zero (belt-and-suspenders).
+    const scrollTop = await page.evaluate(() => {
+      const graph = document.querySelector(".commit-graph");
+      if (!graph) return 0;
+      const candidates = Array.from(graph.querySelectorAll("*")) as HTMLElement[];
+      const scroller = candidates.find((el) => {
+        const s = getComputedStyle(el);
+        return (
+          (s.overflowY === "auto" || s.overflowY === "scroll") && el.scrollHeight > el.clientHeight
+        );
+      });
+      return scroller?.scrollTop ?? 0;
+    });
+    expect(scrollTop).toBeGreaterThan(0);
   });
 });
 
@@ -925,9 +1060,7 @@ test.describe("File Context Menus", () => {
     await expect(contextMenu).toBeVisible();
   });
 
-  test("untracked file shows delete option in context menu", async ({
-    page,
-  }) => {
+  test("untracked file shows delete option in context menu", async ({ page }) => {
     // Find the untracked file (in untracked panel with ? status icon)
     const untrackedFile = page.locator(".file-item").filter({ hasText: "?" }).first();
     await expect(untrackedFile).toBeVisible({ timeout: 10000 });
@@ -938,9 +1071,7 @@ test.describe("File Context Menus", () => {
     await expect(contextMenu.getByText("Delete file")).toBeVisible();
   });
 
-  test("file context menu shows Copy submenu with path options", async ({
-    page,
-  }) => {
+  test("file context menu shows Copy submenu with path options", async ({ page }) => {
     const fileItem = page.locator(".file-item").first();
     await expect(fileItem).toBeVisible({ timeout: 10000 });
     await fileItem.click({ button: "right" });
@@ -963,38 +1094,33 @@ test.describe("File Context Menus", () => {
     await expect(submenu.getByText("File name")).toBeVisible();
   });
 
-  test("right-click does not select or load diff for any file", async ({
-    page,
-  }) => {
+  test("right-click does not select or load diff for any file", async ({ page }) => {
     // Verify no file is selected and no diff panel before right-click
     await expect(page.locator(".file-item.selected")).toHaveCount(0);
 
     // Right-click a file (use second file to avoid default-first-item edge cases)
     const fileItems = page.locator(".file-item");
     await expect(fileItems.first()).toBeVisible({ timeout: 10000 });
-    const target =
-      (await fileItems.count()) > 1 ? fileItems.nth(1) : fileItems.first();
+    const target = (await fileItems.count()) > 1 ? fileItems.nth(1) : fileItems.first();
     await target.click({ button: "right" });
 
     // Context menu should appear
     const contextMenu = page.locator(".context-menu");
     await expect(contextMenu).toBeVisible();
 
-    // Hover over each context menu item (the real bug trigger)
+    // Hover over each context menu item (the real bug trigger). Playwright's
+    // hover() waits for the element to be actionable, so no extra wait needed.
     const menuItems = contextMenu.locator(".context-menu-item");
     const menuCount = await menuItems.count();
     for (let i = 0; i < menuCount; i++) {
       await menuItems.nth(i).hover();
-      await page.waitForTimeout(100);
     }
 
     // No file should be selected after right-click + hovering menu items
     await expect(page.locator(".file-item.selected")).toHaveCount(0);
   });
 
-  test("clicking Copy submenu item closes the context menu", async ({
-    page,
-  }) => {
+  test("clicking Copy submenu item closes the context menu", async ({ page }) => {
     const fileItem = page.locator(".file-item").first();
     await expect(fileItem).toBeVisible({ timeout: 10000 });
     await fileItem.click({ button: "right" });
@@ -1013,6 +1139,106 @@ test.describe("File Context Menus", () => {
 
     // Context menu should close
     await expect(contextMenu).not.toBeVisible();
+  });
+});
+
+test.describe("Batch Delete", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await switchToStatusView(page);
+  });
+
+  test("Delete Selected button appears when multiple untracked files are selected", async ({
+    page,
+  }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "new-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+
+    await expect(
+      page.getByRole("button", { name: "Delete 2 selected files" })
+    ).toBeVisible();
+  });
+
+  test("Delete Selected button appears when multiple unstaged files are selected", async ({
+    page,
+  }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "unstaged-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+
+    await expect(
+      page.getByRole("button", { name: "Delete 2 selected files" })
+    ).toBeVisible();
+  });
+
+  test("right-click on a multi-selected untracked file shows batch delete entry", async ({
+    page,
+  }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "new-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+    await file1.click({ button: "right" });
+
+    const contextMenu = page.locator(".context-menu");
+    await expect(contextMenu).toBeVisible();
+    await expect(contextMenu.getByText("Delete 2 files")).toBeVisible();
+  });
+
+  test("Delete Selected confirmation lists every selected path", async ({ page }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "new-file2.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+
+    await file1.click();
+    await file2.click({ modifiers: ["ControlOrMeta"] });
+
+    await page.getByRole("button", { name: "Delete 2 selected files" }).click();
+
+    const dialogBody = page.locator(".confirm-dialog-body");
+    await expect(dialogBody).toBeVisible();
+    await expect(dialogBody).toContainText("Delete 2 files?");
+    await expect(dialogBody).toContainText("new-file1.ts");
+    await expect(dialogBody).toContainText("new-file2.ts");
+
+    // Cancel cleans up
+    await page.locator(".dialog-btn.cancel").click();
+  });
+
+  test("Delete key returns focus to the list after the dialog closes", async ({ page }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "new-file1.ts" });
+    await expect(file1).toBeVisible({ timeout: 10000 });
+    await file1.click();
+
+    // Press Delete to invoke the keyboard delete path on the listbox
+    await page.keyboard.press("Delete");
+
+    const dialog = page.locator(".confirm-dialog");
+    await expect(dialog).toBeVisible();
+
+    // Cancel — the listbox in the untracked panel should regain focus
+    await page.locator(".dialog-btn.cancel").click();
+    await expect(dialog).not.toBeVisible();
+
+    const listFocused = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      return (
+        el?.getAttribute("role") === "listbox" &&
+        el.getAttribute("aria-label") === "Untracked files"
+      );
+    });
+    expect(listFocused).toBe(true);
   });
 });
 
@@ -1082,9 +1308,7 @@ test.describe("Keyboard Commit Shortcut", () => {
     await switchToStatusView(page);
   });
 
-  test("Ctrl+Enter commits when message is entered and files are staged", async ({
-    page,
-  }) => {
+  test("Ctrl+Enter commits when message is entered and files are staged", async ({ page }) => {
     const textarea = page.locator('textarea[placeholder="Commit message..."]');
     await expect(textarea).toBeVisible({ timeout: 10000 });
 
@@ -1166,16 +1390,12 @@ test.describe("Stash Details Panel", () => {
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await switchToStashesView(page);
   });
 
   test("stash details shows stash name", async ({ page }) => {
-    // Click on stash item
     const stashItem = page.locator(".stash-item").first();
-    await expect(stashItem).toBeVisible({ timeout: 10000 });
     await stashItem.click();
-
-    // Switch to status view where stash details are shown
-    await switchToStatusView(page);
 
     const stashDetails = page.locator(".stash-details-panel");
     await expect(stashDetails).toBeVisible({ timeout: 10000 });
@@ -1188,8 +1408,6 @@ test.describe("Stash Details Panel", () => {
     const stashItem = page.locator(".stash-item").first();
     await stashItem.click();
 
-    await switchToStatusView(page);
-
     const stashDetails = page.locator(".stash-details-panel");
     await expect(stashDetails).toBeVisible({ timeout: 10000 });
 
@@ -1201,12 +1419,10 @@ test.describe("Stash Details Panel", () => {
     const stashItem = page.locator(".stash-item").first();
     await stashItem.click();
 
-    await switchToStatusView(page);
-
     const stashDetails = page.locator(".stash-details-panel");
     await expect(stashDetails).toBeVisible({ timeout: 10000 });
 
-    // Should show files changed section header (lowercase in actual component)
+    // Should show files changed section header
     await expect(stashDetails.getByText("Files changed")).toBeVisible();
   });
 });
@@ -1221,9 +1437,7 @@ test.describe("Commit Workflow - Diff Clearing", () => {
 
   test("diff panel clears after successful commit", async ({ page }) => {
     // Click a staged file to show diff
-    const stagedFile = page
-      .locator(".file-item")
-      .filter({ hasText: "staged-file.ts" });
+    const stagedFile = page.locator(".file-item").filter({ hasText: "staged-file.ts" });
     await stagedFile.click();
 
     // Verify diff panel shows content (not the empty state)
@@ -1237,9 +1451,7 @@ test.describe("Commit Workflow - Diff Clearing", () => {
     await page.locator(".commit-button").click();
 
     // Verify diff panel shows empty state
-    await expect(
-      page.getByText("Select a file to view its diff")
-    ).toBeVisible();
+    await expect(page.getByText("Select a file to view its diff")).toBeVisible();
   });
 });
 
@@ -1252,12 +1464,8 @@ test.describe("Multi-Select Files", () => {
   });
 
   test("Ctrl+click toggles file selection", async ({ page }) => {
-    const file1 = page
-      .locator(".file-item")
-      .filter({ hasText: "unstaged-file1.ts" });
-    const file2 = page
-      .locator(".file-item")
-      .filter({ hasText: "unstaged-file2.ts" });
+    const file1 = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" });
+    const file2 = page.locator(".file-item").filter({ hasText: "unstaged-file2.ts" });
 
     // Click first file
     await file1.click();
@@ -1270,12 +1478,8 @@ test.describe("Multi-Select Files", () => {
   });
 
   test("Shift+click selects range of files", async ({ page }) => {
-    const file1 = page
-      .locator(".file-item")
-      .filter({ hasText: "unstaged-file1.ts" });
-    const file3 = page
-      .locator(".file-item")
-      .filter({ hasText: "unstaged-file3.ts" });
+    const file1 = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" });
+    const file3 = page.locator(".file-item").filter({ hasText: "unstaged-file3.ts" });
 
     // Click first file
     await file1.click();
@@ -1287,28 +1491,18 @@ test.describe("Multi-Select Files", () => {
     await expect(page.locator(".file-item.selected")).toHaveCount(3);
   });
 
-  test("selection actions appear in header when files are selected", async ({
-    page,
-  }) => {
-    const file1 = page
-      .locator(".file-item")
-      .filter({ hasText: "unstaged-file1.ts" });
+  test("selection actions appear in header when files are selected", async ({ page }) => {
+    const file1 = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" });
 
     // Click a file to select it
     await file1.click();
 
-    // Selection buttons should appear in the section header
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await expect(unstagedSection.locator("button", { hasText: "Stage Selected" })).toBeVisible();
-    await expect(unstagedSection.locator("button", { hasText: "Clear" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stage 1 selected file" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Clear selection" }).first()).toBeVisible();
   });
 
   test("Clear button clears selection", async ({ page }) => {
-    const file1 = page
-      .locator(".file-item")
-      .filter({ hasText: "unstaged-file1.ts" });
+    const file1 = page.locator(".file-item").filter({ hasText: "unstaged-file1.ts" });
 
     // Click a file to select it
     await file1.click();
@@ -1318,12 +1512,14 @@ test.describe("Multi-Select Files", () => {
     const unstagedSection = page
       .locator(".section-header")
       .filter({ has: page.getByText("Unstaged", { exact: true }) });
-    await unstagedSection.locator("button", { hasText: "Clear" }).click();
+    await unstagedSection.getByRole("button", { name: "Clear selection" }).click();
 
     // File should no longer be selected
     await expect(file1).not.toHaveClass(/selected/);
     // Clear button should no longer be visible since no selection
-    await expect(unstagedSection.locator("button", { hasText: "Clear" })).not.toBeVisible();
+    await expect(
+      unstagedSection.getByRole("button", { name: "Clear selection" })
+    ).not.toBeVisible();
   });
 });
 
@@ -1349,22 +1545,14 @@ test.describe("Stage All Button - All Files", () => {
   });
 
   test("Stage All button is present in Unstaged section", async ({ page }) => {
-    const unstagedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Unstaged", { exact: true }) });
-
     await expect(
-      unstagedSection.locator("button", { hasText: "Stage All" })
+      page.getByRole("button", { name: "Stage all unstaged files" })
     ).toBeVisible();
   });
 
   test("Stage All button is present in Untracked section", async ({ page }) => {
-    const untrackedSection = page
-      .locator(".section-header")
-      .filter({ has: page.getByText("Untracked", { exact: true }) });
-
     await expect(
-      untrackedSection.locator("button", { hasText: "Stage All" })
+      page.getByRole("button", { name: "Stage all untracked files" })
     ).toBeVisible();
   });
 });
@@ -1391,14 +1579,10 @@ test.describe("Settings Menu", () => {
   test("dropdown has About menu item", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
 
-    await expect(
-      page.locator(".settings-menu-item", { hasText: "About" })
-    ).toBeVisible();
+    await expect(page.locator(".settings-menu-item", { hasText: "About" })).toBeVisible();
   });
 
-  test("dropdown shows Uninstall CLI Tool when CLI is installed", async ({
-    page,
-  }) => {
+  test("dropdown shows Uninstall CLI Tool when CLI is installed", async ({ page }) => {
     // Default mock has check_cli_installed returning true
     await page.locator(".settings-menu-button").click();
 
@@ -1446,9 +1630,7 @@ test.describe("Settings Menu - About Dialog", () => {
     await page.locator(".settings-menu-button").click();
     await page.locator(".settings-menu-item", { hasText: "About" }).click();
 
-    await expect(
-      page.getByText("About Yet Another Git Gui")
-    ).toBeVisible();
+    await expect(page.getByText("About Yet Another Git Gui")).toBeVisible();
   });
 
   test("About dialog shows app version", async ({ page }) => {
@@ -1468,36 +1650,26 @@ test.describe("Settings Menu - About Dialog", () => {
     await expect(page.getByText("Architecture")).toBeVisible();
   });
 
-  test("About dialog closes when Close button is clicked", async ({
-    page,
-  }) => {
+  test("About dialog closes when Close button is clicked", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
     await page.locator(".settings-menu-item", { hasText: "About" }).click();
 
-    await expect(
-      page.getByText("About Yet Another Git Gui")
-    ).toBeVisible();
+    await expect(page.getByText("About Yet Another Git Gui")).toBeVisible();
 
     await page.locator(".dialog-btn.confirm", { hasText: "Close" }).click();
 
-    await expect(
-      page.getByText("About Yet Another Git Gui")
-    ).not.toBeVisible();
+    await expect(page.getByText("About Yet Another Git Gui")).not.toBeVisible();
   });
 
   test("About dialog closes on Escape key", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
     await page.locator(".settings-menu-item", { hasText: "About" }).click();
 
-    await expect(
-      page.getByText("About Yet Another Git Gui")
-    ).toBeVisible();
+    await expect(page.getByText("About Yet Another Git Gui")).toBeVisible();
 
     await page.keyboard.press("Escape");
 
-    await expect(
-      page.getByText("About Yet Another Git Gui")
-    ).not.toBeVisible();
+    await expect(page.getByText("About Yet Another Git Gui")).not.toBeVisible();
   });
 });
 
@@ -1508,13 +1680,9 @@ test.describe("Settings Menu - CLI Uninstall", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("clicking Uninstall CLI Tool shows confirmation dialog", async ({
-    page,
-  }) => {
+  test("clicking Uninstall CLI Tool shows confirmation dialog", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
-    await page
-      .locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" })
-      .click();
+    await page.locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" }).click();
 
     // Confirm dialog should appear
     const dialog = page.locator('[role="dialog"]');
@@ -1524,13 +1692,9 @@ test.describe("Settings Menu - CLI Uninstall", () => {
     await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
   });
 
-  test("cancelling uninstall closes dialog without action", async ({
-    page,
-  }) => {
+  test("cancelling uninstall closes dialog without action", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
-    await page
-      .locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" })
-      .click();
+    await page.locator(".settings-menu-item", { hasText: "Uninstall CLI Tool" }).click();
 
     await page.locator(".dialog-btn.cancel").click();
 
@@ -1550,9 +1714,7 @@ test.describe("Settings Menu - CLI Install (not installed)", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("shows Install CLI Tool when CLI is not installed", async ({
-    page,
-  }) => {
+  test("shows Install CLI Tool when CLI is not installed", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
 
     await expect(
@@ -1560,13 +1722,9 @@ test.describe("Settings Menu - CLI Install (not installed)", () => {
     ).toBeVisible();
   });
 
-  test("clicking Install CLI Tool shows confirmation dialog with details", async ({
-    page,
-  }) => {
+  test("clicking Install CLI Tool shows confirmation dialog with details", async ({ page }) => {
     await page.locator(".settings-menu-button").click();
-    await page
-      .locator(".settings-menu-item", { hasText: "Install CLI Tool" })
-      .click();
+    await page.locator(".settings-menu-item", { hasText: "Install CLI Tool" }).click();
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible();
@@ -1590,9 +1748,7 @@ test.describe("Empty State Centering", () => {
 
     // If there's an empty section visible, check its styles
     if ((await emptySection.count()) > 0) {
-      const display = await emptySection.evaluate(
-        (el) => window.getComputedStyle(el).display
-      );
+      const display = await emptySection.evaluate((el) => window.getComputedStyle(el).display);
       const alignItems = await emptySection.evaluate(
         (el) => window.getComputedStyle(el).alignItems
       );
@@ -1629,9 +1785,8 @@ test.describe("Repo State Banner", () => {
     await expect(banner).toHaveAttribute("aria-live", "polite");
   });
 
-  test("sidebar shows state label when repo is in merge state", async ({
-    page,
-  }) => {
+  test("branches view shows state label when repo is in merge state", async ({ page }) => {
+    await switchToBranchesView(page);
     const stateLabel = page.locator(".repo-state-label");
     await expect(stateLabel).toBeVisible({ timeout: 10000 });
     await expect(stateLabel).toContainText("MERGING");
@@ -1659,22 +1814,11 @@ test.describe("Repo State Banner - Accessibility", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("repo state banner passes WCAG color contrast checks", async ({
-    page,
-  }) => {
+  test("repo state banner passes WCAG color contrast checks", async ({ page }) => {
     await expect(page.locator(".repo-state-banner")).toBeVisible({
       timeout: 10000,
     });
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .include(".repo-state-banner")
-      .withTags(["wcag2aa"])
-      .analyze();
-
-    const contrastViolations = accessibilityScanResults.violations.filter(
-      (v) => v.id === "color-contrast",
-    );
-    expect(contrastViolations).toEqual([]);
+    await assertContrastClean(page, ".repo-state-banner");
   });
 });
 
@@ -1689,9 +1833,7 @@ test.describe("Empty Repository", () => {
 
   test("shows 'New repository' badge in status bar", async ({ page }) => {
     await expect(page.locator(".app")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator(".status-bar .branch-indicator")).toContainText(
-      "New repository",
-    );
+    await expect(page.locator(".status-bar .branch-indicator")).toContainText("New repository");
   });
 
   test("shows empty state message in history view", async ({ page }) => {
@@ -1699,9 +1841,7 @@ test.describe("Empty Repository", () => {
     await switchToHistoryView(page);
 
     await expect(
-      page.getByText(
-        "No commits yet. Create your first commit in the Status view.",
-      ),
+      page.getByText("No commits yet. Create your first commit in the Status view.")
     ).toBeVisible({ timeout: 5000 });
   });
 

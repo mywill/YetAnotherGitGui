@@ -12,9 +12,10 @@ export interface SearchResult {
 
 const ALL_MODE_LIMIT = 5;
 const FILTERED_MODE_LIMIT = 50;
-const DEBOUNCE_MS = 150;
+export const SEARCH_DEBOUNCE_MS = 150;
+const DEBOUNCE_MS = SEARCH_DEBOUNCE_MS;
 
-function matchesQuery(text: string, query: string): boolean {
+export function matchesQuery(text: string, query: string): boolean {
   return text.toLowerCase().includes(query.toLowerCase());
 }
 

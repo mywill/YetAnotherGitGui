@@ -1,10 +1,12 @@
 import { memo, useCallback } from "react";
 import clsx from "clsx";
-import type { FileStatus, FileStatusType } from "../../types";
+import { IconCheck } from "@tabler/icons-react";
+import type { FileStatus } from "../../types";
 import { ContextMenu, type ContextMenuItem } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useContextMenu } from "../../hooks/useContextMenu";
+import { STATUS_COLORS, getStatusLetter } from "../../utils/statusColors";
 
 interface FileItemProps {
   file: FileStatus;
@@ -18,25 +20,6 @@ interface FileItemProps {
   extraMenuItems?: ContextMenuItem[];
 }
 
-const STATUS_ICONS: Record<FileStatusType, string> = {
-  modified: "M",
-  added: "A",
-  deleted: "D",
-  renamed: "R",
-  copied: "C",
-  untracked: "?",
-  conflicted: "!",
-};
-
-const STATUS_STYLE: Record<string, string> = {
-  modified: "text-status-modified bg-status-modified/15",
-  added: "text-status-added bg-status-added/15",
-  deleted: "text-status-deleted bg-status-deleted/15",
-  renamed: "text-status-modified bg-status-modified/15",
-  untracked: "text-status-untracked bg-status-untracked/15",
-  conflicted: "text-status-conflicted bg-status-conflicted/20",
-};
-
 export const FileItem = memo(function FileItem({
   file,
   isStaged,
@@ -48,9 +31,10 @@ export const FileItem = memo(function FileItem({
   onDoubleClick,
   extraMenuItems,
 }: FileItemProps) {
-  // Avoid subscribing to repositoryInfo here — it would re-render every
-  // FileItem whenever any repository state changes. Read it lazily inside
-  // the context menu callback instead.
+  // Intentionally NOT subscribing to repositoryInfo: a long file list would
+  // re-render every row whenever any repository state changes. The repo path
+  // is read lazily via useRepositoryStore.getState() in the context-menu
+  // callback below — context menus open from a click, so the value is fresh.
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(
@@ -114,11 +98,10 @@ export const FileItem = memo(function FileItem({
     <>
       <div
         className={clsx(
-          "file-item hover:bg-bg-hover flex shrink-0 cursor-pointer items-center gap-2 px-3 py-1 text-xs transition-colors duration-100",
-          isStaged && "staged bg-success/8 hover:bg-success/15",
-          isSelected &&
-            "selected bg-bg-selected outline-focus-outline hover:bg-bg-selected-hover outline outline-1 -outline-offset-1",
-          isStaged && isSelected && "bg-primary/20 hover:bg-primary/30"
+          "file-item hover:bg-bg-hover min-h-row py-row-pad flex shrink-0 cursor-pointer items-center gap-2 px-3 text-xs transition-colors duration-100",
+          isStaged && "staged light:bg-success/15 light:hover:bg-success/20",
+          isSelected && "selected bg-bg-selected hover:bg-bg-selected-hover",
+          isStaged && isSelected && "bg-success/20 hover:bg-success/30"
         )}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
@@ -131,39 +114,38 @@ export const FileItem = memo(function FileItem({
             "stage-checkbox flex size-4 shrink-0 cursor-pointer items-center justify-center rounded border",
             isStaged
               ? "border-addition bg-addition/20 text-addition"
-              : "border-border bg-bg-tertiary text-transparent"
+              : "border-border bg-bg-well text-transparent"
           )}
           onClick={handleCheckboxClick}
           role="presentation"
           title={isStaged ? "Unstage file" : "Stage file"}
         >
-          {isStaged && (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-              <path
-                d="M8.5 2.5L4 7.5L1.5 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
+          {isStaged && <IconCheck size={10} stroke={1.5} aria-hidden />}
         </span>
         <span
-          className={clsx(
-            "status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold",
-            STATUS_STYLE[file.status] || ""
-          )}
+          className="status-icon flex size-4.5 shrink-0 items-center justify-center rounded text-xs font-bold"
+          style={
+            STATUS_COLORS[file.status]
+              ? {
+                  color: STATUS_COLORS[file.status].color,
+                  background: STATUS_COLORS[file.status].bg,
+                }
+              : undefined
+          }
         >
-          {STATUS_ICONS[file.status]}
+          {getStatusLetter(file.status)}
         </span>
-        <span className="file-name shrink-0 font-medium">{fileName}</span>
+        <span className="file-name shrink-0 font-mono font-medium">{fileName}</span>
         {dirPath && (
-          <span className="file-path text-text-muted ml-1 flex-1 truncate">{dirPath}</span>
+          <span className="file-path text-text-muted ml-1 flex-1 truncate font-mono">
+            {dirPath}
+          </span>
         )}
         {isUntracked && (
-          <span className="untracked-badge text-status-untracked bg-status-untracked/20 text-2xs shrink-0 rounded px-1.5 py-px">
+          <span
+            className="untracked-badge text-status-untracked text-2xs shrink-0 rounded px-1.5 py-px"
+            style={{ background: STATUS_COLORS.untracked.bg }}
+          >
             new
           </span>
         )}

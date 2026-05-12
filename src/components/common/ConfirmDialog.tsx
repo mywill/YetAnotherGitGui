@@ -54,7 +54,7 @@ export function ConfirmDialog({
       onClick={handleBackdropClick}
     >
       <div
-        className="confirm-dialog border-border bg-bg-secondary shadow-dialog max-w-lg min-w-80 rounded-lg border"
+        className="confirm-dialog border-border bg-bg-panel shadow-dialog max-w-lg min-w-80 rounded-lg border"
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
@@ -65,9 +65,9 @@ export function ConfirmDialog({
             {title}
           </h2>
         </div>
-        <div className="confirm-dialog-body p-3">
+        <div className="confirm-dialog-body max-h-96 overflow-y-auto p-3">
           {typeof message === "string" ? (
-            <p className="text-text-secondary text-xs leading-normal">{message}</p>
+            <p className="text-text-muted text-xs leading-normal whitespace-pre-line">{message}</p>
           ) : (
             message
           )}
@@ -75,7 +75,7 @@ export function ConfirmDialog({
         <div className="confirm-dialog-actions border-border flex justify-end gap-2 border-t p-3">
           <YaggButton
             variant="outline"
-            className="dialog-btn cancel text-text-secondary hover:border-text-muted hover:bg-bg-hover text-xs transition-all duration-150"
+            className="dialog-btn cancel text-text-muted hover:border-text-muted hover:bg-bg-hover text-xs transition-all duration-150"
             onClick={onCancel}
           >
             {cancelLabel}

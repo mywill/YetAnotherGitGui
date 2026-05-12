@@ -46,6 +46,24 @@ export const tauriMocks = `
           return null;
         }
 
+        if (pluginName === 'event') {
+          if (pluginCmd === 'listen') {
+            const eventId = window.__TAURI_NEXT_EVENT_ID__ = (window.__TAURI_NEXT_EVENT_ID__ || 0) + 1;
+            window.__TAURI_EVENT_LISTENERS__ = window.__TAURI_EVENT_LISTENERS__ || new Map();
+            window.__TAURI_EVENT_LISTENERS__.set(eventId, { event: args.event, handler: args.handler });
+            return eventId;
+          }
+          if (pluginCmd === 'unlisten') {
+            if (window.__TAURI_EVENT_LISTENERS__) {
+              window.__TAURI_EVENT_LISTENERS__.delete(args.eventId);
+            }
+            return undefined;
+          }
+          if (pluginCmd === 'emit' || pluginCmd === 'emit_to') {
+            return undefined;
+          }
+        }
+
         console.warn('[E2E Mock] Unhandled plugin command:', cmd);
         return null;
       }
@@ -288,6 +306,7 @@ export const tauriMocks = `
         case 'unstage_files':
         case 'revert_file':
         case 'delete_file':
+        case 'delete_files':
         case 'resolve_conflict':
         case 'stage_hunk':
         case 'unstage_hunk':
@@ -304,16 +323,65 @@ export const tauriMocks = `
         case 'list_branches':
           if (window.__MOCK_EMPTY_REPO__) return [];
           return [
-            { name: 'main', is_remote: false, is_head: true, target_hash: 'abc123def456789' },
-            { name: 'feature/test', is_remote: false, is_head: false, target_hash: 'def456789abc123' },
-            { name: 'origin/main', is_remote: true, is_head: false, target_hash: 'abc123def456789' }
+            {
+              name: 'main',
+              is_remote: false,
+              is_head: true,
+              target_hash: 'abc123def456789',
+              upstream: 'origin/main',
+              ahead: 2,
+              behind: 1,
+              last_commit_summary: 'Initial commit',
+              last_commit_author: 'Test User',
+              last_commit_time: Math.floor(Date.now() / 1000) - 3600
+            },
+            {
+              name: 'feature/test',
+              is_remote: false,
+              is_head: false,
+              target_hash: 'def456789abc123',
+              upstream: null,
+              ahead: 0,
+              behind: 0,
+              last_commit_summary: 'Add feature',
+              last_commit_author: 'Test User',
+              last_commit_time: Math.floor(Date.now() / 1000) - 86400
+            },
+            {
+              name: 'origin/main',
+              is_remote: true,
+              is_head: false,
+              target_hash: 'abc123def456789',
+              upstream: null,
+              ahead: 0,
+              behind: 0,
+              last_commit_summary: 'Initial commit',
+              last_commit_author: 'Test User',
+              last_commit_time: Math.floor(Date.now() / 1000) - 7200
+            }
           ];
 
         case 'list_tags':
           if (window.__MOCK_EMPTY_REPO__) return [];
           return [
-            { name: 'v1.0.0', target_hash: 'abc123def456789', is_annotated: true, message: 'First release' },
-            { name: 'v0.9.0', target_hash: 'def456789abc123', is_annotated: false, message: null }
+            {
+              name: 'v1.0.0',
+              target_hash: 'abc123def456789',
+              is_annotated: true,
+              message: 'First release',
+              tagger_name: 'Test User',
+              tagger_time: Math.floor(Date.now() / 1000) - 604800,
+              last_commit_summary: 'Initial commit'
+            },
+            {
+              name: 'v0.9.0',
+              target_hash: 'def456789abc123',
+              is_annotated: false,
+              message: null,
+              tagger_name: null,
+              tagger_time: null,
+              last_commit_summary: 'Add feature'
+            }
           ];
 
         case 'list_stashes':
@@ -432,6 +500,12 @@ export const tauriMocks = `
             total_lines: 3
           };
 
+        case 'read_settings':
+          return window.__MOCK_SETTINGS__ || '{}';
+        case 'write_settings':
+          if (args?.data) window.__MOCK_SETTINGS__ = args.data;
+          return undefined;
+
         case 'spawn_terminal':
           return 1;
         case 'write_terminal':
@@ -462,6 +536,18 @@ export const tauriMocks = `
     metadata: {
       currentWindow: { label: 'main' },
       currentWebview: { label: 'main' }
+    }
+  };
+
+  // Tauri SDK's @tauri-apps/api/event uses this global (not __TAURI_INTERNALS__)
+  // for synchronous listener bookkeeping inside _unlisten. Without it, React
+  // effect cleanup throws TypeError during component unmount and surfaces as a
+  // flaky page-level unhandled rejection.
+  window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    unregisterListener: (event, eventId) => {
+      if (window.__TAURI_EVENT_LISTENERS__) {
+        window.__TAURI_EVENT_LISTENERS__.delete(eventId);
+      }
     }
   };
 

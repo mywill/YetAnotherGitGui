@@ -46,6 +46,6 @@ describe("TerminalPanel", () => {
 
   it("has a resizer element", () => {
     const { container } = render(<TerminalPanel />);
-    expect(container.querySelector(".terminal-resizer")).toBeInTheDocument();
+    expect(container.querySelector(".yagg-resizer")).toBeInTheDocument();
   });
 });

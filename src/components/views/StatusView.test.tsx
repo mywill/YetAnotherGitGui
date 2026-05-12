@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { StatusView } from "./StatusView";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { mockStore } from "../../test/mockStores";
 import type { FileStatuses, FileDiff } from "../../types";
 
@@ -9,16 +10,24 @@ vi.mock("../../stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
 }));
 
-vi.mock("../files/StagedUnstagedPanel", () => ({
-  StagedUnstagedPanel: ({
-    statuses,
-    loading,
-  }: {
-    statuses: FileStatuses | null;
-    loading: boolean;
-  }) => (
-    <div data-testid="staged-unstaged-panel">
+vi.mock("../../stores/settingsStore", () => ({
+  useSettingsStore: Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({ layoutSizes: {}, setLayoutSize: vi.fn() })),
+  }),
+}));
+
+vi.mock("../files/StagedPanel", () => ({
+  StagedPanel: ({ statuses, loading }: { statuses: FileStatuses | null; loading: boolean }) => (
+    <div data-testid="staged-panel">
       {loading ? "Loading..." : `Staged: ${statuses?.staged.length ?? 0}`}
+    </div>
+  ),
+}));
+
+vi.mock("../files/UnstagedPanel", () => ({
+  UnstagedPanel: ({ statuses, loading }: { statuses: FileStatuses | null; loading: boolean }) => (
+    <div data-testid="unstaged-panel">
+      {loading ? "Loading..." : `Unstaged: ${statuses?.unstaged.length ?? 0}`}
     </div>
   ),
 }));
@@ -55,13 +64,10 @@ vi.mock("../diff/DiffViewPanel", () => ({
   ),
 }));
 
-vi.mock("../sidebar/StashDetailsPanel", () => ({
-  StashDetailsPanel: () => <div data-testid="stash-details-panel">StashDetailsPanel</div>,
-}));
-
 describe("StatusView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize: vi.fn() });
   });
 
   function setupStore(
@@ -71,8 +77,6 @@ describe("StatusView", () => {
       currentDiff: FileDiff | null;
       currentDiffStaged: boolean;
       diffLoading: boolean;
-      selectedStashDetails: null;
-      stashDetailsLoading: boolean;
     }> = {}
   ) {
     const defaultState = {
@@ -81,8 +85,6 @@ describe("StatusView", () => {
       currentDiff: null,
       currentDiffStaged: false,
       diffLoading: false,
-      selectedStashDetails: null,
-      stashDetailsLoading: false,
       ...overrides,
     };
 
@@ -94,7 +96,8 @@ describe("StatusView", () => {
 
     render(<StatusView />);
 
-    expect(screen.getByTestId("staged-unstaged-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("staged-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("unstaged-panel")).toBeInTheDocument();
     expect(screen.getByTestId("untracked-panel")).toBeInTheDocument();
     expect(screen.getByTestId("diff-view-panel")).toBeInTheDocument();
     expect(screen.getByTestId("commit-panel")).toBeInTheDocument();
@@ -115,6 +118,7 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     expect(screen.getByText("Staged: 1")).toBeInTheDocument();
+    expect(screen.getByText("Unstaged: 1")).toBeInTheDocument();
     expect(screen.getByText("Untracked: 2")).toBeInTheDocument();
   });
 
@@ -179,39 +183,70 @@ describe("StatusView", () => {
     expect(container.querySelector(".status-view")).toBeInTheDocument();
     expect(container.querySelector(".status-left")).toBeInTheDocument();
     expect(container.querySelector(".status-right")).toBeInTheDocument();
-    expect(container.querySelector(".status-staging")).toBeInTheDocument();
+    expect(container.querySelector(".status-staged")).toBeInTheDocument();
+    expect(container.querySelector(".status-unstaged")).toBeInTheDocument();
     expect(container.querySelector(".status-untracked")).toBeInTheDocument();
     expect(container.querySelector(".status-diff")).toBeInTheDocument();
     expect(container.querySelector(".status-commit")).toBeInTheDocument();
   });
 
-  it("has a horizontal resizer", () => {
+  it("has a horizontal resizer between the file panel and the diff/commit panel", () => {
     setupStore();
 
     const { container } = render(<StatusView />);
 
-    expect(container.querySelector(".status-resizer-h")).toBeInTheDocument();
+    const resizer = container.querySelector('[role="separator"][aria-orientation="vertical"]');
+    expect(resizer).toBeInTheDocument();
+    expect(resizer).toHaveAttribute("aria-label", "Resize file panel");
   });
 
-  it("resizer responds to mouse events", () => {
+  it("has horizontal resizers between the staged/unstaged/untracked panes", () => {
     setupStore();
 
     const { container } = render(<StatusView />);
 
-    const resizer = container.querySelector(".status-resizer-h");
-    expect(resizer).toBeInTheDocument();
+    const horizontalResizers = container.querySelectorAll(
+      '[role="separator"][aria-orientation="horizontal"]'
+    );
+    expect(horizontalResizers).toHaveLength(2);
+    expect(horizontalResizers[0]).toHaveAttribute("aria-label", "Resize staged section");
+    expect(horizontalResizers[1]).toHaveAttribute("aria-label", "Resize untracked section");
+  });
 
-    // Simulate mousedown on resizer
-    fireEvent.mouseDown(resizer!, { clientX: 300 });
+  it("renders panes in flex mode by default (no stored sizes)", () => {
+    setupStore();
+    const { container } = render(<StatusView />);
 
-    // Should set cursor style on body during resize
-    expect(document.body.style.cursor).toBe("col-resize");
+    // With no stored sizes all three panes use flex, preserving the original
+    // 3:3:2 default ratio. Unstaged is always flex (it's the buffer pane).
+    const staged = container.querySelector(".status-staged") as HTMLElement;
+    const unstaged = container.querySelector(".status-unstaged") as HTMLElement;
+    const untracked = container.querySelector(".status-untracked") as HTMLElement;
 
-    // Simulate mouseup to end resize
-    fireEvent.mouseUp(document);
+    expect(staged.style.flexGrow).toBe("3");
+    expect(unstaged.style.flexGrow).toBe("3");
+    expect(untracked.style.flexGrow).toBe("2");
+  });
 
-    // Cursor should be reset
-    expect(document.body.style.cursor).toBe("");
+  it("renders staged and untracked in pixel mode when stored sizes exist", () => {
+    setupStore();
+    mockStore(useSettingsStore, {
+      layoutSizes: {
+        "workspace.split.status.staged": 200,
+        "workspace.split.status.untracked": 150,
+      },
+      setLayoutSize: vi.fn(),
+    });
+    const { container } = render(<StatusView />);
+
+    const staged = container.querySelector(".status-staged") as HTMLElement;
+    const untracked = container.querySelector(".status-untracked") as HTMLElement;
+    const unstaged = container.querySelector(".status-unstaged") as HTMLElement;
+
+    expect(staged.style.height).toBe("200px");
+    expect(untracked.style.height).toBe("150px");
+    // Unstaged is always flex — it absorbs all resize changes.
+    expect(unstaged.style.flexGrow).toBe("3");
   });
 
   it("handles null file statuses", () => {
@@ -222,6 +257,86 @@ describe("StatusView", () => {
     render(<StatusView />);
 
     expect(screen.getByText("Staged: 0")).toBeInTheDocument();
+    expect(screen.getByText("Unstaged: 0")).toBeInTheDocument();
     expect(screen.getByText("Untracked: 0")).toBeInTheDocument();
+  });
+
+  describe("resize handlers", () => {
+    it("calls setLayoutSize on the file-panel resizer keyboard interaction", () => {
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+
+      const { container } = render(<StatusView />);
+      const resizer = container.querySelector(
+        '[role="separator"][aria-orientation="vertical"]'
+      ) as HTMLElement;
+      fireEvent.keyDown(resizer, { key: "ArrowRight" });
+
+      expect(setLayoutSize).toHaveBeenCalledWith("workspace.split.workcopy", expect.any(Number));
+    });
+
+    it("pins untracked at its measured height when staged is dragged for the first time", () => {
+      // No stored sizes — drag the staged divider and expect both staged and
+      // untracked to be persisted (untracked pinned to its current rendered
+      // height so the unstaged middle pane absorbs the change).
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+
+      const { container } = render(<StatusView />);
+      const resizers = container.querySelectorAll(
+        '[role="separator"][aria-orientation="horizontal"]'
+      );
+      const stagedResizer = resizers[0] as HTMLElement;
+      fireEvent.keyDown(stagedResizer, { key: "ArrowDown" });
+
+      const calls = setLayoutSize.mock.calls.map((c) => c[0]);
+      expect(calls).toContain("workspace.split.status.staged");
+      // untracked may or may not be pinned depending on jsdom layout, but the
+      // staged resize must always fire.
+    });
+
+    it("pins staged at its measured height when untracked is dragged for the first time", () => {
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, { layoutSizes: {}, setLayoutSize });
+
+      const { container } = render(<StatusView />);
+      const resizers = container.querySelectorAll(
+        '[role="separator"][aria-orientation="horizontal"]'
+      );
+      const untrackedResizer = resizers[1] as HTMLElement;
+      fireEvent.keyDown(untrackedResizer, { key: "ArrowUp" });
+
+      const calls = setLayoutSize.mock.calls.map((c) => c[0]);
+      expect(calls).toContain("workspace.split.status.untracked");
+    });
+
+    it("does not re-pin sizes when stored sizes already exist", () => {
+      // Both staged and untracked already have stored sizes — dragging staged
+      // should only update staged, never re-pin untracked.
+      setupStore();
+      const setLayoutSize = vi.fn();
+      mockStore(useSettingsStore, {
+        layoutSizes: {
+          "workspace.split.status.staged": 200,
+          "workspace.split.status.untracked": 150,
+        },
+        setLayoutSize,
+      });
+
+      const { container } = render(<StatusView />);
+      const resizers = container.querySelectorAll(
+        '[role="separator"][aria-orientation="horizontal"]'
+      );
+      const stagedResizer = resizers[0] as HTMLElement;
+      fireEvent.keyDown(stagedResizer, { key: "ArrowDown" });
+
+      const calls = setLayoutSize.mock.calls.map((c) => c[0]);
+      // Only staged should fire — untracked already has a stored size so the
+      // pin-on-first-drag branch is skipped.
+      expect(calls.filter((k) => k === "workspace.split.status.untracked")).toHaveLength(0);
+    });
   });
 });

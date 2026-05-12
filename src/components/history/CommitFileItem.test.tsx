@@ -169,7 +169,7 @@ describe("CommitFileItem", () => {
     it("renders Revert button on each file", () => {
       render(<CommitFileItem file={mockFile} commitHash="abc123" />);
 
-      expect(screen.getByText("Revert")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Revert this file" })).toBeInTheDocument();
     });
 
     it("shows confirmation dialog with correct wording when Revert is clicked", async () => {
@@ -177,7 +177,7 @@ describe("CommitFileItem", () => {
 
       render(<CommitFileItem file={mockFile} commitHash="abc123def456789" />);
 
-      fireEvent.click(screen.getByText("Revert"));
+      fireEvent.click(screen.getByRole("button", { name: "Revert this file" }));
 
       await waitFor(() => {
         expect(mockShowConfirm).toHaveBeenCalledWith({
@@ -193,7 +193,7 @@ describe("CommitFileItem", () => {
 
       render(<CommitFileItem file={mockFile} commitHash="abc123def456789" />);
 
-      fireEvent.click(screen.getByText("Revert"));
+      fireEvent.click(screen.getByRole("button", { name: "Revert this file" }));
 
       await waitFor(() => {
         expect(mockShowConfirm).toHaveBeenCalledWith(
@@ -209,7 +209,7 @@ describe("CommitFileItem", () => {
 
       render(<CommitFileItem file={mockFile} commitHash="abc123def456789" />);
 
-      fireEvent.click(screen.getByText("Revert"));
+      fireEvent.click(screen.getByRole("button", { name: "Revert this file" }));
 
       await waitFor(() => {
         expect(mockRevertCommitFile).toHaveBeenCalledWith("abc123def456789", "src/main.ts");
@@ -221,7 +221,7 @@ describe("CommitFileItem", () => {
 
       render(<CommitFileItem file={mockFile} commitHash="abc123def456789" />);
 
-      fireEvent.click(screen.getByText("Revert"));
+      fireEvent.click(screen.getByRole("button", { name: "Revert this file" }));
 
       await waitFor(() => {
         expect(mockShowConfirm).toHaveBeenCalled();
@@ -234,7 +234,7 @@ describe("CommitFileItem", () => {
 
       render(<CommitFileItem file={mockFile} commitHash="abc123" />);
 
-      fireEvent.click(screen.getByText("Revert"));
+      fireEvent.click(screen.getByRole("button", { name: "Revert this file" }));
 
       // The toggle should NOT have been called because stopPropagation prevents it
       expect(mockToggleExpanded).not.toHaveBeenCalled();

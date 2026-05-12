@@ -401,4 +401,73 @@ describe("BranchItem", () => {
       expect(deleteItem).toHaveClass("disabled");
     });
   });
+
+  describe("secondary line", () => {
+    it("shows upstream tracking info on a local branch with upstream", () => {
+      const branch: BranchInfo = {
+        name: "main",
+        is_remote: false,
+        is_head: true,
+        target_hash: "abc",
+        upstream: "origin/main",
+      };
+      const { container } = render(<BranchItem branch={branch} />);
+      expect(container.querySelector(".branch-item-upstream")).toHaveTextContent(/origin\/main/);
+    });
+
+    it("renders ahead and behind counts when both are present", () => {
+      const branch: BranchInfo = {
+        name: "main",
+        is_remote: false,
+        is_head: true,
+        target_hash: "abc",
+        upstream: "origin/main",
+        ahead: 3,
+        behind: 1,
+      };
+      render(<BranchItem branch={branch} />);
+      expect(screen.getByLabelText("3 ahead, 1 behind")).toBeInTheDocument();
+      expect(screen.getByText("+3")).toBeInTheDocument();
+      expect(screen.getByText("-1")).toBeInTheDocument();
+    });
+
+    it("does not render ahead/behind for remote branches", () => {
+      const branch: BranchInfo = {
+        name: "origin/main",
+        is_remote: true,
+        is_head: false,
+        target_hash: "abc",
+        ahead: 5,
+        behind: 2,
+      };
+      const { container } = render(<BranchItem branch={branch} />);
+      expect(container.querySelector(".ahead-behind")).toBeNull();
+    });
+
+    it("falls back to last commit time when no upstream is set", () => {
+      const branch: BranchInfo = {
+        name: "feature/x",
+        is_remote: false,
+        is_head: false,
+        target_hash: "abc",
+        upstream: null,
+        last_commit_time: Math.floor(Date.now() / 1000) - 7200,
+      };
+      const { container } = render(<BranchItem branch={branch} />);
+      expect(container.querySelector(".branch-item-date")).toHaveTextContent(/ago/);
+      expect(container.querySelector(".branch-item-upstream")).toBeNull();
+    });
+
+    it("renders no secondary metadata when no upstream and no last_commit_time", () => {
+      const branch: BranchInfo = {
+        name: "stale",
+        is_remote: false,
+        is_head: false,
+        target_hash: "abc",
+      };
+      const { container } = render(<BranchItem branch={branch} />);
+      expect(container.querySelector(".branch-item-upstream")).toBeNull();
+      expect(container.querySelector(".branch-item-date")).toBeNull();
+    });
+  });
 });

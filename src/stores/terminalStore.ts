@@ -24,6 +24,6 @@ export const useTerminalStore = create<TerminalState>((set) => ({
   openTerminal: () => set({ isOpen: true }),
   closeTerminal: () => set({ isOpen: false }),
   setSessionId: (id) => set({ sessionId: id }),
-  setPanelHeight: (height) => set({ panelHeight: Math.max(100, Math.min(600, height)) }),
+  setPanelHeight: (height) => set({ panelHeight: Math.max(60, height) }),
   setConnected: (connected) => set({ isConnected: connected }),
 }));

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { App } from "./App";
 import { useRepositoryStore } from "./stores/repositoryStore";
-import { useSelectionStore } from "./stores/selectionStore";
 import { useDialogStore } from "./stores/dialogStore";
 import { useCliArgs } from "./hooks/useCliArgs";
 import { mockStore } from "./test/mockStores";
@@ -10,10 +9,6 @@ import { mockStore } from "./test/mockStores";
 // Mock all stores and hooks
 vi.mock("./stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
-}));
-
-vi.mock("./stores/selectionStore", () => ({
-  useSelectionStore: vi.fn(),
 }));
 
 vi.mock("./stores/dialogStore", () => ({
@@ -34,25 +29,8 @@ vi.mock("./components/common/NotificationToast", () => ({
 }));
 
 // Mock child components to simplify testing
-vi.mock("./components/layout/AppLayout", () => ({
-  AppLayout: ({ sidebar, children }: { sidebar: React.ReactNode; children: React.ReactNode }) => (
-    <div data-testid="app-layout">
-      <div data-testid="sidebar">{sidebar}</div>
-      <div data-testid="content">{children}</div>
-    </div>
-  ),
-}));
-
-vi.mock("./components/sidebar/Sidebar", () => ({
-  Sidebar: () => <div data-testid="sidebar-component">Sidebar</div>,
-}));
-
-vi.mock("./components/views/HistoryView", () => ({
-  HistoryView: () => <div data-testid="history-view">HistoryView</div>,
-}));
-
-vi.mock("./components/views/StatusView", () => ({
-  StatusView: () => <div data-testid="status-view">StatusView</div>,
+vi.mock("./components/shell/WorkspaceShell", () => ({
+  WorkspaceShell: () => <div data-testid="workspace-shell">WorkspaceShell</div>,
 }));
 
 vi.mock("./components/views/WelcomeScreen", () => ({
@@ -67,11 +45,11 @@ vi.mock("./components/common/SettingsMenu", () => ({
   SettingsMenu: () => <div data-testid="settings-menu">SettingsMenu</div>,
 }));
 
-vi.mock("./components/layout/FileStatusCounts", () => ({
+vi.mock("./components/shell/FileStatusCounts", () => ({
   FileStatusCounts: () => <div data-testid="file-status-counts">FileStatusCounts</div>,
 }));
 
-vi.mock("./components/layout/StatusBar", () => ({
+vi.mock("./components/shell/StatusBar", () => ({
   StatusBar: () => <div data-testid="status-bar">StatusBar</div>,
 }));
 
@@ -120,7 +98,6 @@ describe("App", () => {
       isLoading?: boolean;
       cliLoading?: boolean;
       repoPath?: string | null;
-      activeView?: "history" | "status";
       dialogIsOpen?: boolean;
       dialogTitle?: string;
     } = {}
@@ -135,7 +112,6 @@ describe("App", () => {
       isLoading = false,
       cliLoading = false,
       repoPath = "/test/repo",
-      activeView = "status",
       dialogIsOpen = false,
       dialogTitle = "Test Dialog",
     } = overrides;
@@ -147,8 +123,6 @@ describe("App", () => {
       refreshRepository: mockRefreshRepository,
       loadBranchesAndTags: mockLoadBranchesAndTags,
     });
-
-    mockStore(useSelectionStore, { activeView });
 
     mockStore(useDialogStore, {
       isOpen: dialogIsOpen,
@@ -258,30 +232,18 @@ describe("App", () => {
       expect(screen.getByTestId("status-bar")).toBeInTheDocument();
     });
 
-    it("renders sidebar component", () => {
+    it("renders workspace shell", () => {
       render(<App />);
 
-      expect(screen.getByTestId("sidebar-component")).toBeInTheDocument();
+      expect(screen.getByTestId("workspace-shell")).toBeInTheDocument();
     });
   });
 
-  describe("view switching", () => {
-    it("renders StatusView when activeView is status", () => {
-      setupDefaultMocks({ activeView: "status" });
-
+  describe("workspace shell", () => {
+    it("renders WorkspaceShell for main content", () => {
       render(<App />);
 
-      expect(screen.getByTestId("status-view")).toBeInTheDocument();
-      expect(screen.queryByTestId("history-view")).not.toBeInTheDocument();
-    });
-
-    it("renders HistoryView when activeView is history", () => {
-      setupDefaultMocks({ activeView: "history" });
-
-      render(<App />);
-
-      expect(screen.getByTestId("history-view")).toBeInTheDocument();
-      expect(screen.queryByTestId("status-view")).not.toBeInTheDocument();
+      expect(screen.getByTestId("workspace-shell")).toBeInTheDocument();
     });
   });
 
@@ -289,13 +251,13 @@ describe("App", () => {
     it("renders refresh button", () => {
       render(<App />);
 
-      expect(screen.getByText("Refresh")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
     });
 
     it("calls refreshRepository when clicked", () => {
       render(<App />);
 
-      fireEvent.click(screen.getByText("Refresh"));
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
 
       expect(mockRefreshRepository).toHaveBeenCalledTimes(1);
     });

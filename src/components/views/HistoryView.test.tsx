@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { HistoryView } from "./HistoryView";
 import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { mockStore } from "../../test/mockStores";
 
 // Mock the repository store
@@ -20,29 +21,28 @@ vi.mock("../graph/CommitGraph", () => ({
 vi.mock("../history/CommitDetailsPanel", () => ({
   CommitDetailsPanel: ({ details, loading }: { details: unknown; loading: boolean }) => (
     <div data-testid="commit-details-panel">
-      {loading ? "Loading..." : details ? "Details loaded" : "No details"}
+      CommitDetailsPanel(details={details ? "yes" : "no"}, loading={loading ? "yes" : "no"})
     </div>
   ),
+}));
+
+vi.mock("../common/YaggResizer", () => ({
+  YaggResizer: () => <div data-testid="yagg-resizer">Resizer</div>,
 }));
 
 describe("HistoryView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    // Reset body styles
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    useSettingsStore.setState({ layoutSizes: {} });
   });
 
   function setupStore(overrides: Record<string, unknown> = {}, isEmptyRepo = false) {
     const state = {
       commits: [],
-      hasMoreCommits: false,
-      loadMoreCommits: vi.fn(),
       selectedCommitDetails: null,
       commitDetailsLoading: false,
+      hasMoreCommits: false,
+      loadMoreCommits: vi.fn(),
       ...overrides,
     };
 
@@ -52,13 +52,12 @@ describe("HistoryView", () => {
     return state;
   }
 
-  it("renders commit graph and details panel", () => {
+  it("renders commit graph", () => {
     setupStore();
 
     render(<HistoryView />);
 
     expect(screen.getByTestId("commit-graph")).toBeInTheDocument();
-    expect(screen.getByTestId("commit-details-panel")).toBeInTheDocument();
   });
 
   it("passes commits to CommitGraph", () => {
@@ -74,26 +73,32 @@ describe("HistoryView", () => {
     expect(screen.getByText(/2 commits/)).toBeInTheDocument();
   });
 
-  it("shows loading state in details panel", () => {
-    setupStore({ commitDetailsLoading: true });
+  it("renders commit details panel inline", () => {
+    setupStore();
 
     render(<HistoryView />);
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByTestId("commit-details-panel")).toBeInTheDocument();
   });
 
-  it("shows details when commit is selected", () => {
-    const mockDetails = {
-      hash: "abc123",
-      message: "Test commit",
-      author_name: "Test Author",
-    };
-
-    setupStore({ selectedCommitDetails: mockDetails });
+  it("renders resizer between graph and details", () => {
+    setupStore();
 
     render(<HistoryView />);
 
-    expect(screen.getByText("Details loaded")).toBeInTheDocument();
+    expect(screen.getByTestId("yagg-resizer")).toBeInTheDocument();
+  });
+
+  it("passes selectedCommitDetails and commitDetailsLoading to CommitDetailsPanel", () => {
+    setupStore({
+      selectedCommitDetails: { hash: "abc" },
+      commitDetailsLoading: true,
+    });
+
+    render(<HistoryView />);
+
+    expect(screen.getByTestId("commit-details-panel").textContent).toContain("details=yes");
+    expect(screen.getByTestId("commit-details-panel").textContent).toContain("loading=yes");
   });
 
   it("has correct CSS classes for layout", () => {
@@ -104,119 +109,6 @@ describe("HistoryView", () => {
     expect(container.querySelector(".history-view")).toBeInTheDocument();
     expect(container.querySelector(".history-graph")).toBeInTheDocument();
     expect(container.querySelector(".history-details")).toBeInTheDocument();
-    expect(container.querySelector(".history-resizer")).toBeInTheDocument();
-  });
-
-  describe("Resizer", () => {
-    it("sets col-resize cursor on mousedown", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const resizer = container.querySelector(".history-resizer");
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      expect(document.body.style.cursor).toBe("col-resize");
-    });
-
-    it("sets user-select to none on mousedown", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const resizer = container.querySelector(".history-resizer");
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      expect(document.body.style.userSelect).toBe("none");
-    });
-
-    it("resets cursor on mouseup", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const resizer = container.querySelector(".history-resizer");
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      expect(document.body.style.cursor).toBe("col-resize");
-
-      fireEvent.mouseUp(document);
-
-      expect(document.body.style.cursor).toBe("");
-    });
-
-    it("resets user-select on mouseup", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const resizer = container.querySelector(".history-resizer");
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      expect(document.body.style.userSelect).toBe("none");
-
-      fireEvent.mouseUp(document);
-
-      expect(document.body.style.userSelect).toBe("");
-    });
-
-    it("changes details panel width during resize", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const detailsPanel = container.querySelector(".history-details");
-      const resizer = container.querySelector(".history-resizer");
-
-      // Initial width
-      expect(detailsPanel).toHaveStyle({ width: "400px" });
-
-      // Start resize
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      // Move mouse (delta = -50, so width increases by 50)
-      fireEvent.mouseMove(document, { clientX: 350 });
-
-      expect(detailsPanel).toHaveStyle({ width: "450px" });
-
-      fireEvent.mouseUp(document);
-    });
-
-    it("respects minimum width of 300px", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const detailsPanel = container.querySelector(".history-details");
-      const resizer = container.querySelector(".history-resizer");
-
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      // Try to shrink way below minimum
-      fireEvent.mouseMove(document, { clientX: 600 });
-
-      expect(detailsPanel).toHaveStyle({ width: "300px" });
-
-      fireEvent.mouseUp(document);
-    });
-
-    it("respects maximum width of 600px", () => {
-      setupStore();
-
-      const { container } = render(<HistoryView />);
-
-      const detailsPanel = container.querySelector(".history-details");
-      const resizer = container.querySelector(".history-resizer");
-
-      fireEvent.mouseDown(resizer!, { clientX: 400 });
-
-      // Try to expand way above maximum
-      fireEvent.mouseMove(document, { clientX: 0 });
-
-      expect(detailsPanel).toHaveStyle({ width: "600px" });
-
-      fireEvent.mouseUp(document);
-    });
   });
 
   describe("empty repo", () => {
@@ -236,6 +128,14 @@ describe("HistoryView", () => {
       render(<HistoryView />);
 
       expect(screen.queryByTestId("commit-graph")).not.toBeInTheDocument();
+    });
+
+    it("does not show commit details panel when repo is empty", () => {
+      setupStore({}, true);
+
+      render(<HistoryView />);
+
+      expect(screen.queryByTestId("commit-details-panel")).not.toBeInTheDocument();
     });
 
     it("has history-view class on empty state", () => {

@@ -1,11 +1,9 @@
 mod commands;
 pub mod crash_handler;
-mod error;
-mod git;
+pub mod error;
+pub mod git;
 mod state;
 pub mod terminal;
-#[cfg(test)]
-mod test_utils;
 pub mod update_logger;
 
 use state::AppState;
@@ -53,6 +51,7 @@ pub fn run() {
             commands::revert_commit_file,
             commands::revert_commit_file_lines,
             commands::delete_file,
+            commands::delete_files,
             commands::resolve_conflict,
             commands::install_cli,
             commands::uninstall_cli,
@@ -65,6 +64,8 @@ pub fn run() {
             commands::get_stash_file_diff,
             commands::write_update_log,
             commands::get_update_log_path,
+            commands::read_settings,
+            commands::write_settings,
             commands::spawn_terminal,
             commands::write_terminal,
             commands::resize_terminal,

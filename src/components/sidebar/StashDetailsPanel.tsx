@@ -1,11 +1,15 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import type { StashDetails } from "../../types";
 import { StashFileItem } from "./StashFileItem";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { KeyboardList } from "../common/KeyboardList";
+import { YaggResizer } from "../common/YaggResizer";
 import { DetailsPanelLoading, DetailsPanelEmpty } from "../common/DetailsPanelStates";
 import { cleanStashMessage } from "../../utils/stashMessage";
+
+const INFO_MIN = 120;
 
 interface StashDetailsPanelProps {
   details: StashDetails | null;
@@ -15,6 +19,45 @@ interface StashDetailsPanelProps {
 export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) {
   const toggleStashFileExpanded = useRepositoryStore((s) => s.toggleStashFileExpanded);
   const loadStashFileDiff = useRepositoryStore((s) => s.loadStashFileDiff);
+
+  const storedInfoHeight = useSettingsStore((s) => s.layoutSizes["stash.infoHeight"]);
+  const setLayoutSize = useSettingsStore((s) => s.setLayoutSize);
+
+  const containerObsRef = useRef<ResizeObserver | null>(null);
+  const infoObsRef = useRef<ResizeObserver | null>(null);
+  const [containerH, setContainerH] = useState(0);
+  const [contentH, setContentH] = useState(0);
+
+  const containerRef = useCallback((el: HTMLDivElement | null) => {
+    containerObsRef.current?.disconnect();
+    containerObsRef.current = null;
+    if (!el) return;
+    setContainerH(el.clientHeight);
+    const ro = new ResizeObserver(() => setContainerH(el.clientHeight));
+    ro.observe(el);
+    containerObsRef.current = ro;
+  }, []);
+
+  const infoContentRef = useCallback((el: HTMLDivElement | null) => {
+    infoObsRef.current?.disconnect();
+    infoObsRef.current = null;
+    if (!el) return;
+    setContentH(el.scrollHeight);
+    const ro = new ResizeObserver(() => setContentH(el.scrollHeight));
+    ro.observe(el);
+    infoObsRef.current = ro;
+  }, []);
+
+  const defaultInfoHeight = Math.max(INFO_MIN, contentH);
+  const infoMax = Math.max(INFO_MIN, containerH - 120);
+  const infoHeight = Math.min(infoMax, Math.max(INFO_MIN, storedInfoHeight ?? defaultInfoHeight));
+
+  const handleInfoResize = useCallback(
+    (next: number) => {
+      setLayoutSize("stash.infoHeight", next);
+    },
+    [setLayoutSize]
+  );
 
   const handleActivate = useCallback(
     (index: number) => {
@@ -46,11 +89,15 @@ export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) 
   const cleanMessage = cleanStashMessage(details.message);
 
   return (
-    <div className="stash-details-panel flex h-full flex-col overflow-hidden">
-      <div className="stash-info border-border shrink-0 border-b p-3">
+    <div ref={containerRef} className="stash-details-panel flex h-full flex-col overflow-hidden">
+      <div
+        ref={infoContentRef}
+        className="stash-info border-border shrink-0 overflow-y-auto border-b p-3"
+        style={{ height: infoHeight }}
+      >
         <div className="stash-name mb-2 flex items-center gap-2">
           <span className="label text-text-muted text-xs">Stash</span>
-          <code className="name bg-bg-tertiary text-text-primary rounded px-1.5 py-px font-mono text-xs">
+          <code className="name bg-bg-well text-text-primary rounded px-1.5 py-px font-mono text-xs">
             {stashName}
           </code>
         </div>
@@ -63,28 +110,39 @@ export function StashDetailsPanel({ details, loading }: StashDetailsPanelProps) 
           {details.branch_name && (
             <div className="meta-row flex gap-2 text-xs">
               <span className="label text-text-muted min-w-15 shrink-0">Branch</span>
-              <span className="value text-text-secondary">{details.branch_name}</span>
+              <span className="value text-text-muted font-mono">{details.branch_name}</span>
             </div>
           )}
           <div className="meta-row flex gap-2 text-xs">
             <span className="label text-text-muted min-w-15 shrink-0">Created</span>
-            <span className="value text-text-secondary" title={date.toLocaleString()}>
+            <span className="value text-text-muted" title={date.toLocaleString()}>
               {timeAgo}
             </span>
           </div>
           <div className="meta-row flex gap-2 text-xs">
             <span className="label text-text-muted min-w-15 shrink-0">Commit</span>
-            <code className="value commit-hash bg-bg-tertiary text-text-secondary rounded-sm px-1 py-px font-mono text-xs">
+            <code className="value commit-hash bg-bg-well text-text-muted rounded-sm px-1 py-px font-mono text-xs">
               {details.commit_hash.slice(0, 12)}
             </code>
           </div>
         </div>
       </div>
 
-      <div className="files-section flex flex-1 flex-col overflow-hidden">
-        <div className="files-header border-border bg-bg-tertiary text-text-secondary flex shrink-0 items-center justify-between border-b px-3 py-2 text-xs font-semibold">
+      <YaggResizer
+        orientation="horizontal"
+        size={infoHeight}
+        onSizeChange={handleInfoResize}
+        min={INFO_MIN}
+        max={infoMax}
+        defaultSize={defaultInfoHeight}
+        ariaLabel="Resize stash info"
+        panelSide="up"
+      />
+
+      <div className="files-section flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="files-header border-border bg-bg-well text-text-muted text-2xs flex shrink-0 items-center justify-between border-b px-3 py-2 font-mono font-medium tracking-widest uppercase">
           <span>Files changed</span>
-          <span className="file-count bg-bg-hover rounded-full px-2 py-px text-xs font-normal">
+          <span className="file-count bg-bg-hover rounded-full px-2 py-px font-mono text-xs font-normal tracking-normal normal-case">
             {details.files_changed.length}
           </span>
         </div>

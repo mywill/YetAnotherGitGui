@@ -16,7 +16,7 @@ interface KeyboardListProps {
   "aria-label": string;
   onActivate?: (index: number) => void;
   onSecondaryActivate?: (index: number) => void;
-  onDelete?: (index: number) => void;
+  onDelete?: (index: number) => void | Promise<void>;
   onActiveChange?: (index: number, isShift: boolean) => void;
   children: ReactNode;
   className?: string;
@@ -57,9 +57,12 @@ function KeyboardListItem({ index, children, className }: KeyboardListItemProps)
 
   const handleMouseDown = useCallback(
     (e: MouseEvent) => {
+      // Mousedown fires before the click-induced focus event reaches the list.
+      // Suppress that focus-driven onActiveChange for any button — the row's
+      // own onClick handler is the source of truth for selection on click.
+      skipNextFocus.current = true;
       if (e.button === 2) {
         setActiveIndex(index);
-        skipNextFocus.current = true;
       }
     },
     [index, setActiveIndex, skipNextFocus]
@@ -125,6 +128,11 @@ export function KeyboardList({
 
   const prevCountRef = useRef(0);
 
+  // Intentionally runs every render: itemRefs is a mutable Map mutated by
+  // child registerItem callbacks, and we need to clamp activeIndex / fire
+  // onActiveChange when the count shrinks. Keying on [activeIndex] would
+  // miss the very item-mount/unmount changes we care about.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const count = itemRefs.current.size;
     const prevCount = prevCountRef.current;
@@ -196,7 +204,11 @@ export function KeyboardList({
         case "Delete":
         case "Backspace": {
           e.preventDefault();
-          onDelete?.(activeIndex);
+          const result = onDelete?.(activeIndex);
+          // Re-focus the listbox after the (possibly async) delete settles.
+          // Confirmation dialogs steal focus and never return it; without
+          // this, repeat Delete presses don't reach the list.
+          Promise.resolve(result).finally(() => listRef.current?.focus());
           break;
         }
       }

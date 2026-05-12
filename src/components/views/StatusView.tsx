@@ -1,10 +1,24 @@
-import { useState, useCallback } from "react";
-import { StagedUnstagedPanel } from "../files/StagedUnstagedPanel";
+import { useCallback, useRef } from "react";
+import { StagedPanel } from "../files/StagedPanel";
+import { UnstagedPanel } from "../files/UnstagedPanel";
 import { UntrackedPanel } from "../files/UntrackedPanel";
 import { CommitPanel } from "../commit/CommitPanel";
 import { DiffViewPanel } from "../diff/DiffViewPanel";
-import { StashDetailsPanel } from "../sidebar/StashDetailsPanel";
+import { YaggResizer } from "../common/YaggResizer";
 import { useRepositoryStore } from "../../stores/repositoryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { useResizeObserver } from "../../hooks/useResizeObserver";
+import {
+  STATUS_LEFT_DEFAULT,
+  STATUS_LEFT_MIN,
+  STATUS_LEFT_MAX,
+  STATUS_PANE_MIN,
+  STATUS_PANE_MAX,
+  LAYOUT_KEYS,
+} from "../shell/layoutConstants";
+
+const STAGED_KEY = LAYOUT_KEYS.statusStaged;
+const UNTRACKED_KEY = LAYOUT_KEYS.statusUntracked;
 
 export function StatusView() {
   const fileStatuses = useRepositoryStore((s) => s.fileStatuses);
@@ -12,90 +26,129 @@ export function StatusView() {
   const currentDiff = useRepositoryStore((s) => s.currentDiff);
   const currentDiffStaged = useRepositoryStore((s) => s.currentDiffStaged);
   const diffLoading = useRepositoryStore((s) => s.diffLoading);
-  const selectedStashDetails = useRepositoryStore((s) => s.selectedStashDetails);
-  const stashDetailsLoading = useRepositoryStore((s) => s.stashDetailsLoading);
 
-  const [leftWidth, setLeftWidth] = useState(280);
+  const leftWidth = useSettingsStore(
+    (s) => s.layoutSizes[LAYOUT_KEYS.statusLeft] ?? STATUS_LEFT_DEFAULT
+  );
+  const stagedSize = useSettingsStore((s) => s.layoutSizes[STAGED_KEY]);
+  const untrackedSize = useSettingsStore((s) => s.layoutSizes[UNTRACKED_KEY]);
+  const setLayoutSize = useSettingsStore((s) => s.setLayoutSize);
 
-  // Show stash details panel if a stash is selected
-  const showStashDetails = selectedStashDetails !== null || stashDetailsLoading;
+  // Measure rendered pixel sizes so the resizer drag baseline is correct
+  // before either pane has a stored size, and so we can pin the opposite
+  // pane when the user first drags.
+  const stagedRef = useRef<HTMLDivElement>(null);
+  const untrackedRef = useRef<HTMLDivElement>(null);
+  const stagedMeasured = useResizeObserver(stagedRef);
+  const untrackedMeasured = useResizeObserver(untrackedRef);
 
-  const handleHorizontalResize = useCallback((delta: number) => {
-    setLeftWidth((w) => Math.max(200, Math.min(450, w + delta)));
-  }, []);
+  const handleLeftResize = useCallback(
+    (next: number) => {
+      setLayoutSize(LAYOUT_KEYS.statusLeft, next);
+    },
+    [setLayoutSize]
+  );
+
+  const handleStagedResize = useCallback(
+    (next: number) => {
+      setLayoutSize(STAGED_KEY, next);
+      // Pin untracked at its current rendered height on the first drag so
+      // the unstaged middle pane is the only one that absorbs the change.
+      if (untrackedSize === undefined && untrackedMeasured.height > 0) {
+        setLayoutSize(UNTRACKED_KEY, untrackedMeasured.height);
+      }
+    },
+    [setLayoutSize, untrackedSize, untrackedMeasured.height]
+  );
+
+  const handleUntrackedResize = useCallback(
+    (next: number) => {
+      setLayoutSize(UNTRACKED_KEY, next);
+      if (stagedSize === undefined && stagedMeasured.height > 0) {
+        setLayoutSize(STAGED_KEY, stagedMeasured.height);
+      }
+    },
+    [setLayoutSize, stagedSize, stagedMeasured.height]
+  );
 
   return (
     <div className="status-view flex min-h-0 flex-1 overflow-hidden">
-      {/* Left: File panels only */}
       <div
-        className="status-left bg-bg-secondary flex max-w-112 min-w-50 flex-col overflow-hidden"
+        id="status-left-panel"
+        className="status-left bg-bg-panel flex flex-col overflow-hidden"
         style={{ width: leftWidth }}
       >
-        <div className="status-staging flex min-h-0 flex-3 flex-col overflow-hidden">
-          <StagedUnstagedPanel statuses={fileStatuses} loading={fileStatusesLoading} />
+        <div
+          ref={stagedRef}
+          id="status-staged-pane"
+          className="status-staged flex min-h-0 flex-col overflow-hidden"
+          style={
+            stagedSize !== undefined
+              ? { height: stagedSize, flexShrink: 0 }
+              : { flexGrow: 3, flexShrink: 1, flexBasis: 0 }
+          }
+        >
+          <StagedPanel statuses={fileStatuses} loading={fileStatusesLoading} />
         </div>
-        <div className="status-untracked flex min-h-0 flex-1 flex-col overflow-hidden">
+        <YaggResizer
+          orientation="horizontal"
+          size={stagedSize ?? stagedMeasured.height}
+          onSizeChange={handleStagedResize}
+          min={STATUS_PANE_MIN}
+          max={STATUS_PANE_MAX}
+          defaultSize={STATUS_PANE_MIN * 3}
+          ariaLabel="Resize staged section"
+          panelSide="up"
+          panelId="status-staged-pane"
+        />
+        <div
+          className="status-unstaged flex min-h-0 flex-col overflow-hidden"
+          style={{ flexGrow: 3, flexShrink: 1, flexBasis: 0 }}
+        >
+          <UnstagedPanel statuses={fileStatuses} loading={fileStatusesLoading} />
+        </div>
+        <YaggResizer
+          orientation="horizontal"
+          size={untrackedSize ?? untrackedMeasured.height}
+          onSizeChange={handleUntrackedResize}
+          min={STATUS_PANE_MIN}
+          max={STATUS_PANE_MAX}
+          defaultSize={STATUS_PANE_MIN * 2}
+          ariaLabel="Resize untracked section"
+          panelSide="down"
+          panelId="status-untracked-pane"
+        />
+        <div
+          ref={untrackedRef}
+          id="status-untracked-pane"
+          className="status-untracked flex min-h-0 flex-col overflow-hidden"
+          style={
+            untrackedSize !== undefined
+              ? { height: untrackedSize, flexShrink: 0 }
+              : { flexGrow: 2, flexShrink: 1, flexBasis: 0 }
+          }
+        >
           <UntrackedPanel statuses={fileStatuses} loading={fileStatusesLoading} />
         </div>
       </div>
-      <HorizontalResizer onResize={handleHorizontalResize} />
-      {/* Right: Diff + Commit or Stash Details */}
-      <div className="status-right flex min-w-75 flex-1 flex-col overflow-hidden">
-        {showStashDetails ? (
-          <div className="status-stash-details bg-bg-primary flex-1 overflow-hidden">
-            <StashDetailsPanel details={selectedStashDetails} loading={stashDetailsLoading} />
-          </div>
-        ) : (
-          <>
-            <div className="status-diff bg-bg-primary min-h-50 flex-1 overflow-hidden">
-              <DiffViewPanel diff={currentDiff} loading={diffLoading} staged={currentDiffStaged} />
-            </div>
-            <div
-              className="status-commit border-border shrink-0 overflow-hidden border-t"
-              style={{ minHeight: 140, maxHeight: 220 }}
-            >
-              <CommitPanel />
-            </div>
-          </>
-        )}
+      <YaggResizer
+        orientation="vertical"
+        size={leftWidth}
+        onSizeChange={handleLeftResize}
+        min={STATUS_LEFT_MIN}
+        max={STATUS_LEFT_MAX}
+        defaultSize={STATUS_LEFT_DEFAULT}
+        ariaLabel="Resize file panel"
+        panelId="status-left-panel"
+      />
+      <div className="status-right flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="status-diff bg-bg-canvas min-h-50 flex-1 overflow-hidden">
+          <DiffViewPanel diff={currentDiff} loading={diffLoading} staged={currentDiffStaged} />
+        </div>
+        <div className="status-commit border-border shrink-0 overflow-hidden border-t">
+          <CommitPanel />
+        </div>
       </div>
     </div>
-  );
-}
-
-interface ResizerProps {
-  onResize: (delta: number) => void;
-}
-
-function HorizontalResizer({ onResize }: ResizerProps) {
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-
-      const handleMouseMove = (e: MouseEvent) => {
-        onResize(e.clientX - startX);
-      };
-
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    [onResize]
-  );
-
-  return (
-    <div
-      className="status-resizer-h bg-border hover:bg-bg-selected w-1 shrink-0 cursor-col-resize transition-colors duration-150"
-      onMouseDown={handleMouseDown}
-    />
   );
 }

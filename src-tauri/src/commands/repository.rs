@@ -49,7 +49,6 @@ pub fn get_repository_info(state: State<AppState>) -> Result<git::RepositoryInfo
 mod tests {
     use super::*;
     use crate::state::AppState;
-    use crate::test_utils::*;
     use git2::Repository;
 
     #[test]
@@ -58,33 +57,6 @@ mod tests {
         assert!(result.is_ok());
         let cwd = result.unwrap();
         assert!(!cwd.is_empty());
-    }
-
-    #[test]
-    fn test_open_repository_logic() {
-        // Test the underlying git functions that open_repository uses
-        let (temp_dir, _repo) = create_test_repo();
-
-        let result = git::open_repo(temp_dir.path());
-        assert!(result.is_ok());
-
-        let repo = result.unwrap();
-        let info = git::get_repo_info(&repo);
-        assert!(info.is_ok());
-    }
-
-    #[test]
-    fn test_open_repository_invalid_path() {
-        let result = git::open_repo(std::path::Path::new("/nonexistent/path"));
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_get_repository_info_logic() {
-        let (_temp_dir, repo) = create_test_repo();
-
-        let result = git::get_repo_info(&repo);
-        assert!(result.is_ok());
     }
 
     #[test]
