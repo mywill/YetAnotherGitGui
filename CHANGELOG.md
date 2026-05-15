@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.11.0...v1.12.0) (2026-05-15)
+
+
+### Features
+
+* Added notifications for new versions on launch and updated update flow in general ([b4c1bd8](https://github.com/mywill/YetAnotherGitGui/commit/b4c1bd8754bd5f6bfde04f4f423b816f8b97182a))
+
 # [1.11.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.10.2...v1.11.0) (2026-05-12)
 
 
