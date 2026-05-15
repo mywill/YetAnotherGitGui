@@ -99,6 +99,61 @@ describe("notificationStore", () => {
     });
   });
 
+  describe("options: duration / action / actionLabel", () => {
+    it("showSuccess respects a custom duration", () => {
+      useNotificationStore.getState().showSuccess("Long-lived", { duration: 10000 });
+
+      vi.advanceTimersByTime(3000);
+      expect(useNotificationStore.getState().notifications).toHaveLength(1);
+
+      vi.advanceTimersByTime(7000);
+      expect(useNotificationStore.getState().notifications).toHaveLength(0);
+    });
+
+    it("showError respects a custom duration", () => {
+      useNotificationStore.getState().showError("Brief", { duration: 1000 });
+
+      vi.advanceTimersByTime(999);
+      expect(useNotificationStore.getState().notifications).toHaveLength(1);
+
+      vi.advanceTimersByTime(1);
+      expect(useNotificationStore.getState().notifications).toHaveLength(0);
+    });
+
+    it("stores the action callback on the notification", () => {
+      const action = vi.fn();
+      useNotificationStore.getState().showSuccess("Click me", { action });
+
+      const stored = useNotificationStore.getState().notifications[0];
+      expect(stored.action).toBe(action);
+    });
+
+    it("stores actionLabel on the notification", () => {
+      useNotificationStore
+        .getState()
+        .showSuccess("Click me", { action: () => {}, actionLabel: "Update" });
+
+      const stored = useNotificationStore.getState().notifications[0];
+      expect(stored.actionLabel).toBe("Update");
+    });
+
+    it("omitted opts preserves 3s default for showSuccess", () => {
+      useNotificationStore.getState().showSuccess("Plain");
+      vi.advanceTimersByTime(2999);
+      expect(useNotificationStore.getState().notifications).toHaveLength(1);
+      vi.advanceTimersByTime(1);
+      expect(useNotificationStore.getState().notifications).toHaveLength(0);
+    });
+
+    it("omitted opts preserves 10s default for showError", () => {
+      useNotificationStore.getState().showError("Plain");
+      vi.advanceTimersByTime(9999);
+      expect(useNotificationStore.getState().notifications).toHaveLength(1);
+      vi.advanceTimersByTime(1);
+      expect(useNotificationStore.getState().notifications).toHaveLength(0);
+    });
+  });
+
   describe("dismiss", () => {
     it("removes only the targeted notification", () => {
       useNotificationStore.getState().showError("Error 1");

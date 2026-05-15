@@ -16,6 +16,7 @@ describe("settingsStore", () => {
       textSize: "medium",
       theme: "dark",
       layoutSizes: {},
+      autoCheckForUpdates: true,
       loaded: false,
     });
     // Reset DOM dataset
@@ -125,6 +126,40 @@ describe("settingsStore", () => {
       useSettingsStore.getState().setTheme("light");
       expect(useSettingsStore.getState().theme).toBe("light");
       expect(document.documentElement.dataset.theme).toBe("light");
+    });
+  });
+
+  describe("autoCheckForUpdates", () => {
+    it("defaults to true after fresh load with empty saved state", async () => {
+      const { readSettings } = await import("../services/settings");
+      vi.mocked(readSettings).mockResolvedValue({});
+
+      await useSettingsStore.getState().load();
+
+      expect(useSettingsStore.getState().autoCheckForUpdates).toBe(true);
+    });
+
+    it("setAutoCheckForUpdates(false) persists with the field", async () => {
+      const { writeSettings } = await import("../services/settings");
+      vi.useFakeTimers();
+
+      useSettingsStore.getState().setAutoCheckForUpdates(false);
+      vi.advanceTimersByTime(0);
+
+      expect(useSettingsStore.getState().autoCheckForUpdates).toBe(false);
+      expect(writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ autoCheckForUpdates: false })
+      );
+      vi.useRealTimers();
+    });
+
+    it("load() round-trips a persisted autoCheckForUpdates: false", async () => {
+      const { readSettings } = await import("../services/settings");
+      vi.mocked(readSettings).mockResolvedValue({ autoCheckForUpdates: false });
+
+      await useSettingsStore.getState().load();
+
+      expect(useSettingsStore.getState().autoCheckForUpdates).toBe(false);
     });
   });
 

@@ -1852,3 +1852,45 @@ test.describe("Empty Repository", () => {
     await expect(page.locator(".history-graph")).not.toBeVisible();
   });
 });
+
+test.describe("Launch-time update check", () => {
+  test("shows toast and opens dialog when an update is available", async ({ page }) => {
+    // This init script runs before tauriMocks; tauriMocks reads __E2E_UPDATER_RESPONSE.
+    await page.addInitScript(() => {
+      (window as unknown as Record<string, unknown>).__E2E_UPDATER_RESPONSE = {
+        rid: 1,
+        version: "9.9.9",
+        currentVersion: "1.0.0",
+        date: "2026-05-14",
+        body: "Brand new features",
+        rawJson: {},
+      };
+    });
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const toast = page.locator(".notification-toast-success");
+    await expect(toast).toBeVisible({ timeout: 10000 });
+    await expect(toast).toContainText("9.9.9");
+
+    await toast.click();
+
+    await expect(page.getByText("Update Available")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Brand new features")).toBeVisible();
+
+    await page.getByRole("button", { name: "Later" }).click();
+    await expect(page.getByText("Update Available")).not.toBeVisible();
+  });
+
+  test("does not show toast when no update is available", async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Wait long enough for any pending check to resolve.
+    await page.waitForTimeout(1000);
+
+    await expect(page.locator(".notification-toast-success")).toHaveCount(0);
+  });
+});

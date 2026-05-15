@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AboutDialog } from "./AboutDialog";
-import { getAppInfo, checkForUpdate, downloadAndInstallUpdate } from "../../services/system";
+import { getAppInfo, checkForUpdate } from "../../services/system";
 
 vi.mock("../../services/system", () => ({
   getAppInfo: vi.fn(),
   checkForUpdate: vi.fn(),
-  downloadAndInstallUpdate: vi.fn(),
   writeUpdateLog: vi.fn().mockResolvedValue(undefined),
-  getUpdateLogPath: vi.fn().mockResolvedValue("/home/user/.local/share/yagg/update.log"),
   getReleaseUrl: vi.fn(
     (v: string) => `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${v}`
   ),
@@ -163,7 +161,7 @@ describe("AboutDialog", () => {
       });
     });
 
-    it("shows available version with update button", async () => {
+    it("shows available version with view update button", async () => {
       vi.mocked(checkForUpdate).mockResolvedValue({
         available: true,
         version: "2.0.0",
@@ -173,46 +171,48 @@ describe("AboutDialog", () => {
 
       await waitFor(() => {
         expect(screen.getByText(/v2.0.0 available/)).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
-        expect(screen.getByText("View release")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "View update" })).toBeInTheDocument();
+        expect(screen.queryByText("View release")).not.toBeInTheDocument();
       });
     });
 
-    it("calls downloadAndInstallUpdate when Update button clicked", async () => {
+    it("calls onUpdateRequested with the update info when Update button is clicked", async () => {
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "2.0.0",
+        notes: "release notes",
+      });
+      const onUpdateRequested = vi.fn();
+
+      render(<AboutDialog onClose={mockOnClose} onUpdateRequested={onUpdateRequested} />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole("button", { name: "View update" }));
+      });
+
+      expect(onUpdateRequested).toHaveBeenCalledTimes(1);
+      expect(onUpdateRequested).toHaveBeenCalledWith({
+        available: true,
+        version: "2.0.0",
+        notes: "release notes",
+      });
+    });
+
+    it("is safe to click Update when no onUpdateRequested callback is provided", async () => {
       vi.mocked(checkForUpdate).mockResolvedValue({
         available: true,
         version: "2.0.0",
       });
-      vi.mocked(downloadAndInstallUpdate).mockResolvedValue(undefined);
 
       render(<AboutDialog onClose={mockOnClose} />);
 
       await waitFor(() => {
-        fireEvent.click(screen.getByRole("button", { name: "Update" }));
+        expect(screen.getByRole("button", { name: "View update" })).toBeInTheDocument();
       });
 
-      await waitFor(() => {
-        expect(downloadAndInstallUpdate).toHaveBeenCalled();
-      });
-    });
-
-    it("shows error when auto-update fails", async () => {
-      vi.mocked(checkForUpdate).mockResolvedValue({
-        available: true,
-        version: "2.0.0",
-      });
-      vi.mocked(downloadAndInstallUpdate).mockRejectedValue(new Error("Failed"));
-
-      render(<AboutDialog onClose={mockOnClose} />);
-
-      await waitFor(() => {
-        fireEvent.click(screen.getByRole("button", { name: "Update" }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Auto-update failed/)).toBeInTheDocument();
-        expect(screen.getByText("Download manually")).toBeInTheDocument();
-      });
+      expect(() =>
+        fireEvent.click(screen.getByRole("button", { name: "View update" }))
+      ).not.toThrow();
     });
 
     it("shows check failed when update check errors", async () => {

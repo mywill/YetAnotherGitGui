@@ -4,13 +4,9 @@ import {
   installCli,
   uninstallCli,
   checkForUpdate,
-  downloadAndInstallUpdate,
-  getReleaseUrl,
   writeUpdateLog,
-  getUpdateLogPath,
   type UpdateInfo,
 } from "../../services/system";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import type { Density, TextSize, Theme } from "../../stores/settingsStore";
@@ -18,6 +14,7 @@ import { usePlatform } from "../../hooks/usePlatform";
 import { IconSettings } from "@tabler/icons-react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
+import { UpdateDialog } from "./UpdateDialog";
 import { YaggButton } from "./YaggButton";
 
 export function SettingsMenu() {
@@ -30,6 +27,8 @@ export function SettingsMenu() {
   const setDensity = useSettingsStore((s) => s.setDensity);
   const currentTextSize = useSettingsStore((s) => s.textSize);
   const setTextSize = useSettingsStore((s) => s.setTextSize);
+  const autoCheckForUpdates = useSettingsStore((s) => s.autoCheckForUpdates);
+  const setAutoCheckForUpdates = useSettingsStore((s) => s.setAutoCheckForUpdates);
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
@@ -37,8 +36,6 @@ export function SettingsMenu() {
   const [updateChecking, setUpdateChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
-  const [updateInstalling, setUpdateInstalling] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -103,7 +100,6 @@ export function SettingsMenu() {
     closeMenu();
     setUpdateChecking(true);
     setUpdateInfo(null);
-    setUpdateError(null);
     try {
       const info = await checkForUpdate();
       setUpdateInfo(info);
@@ -127,25 +123,6 @@ export function SettingsMenu() {
       setUpdateChecking(false);
     }
   };
-
-  const handleInstallUpdate = async () => {
-    setUpdateInstalling(true);
-    setUpdateError(null);
-    try {
-      await downloadAndInstallUpdate();
-    } catch (error) {
-      await writeUpdateLog(`ERROR in settings menu install: ${String(error)}`);
-      const logPath = await getUpdateLogPath();
-      const logHint = logPath ? ` Check ${logPath} for details.` : "";
-      setUpdateError(
-        `Auto-update failed: ${String(error)}. Please download the update manually.${logHint}`
-      );
-    } finally {
-      setUpdateInstalling(false);
-    }
-  };
-
-  const releaseUrl = updateInfo?.version ? getReleaseUrl(updateInfo.version) : "";
 
   return (
     <>
@@ -262,6 +239,33 @@ export function SettingsMenu() {
                 ))}
               </div>
             </div>
+            <div className="settings-menu-group px-3 py-2">
+              <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
+                Auto-check on launch
+              </div>
+              <div className="flex gap-1">
+                <YaggButton
+                  variant={autoCheckForUpdates ? "selection" : "outline"}
+                  size="sm"
+                  className="text-2xs flex-1"
+                  role="menuitemradio"
+                  aria-checked={autoCheckForUpdates}
+                  onClick={() => setAutoCheckForUpdates(true)}
+                >
+                  On
+                </YaggButton>
+                <YaggButton
+                  variant={!autoCheckForUpdates ? "selection" : "outline"}
+                  size="sm"
+                  className="text-2xs flex-1"
+                  role="menuitemradio"
+                  aria-checked={!autoCheckForUpdates}
+                  onClick={() => setAutoCheckForUpdates(false)}
+                >
+                  Off
+                </YaggButton>
+              </div>
+            </div>
             <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
             <YaggButton
               variant="menu-item"
@@ -340,49 +344,19 @@ export function SettingsMenu() {
         />
       )}
 
-      {showAboutDialog && <AboutDialog onClose={() => setShowAboutDialog(false)} />}
-
-      {showUpdateDialog && updateInfo?.available && updateInfo.version && (
-        <ConfirmDialog
-          title="Update Available"
-          message={
-            <div className="update-dialog-content">
-              <p className="text-text-muted mb-2 text-xs">
-                Version <strong>{updateInfo.version}</strong> is available.
-              </p>
-              {updateInfo.notes && (
-                <div className="update-dialog-notes overflow-wrap-anywhere bg-bg-canvas mb-2 max-h-75 overflow-y-auto rounded p-2 text-xs leading-normal break-words whitespace-pre-wrap">
-                  <p className="update-dialog-notes-label text-text-primary font-semibold">
-                    Release notes:
-                  </p>
-                  <p className="text-text-muted">{updateInfo.notes}</p>
-                </div>
-              )}
-              {updateError && (
-                <p className="update-dialog-error text-danger mb-2 text-xs">{updateError}</p>
-              )}
-              <p className="update-dialog-link text-xs">
-                <a
-                  className="text-accent"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openUrl(releaseUrl);
-                  }}
-                >
-                  View release on GitHub
-                </a>
-              </p>
-            </div>
-          }
-          confirmLabel={updateInstalling ? "Installing..." : "Update & Restart"}
-          cancelLabel="Later"
-          onConfirm={handleInstallUpdate}
-          onCancel={() => {
-            setShowUpdateDialog(false);
-            setUpdateError(null);
+      {showAboutDialog && (
+        <AboutDialog
+          onClose={() => setShowAboutDialog(false)}
+          onUpdateRequested={(info) => {
+            setShowAboutDialog(false);
+            setUpdateInfo(info);
+            setShowUpdateDialog(true);
           }}
         />
+      )}
+
+      {showUpdateDialog && updateInfo?.available && (
+        <UpdateDialog info={updateInfo} onClose={() => setShowUpdateDialog(false)} />
       )}
     </>
   );

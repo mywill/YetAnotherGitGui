@@ -6,6 +6,7 @@ export interface SettingsData {
   theme?: "dark" | "light";
   layoutSizes?: Record<string, number>;
   sectionExpanded?: Record<string, boolean>;
+  autoCheckForUpdates?: boolean;
 }
 
 export async function readSettings(): Promise<SettingsData> {

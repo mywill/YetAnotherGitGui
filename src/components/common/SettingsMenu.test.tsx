@@ -527,6 +527,42 @@ describe("SettingsMenu", () => {
     });
   });
 
+  describe("auto-check on launch toggle", () => {
+    it("shows the Auto-check on launch toggle group with current state", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      expect(screen.getByText("Auto-check on launch")).toBeInTheDocument();
+      const onBtn = screen.getByRole("menuitemradio", { name: "On" });
+      const offBtn = screen.getByRole("menuitemradio", { name: "Off" });
+      // Default state is true (autoCheckForUpdates defaults to true in the store)
+      expect(onBtn).toHaveAttribute("aria-checked", "true");
+      expect(offBtn).toHaveAttribute("aria-checked", "false");
+    });
+
+    it("clicking Off flips autoCheckForUpdates to false", async () => {
+      const { useSettingsStore } = await import("../../stores/settingsStore");
+      // Ensure starting state is on
+      useSettingsStore.setState({ autoCheckForUpdates: true });
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByRole("menuitemradio", { name: "Off" }));
+
+      expect(useSettingsStore.getState().autoCheckForUpdates).toBe(false);
+    });
+  });
+
   describe("about dialog", () => {
     it("opens About dialog when About is clicked", async () => {
       vi.mocked(checkCliInstalled).mockResolvedValue(false);
@@ -540,6 +576,41 @@ describe("SettingsMenu", () => {
       fireEvent.click(screen.getByText("About"));
 
       expect(screen.getByText("About Yet Another Git Gui")).toBeInTheDocument();
+    });
+
+    it("clicking Update inside About closes About and opens UpdateDialog", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      // The About dialog runs its own checkForUpdate on mount.
+      vi.mocked(checkForUpdate).mockResolvedValue({
+        available: true,
+        version: "3.0.0",
+        notes: "from about",
+      });
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("About"));
+
+      await waitFor(() => {
+        expect(screen.getByText("About Yet Another Git Gui")).toBeInTheDocument();
+      });
+
+      // Wait for the About dialog's internal check to resolve and render the Update button.
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "View update" })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "View update" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("About Yet Another Git Gui")).not.toBeInTheDocument();
+        expect(screen.getByText("Update Available")).toBeInTheDocument();
+        expect(screen.getByText("from about")).toBeInTheDocument();
+      });
     });
 
     it("closes About dialog when Close is clicked", async () => {

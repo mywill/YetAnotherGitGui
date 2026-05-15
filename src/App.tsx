@@ -18,6 +18,7 @@ import { TerminalPanel } from "./components/terminal/TerminalPanel";
 import { useCliArgs } from "./hooks/useCliArgs";
 import { usePlatform } from "./hooks/usePlatform";
 import { useKeyboardShortcuts, type ShortcutHandler } from "./hooks/useKeyboardShortcuts";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { YaggButton } from "./components/common/YaggButton";
 import { IconSearch, IconRefresh } from "@tabler/icons-react";
 import "./styles/index.css";
@@ -47,6 +48,8 @@ export function App() {
   const dialogCancelLabel = useDialogStore((s) => s.cancelLabel);
   const dialogOnConfirm = useDialogStore((s) => s.onConfirm);
   const closeDialog = useDialogStore((s) => s.closeDialog);
+
+  const updateDialog = useUpdateCheck();
 
   // Load persisted settings (density, theme, layout sizes) on mount
   useEffect(() => {
@@ -140,6 +143,7 @@ export function App() {
           <WelcomeScreen failedPath={repoPath} />
         </main>
         <NotificationToast />
+        {updateDialog}
       </div>
     );
   }
@@ -196,6 +200,8 @@ export function App() {
       <StatusBar />
 
       <NotificationToast />
+
+      {updateDialog}
 
       <CommandPalette />
 

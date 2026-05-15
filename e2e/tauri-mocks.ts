@@ -27,7 +27,11 @@ export const tauriMocks = `
         }
 
         if (pluginName === 'updater') {
-          if (pluginCmd === 'check') return null;
+          if (pluginCmd === 'check') {
+            // Allow individual tests to override via window.__E2E_UPDATER_RESPONSE
+            return window.__E2E_UPDATER_RESPONSE ?? null;
+          }
+          if (pluginCmd === 'download_and_install') return undefined;
           return null;
         }
 

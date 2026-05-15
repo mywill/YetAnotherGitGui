@@ -14,6 +14,7 @@ interface SettingsState {
   theme: Theme;
   layoutSizes: Record<string, number>;
   sectionExpanded: Record<string, boolean>;
+  autoCheckForUpdates: boolean;
   loaded: boolean;
 
   load: () => Promise<void>;
@@ -22,6 +23,7 @@ interface SettingsState {
   setTheme: (t: Theme) => void;
   setLayoutSize: (key: string, px: number) => void;
   setSectionExpanded: (key: string, value: boolean) => void;
+  setAutoCheckForUpdates: (value: boolean) => void;
 }
 
 const DEFAULTS: Omit<
@@ -33,12 +35,14 @@ const DEFAULTS: Omit<
   | "setTheme"
   | "setLayoutSize"
   | "setSectionExpanded"
+  | "setAutoCheckForUpdates"
 > = {
   density: "compact",
   textSize: "medium",
   theme: "dark",
   layoutSizes: {},
   sectionExpanded: {},
+  autoCheckForUpdates: true,
 };
 
 // Module-level so concurrent setter calls coalesce into one persist write.
@@ -72,13 +76,15 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
   const delay = immediate ? 0 : 500;
   persistTimer = setTimeout(() => {
     persistTimer = null;
-    const { density, textSize, theme, layoutSizes, sectionExpanded } = getState();
+    const { density, textSize, theme, layoutSizes, sectionExpanded, autoCheckForUpdates } =
+      getState();
     const data: SettingsData = {
       density,
       textSize,
       theme,
       layoutSizes,
       sectionExpanded,
+      autoCheckForUpdates,
     };
     writeSettings(data).catch((err: unknown) => {
       const raw = err instanceof Error ? err.message : String(err);
@@ -99,6 +105,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const theme = saved.theme ?? DEFAULTS.theme;
       const layoutSizes = saved.layoutSizes ?? DEFAULTS.layoutSizes;
       const sectionExpanded = saved.sectionExpanded ?? DEFAULTS.sectionExpanded;
+      const autoCheckForUpdates = saved.autoCheckForUpdates ?? DEFAULTS.autoCheckForUpdates;
 
       applyToDOM(density, textSize, theme);
       set({
@@ -107,6 +114,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         theme,
         layoutSizes,
         sectionExpanded,
+        autoCheckForUpdates,
         loaded: true,
       });
     } catch {
@@ -145,6 +153,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set((s) => ({
       sectionExpanded: { ...s.sectionExpanded, [key]: value },
     }));
+    persistDebounced(get, true);
+  },
+
+  setAutoCheckForUpdates: (autoCheckForUpdates) => {
+    set({ autoCheckForUpdates });
     persistDebounced(get, true);
   },
 }));

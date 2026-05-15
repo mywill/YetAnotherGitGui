@@ -3,24 +3,21 @@ import { createPortal } from "react-dom";
 import {
   getAppInfo,
   checkForUpdate,
-  downloadAndInstallUpdate,
-  getReleaseUrl,
   writeUpdateLog,
-  getUpdateLogPath,
   type AppInfo,
   type UpdateInfo,
 } from "../../services/system";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { YaggButton } from "./YaggButton";
 
 interface AboutDialogProps {
   onClose: () => void;
+  onUpdateRequested?: (info: UpdateInfo) => void;
 }
 
-export function AboutDialog({ onClose }: AboutDialogProps) {
+export function AboutDialog({ onClose, onUpdateRequested }: AboutDialogProps) {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [updateStatus, setUpdateStatus] = useState<
-    "checking" | "up-to-date" | "available" | "installing" | "error"
+    "checking" | "up-to-date" | "available" | "error"
   >("checking");
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -50,20 +47,6 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
       });
   }, []);
 
-  const handleUpdate = async () => {
-    setUpdateStatus("installing");
-    setUpdateError(null);
-    try {
-      await downloadAndInstallUpdate();
-    } catch (error) {
-      await writeUpdateLog(`ERROR in about dialog install: ${String(error)}`);
-      const logPath = await getUpdateLogPath();
-      const logHint = logPath ? ` Check ${logPath} for details.` : "";
-      setUpdateError(`Auto-update failed: ${String(error)}.${logHint}`);
-      setUpdateStatus("available");
-    }
-  };
-
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, []);
@@ -86,8 +69,6 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
     },
     [onClose]
   );
-
-  const releaseUrl = updateInfo?.version ? getReleaseUrl(updateInfo.version) : "";
 
   return createPortal(
     <div
@@ -152,25 +133,10 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                         <YaggButton
                           variant="accent"
                           className="about-update-btn px-2 py-px text-xs"
-                          onClick={handleUpdate}
+                          onClick={() => onUpdateRequested?.(updateInfo)}
                         >
-                          Update
+                          View update
                         </YaggButton>
-                        <a
-                          className="about-update-link text-accent text-xs"
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openUrl(releaseUrl);
-                          }}
-                        >
-                          View release
-                        </a>
-                      </span>
-                    )}
-                    {updateStatus === "installing" && (
-                      <span className="about-update-checking text-text-muted italic">
-                        Installing...
                       </span>
                     )}
                     {updateStatus === "error" && (
@@ -179,21 +145,6 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
                     {updateError && (
                       <span className="about-update-error-detail text-danger text-xs">
                         {updateError}
-                        {updateInfo?.version && (
-                          <>
-                            {" "}
-                            <a
-                              className="text-accent"
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openUrl(releaseUrl);
-                              }}
-                            >
-                              Download manually
-                            </a>
-                          </>
-                        )}
                       </span>
                     )}
                   </td>
