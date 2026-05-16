@@ -32,6 +32,8 @@ pub fn run() {
             commands::list_tags,
             commands::checkout_commit,
             commands::checkout_branch,
+            commands::create_branch_and_checkout,
+            commands::validate_branch_name,
             commands::delete_branch,
             commands::delete_tag,
             commands::get_file_statuses,

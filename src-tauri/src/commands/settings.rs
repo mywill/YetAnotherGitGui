@@ -33,6 +33,13 @@ pub fn write_settings(data: String) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // Both fs-touching tests share the real user settings file at
+    // <data_dir>/yagg/settings.json. Without this lock, parallel test execution
+    // can race: the read test sees an empty/partial file while the roundtrip
+    // test is mid-write, and `serde_json::from_str("")` fails.
+    static FS_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_settings_path_is_valid() {
@@ -44,6 +51,8 @@ mod tests {
 
     #[test]
     fn test_read_settings_returns_empty_when_no_file() {
+        let _guard = FS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
         // This test works because the settings file likely doesn't exist in the test env
         // If it does exist, it should return valid JSON either way
         let result = read_settings();
@@ -56,6 +65,8 @@ mod tests {
 
     #[test]
     fn test_write_and_read_roundtrip() {
+        let _guard = FS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
         let test_data = r#"{"density":"compact","theme":"dark"}"#.to_string();
         let write_result = write_settings(test_data.clone());
         assert!(write_result.is_ok());

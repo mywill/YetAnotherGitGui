@@ -1679,6 +1679,55 @@ describe("repositoryStore", () => {
     });
   });
 
+  describe("createBranch", () => {
+    it("calls git.createBranch and refreshes repository", async () => {
+      useRepositoryStore.setState({
+        repositoryInfo: {
+          path: "/test/repo",
+          current_branch: "main",
+          is_detached: false,
+          remotes: [],
+          head_hash: "abc123",
+        },
+        commits: [],
+        hasMoreCommits: true,
+      });
+
+      vi.mocked(git.createBranch).mockResolvedValue(undefined);
+      vi.mocked(git.getRepositoryInfo).mockResolvedValue({
+        path: "/test/repo",
+        current_branch: "feature/new",
+        is_detached: false,
+        remotes: [],
+        head_hash: "abc123",
+      });
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+
+      const { createBranch } = useRepositoryStore.getState();
+      await createBranch("feature/new");
+
+      expect(git.createBranch).toHaveBeenCalledWith("feature/new");
+      expect(git.getRepositoryInfo).toHaveBeenCalled();
+    });
+
+    it("shows an error toast prefixed with 'Failed to create branch' on failure", async () => {
+      vi.mocked(git.createBranch).mockRejectedValue(new Error("branch already exists"));
+
+      const { createBranch } = useRepositoryStore.getState();
+      await createBranch("existing");
+
+      expect(mockShowError).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to create branch")
+      );
+      expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("branch already exists"));
+    });
+  });
+
   describe("deleteBranch", () => {
     it("calls git.deleteBranch and refreshes repository", async () => {
       useRepositoryStore.setState({

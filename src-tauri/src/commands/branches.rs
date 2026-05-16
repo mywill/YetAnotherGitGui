@@ -181,6 +181,47 @@ pub fn checkout_branch(branch_name: String, state: State<AppState>) -> Result<()
 }
 
 #[tauri::command]
+pub fn create_branch_and_checkout(
+    branch_name: String,
+    state: State<AppState>,
+) -> Result<(), AppError> {
+    let repo = state.get_repo()?;
+
+    // Create the new branch at HEAD. force=false ensures we fail if it already
+    // exists.
+    let head_commit = repo.head()?.peel_to_commit()?;
+    repo.branch(&branch_name, &head_commit, false)?;
+
+    // Check out the newly created branch (same pattern as checkout_branch).
+    let branch = repo.find_branch(&branch_name, BranchType::Local)?;
+    let reference = branch.get();
+    let commit = reference.peel_to_commit()?;
+    let tree = commit.tree()?;
+    repo.checkout_tree(tree.as_object(), None)?;
+    let refname = reference
+        .name()
+        .ok_or_else(|| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
+    repo.set_head(refname)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn validate_branch_name(name: String) -> Result<(), AppError> {
+    // Reject leading dash explicitly: git's ref naming rules allow it, but it
+    // is universally a footgun (mistaken for a CLI flag by many tools).
+    if name.starts_with('-') {
+        return Err(AppError::Git(git2::Error::from_str("invalid branch name")));
+    }
+    let refname = format!("refs/heads/{}", name);
+    if git2::Reference::is_valid_name(&refname) {
+        Ok(())
+    } else {
+        Err(AppError::Git(git2::Error::from_str("invalid branch name")))
+    }
+}
+
+#[tauri::command]
 pub fn delete_branch(
     branch_name: String,
     is_remote: bool,
@@ -241,5 +282,50 @@ mod tests {
             repo_lock.as_ref().ok_or(AppError::NoRepository);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_branch_name_accepts_simple() {
+        assert!(validate_branch_name("feature/foo".to_string()).is_ok());
+    }
+
+    #[test]
+    fn validate_branch_name_accepts_nested() {
+        assert!(validate_branch_name("team/alice/feature-1".to_string()).is_ok());
+    }
+
+    #[test]
+    fn validate_branch_name_rejects_spaces() {
+        assert!(validate_branch_name("bad name".to_string()).is_err());
+    }
+
+    #[test]
+    fn validate_branch_name_rejects_leading_dash() {
+        assert!(validate_branch_name("-evil".to_string()).is_err());
+    }
+
+    #[test]
+    fn validate_branch_name_rejects_trailing_lock() {
+        assert!(validate_branch_name("foo.lock".to_string()).is_err());
+    }
+
+    #[test]
+    fn validate_branch_name_rejects_double_dot() {
+        assert!(validate_branch_name("a..b".to_string()).is_err());
+    }
+
+    #[test]
+    fn validate_branch_name_rejects_empty() {
+        assert!(validate_branch_name("".to_string()).is_err());
+    }
+
+    #[test]
+    fn validate_branch_name_rejects_special_chars() {
+        for name in ["a~b", "a:b", "a^b", "a?b", "a*b", "a[b", "a\\b"] {
+            assert!(
+                validate_branch_name(name.to_string()).is_err(),
+                "expected error for {name}"
+            );
+        }
     }
 }

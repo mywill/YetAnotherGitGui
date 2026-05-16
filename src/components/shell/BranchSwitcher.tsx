@@ -1,24 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { IconChevronDown } from "@tabler/icons-react";
+import { IconChevronDown, IconPlus } from "@tabler/icons-react";
 import type { BranchInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
 import { useFilteredListNav } from "../../hooks/useFilteredListNav";
+import { validateBranchName } from "../../services/git";
 
 interface BranchSwitcherProps {
   branchName: string;
   isDetached: boolean;
 }
 
-const getBranchLabel = (b: BranchInfo) => b.name;
+type SwitcherRow = { kind: "branch"; branch: BranchInfo } | { kind: "create"; name: string };
+
+const getRowLabel = (row: SwitcherRow) => (row.kind === "branch" ? row.branch.name : row.name);
+
+const rowKey = (row: SwitcherRow) =>
+  row.kind === "branch" ? `branch:${row.branch.name}` : `create:${row.name}`;
+
+type Validation = { ok: true } | { ok: false; reason: string } | null;
 
 export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) => {
   const branches = useRepositoryStore((s) => s.branches);
   const checkoutBranch = useRepositoryStore((s) => s.checkoutBranch);
+  const createBranch = useRepositoryStore((s) => s.createBranch);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
   const [open, setOpen] = useState(false);
+  const [nameValidation, setNameValidation] = useState<Validation>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -40,7 +50,19 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
   }, []);
 
   const activate = useCallback(
-    async (branch: BranchInfo) => {
+    async (row: SwitcherRow) => {
+      if (row.kind === "create") {
+        setOpen(false);
+        try {
+          await createBranch(row.name);
+        } catch {
+          // Store action surfaces errors via toast; ignore here so the popover
+          // still closes cleanly.
+        }
+        triggerRef.current?.focus();
+        return;
+      }
+      const branch = row.branch;
       if (branch.is_head) {
         close();
         return;
@@ -57,13 +79,32 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
       }
       triggerRef.current?.focus();
     },
-    [checkoutBranch, showConfirm, close]
+    [checkoutBranch, createBranch, showConfirm, close]
   );
 
+  // Build the row list. The create row's existence depends on the typed text
+  // being valid AND not already an exact match.
+  const buildRows = useCallback(
+    (query: string): SwitcherRow[] => {
+      const branchRows: SwitcherRow[] = orderedLocals.map((branch) => ({
+        kind: "branch" as const,
+        branch,
+      }));
+      const trimmed = query.trim();
+      if (!trimmed) return branchRows;
+      const exactMatch = orderedLocals.some((b) => b.name === trimmed);
+      if (exactMatch || !nameValidation || !nameValidation.ok) return branchRows;
+      return [...branchRows, { kind: "create" as const, name: trimmed }];
+    },
+    [orderedLocals, nameValidation]
+  );
+
+  const [rows, setRows] = useState<SwitcherRow[]>(() => buildRows(""));
+
   const { query, setQuery, filtered, activeIndex, setActiveIndex, handleKeyDown } =
-    useFilteredListNav<BranchInfo>({
-      items: orderedLocals,
-      getLabel: getBranchLabel,
+    useFilteredListNav<SwitcherRow>({
+      items: rows,
+      getLabel: getRowLabel,
       open,
       onActivate: activate,
       onEscape: () => {
@@ -72,9 +113,31 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
       },
     });
 
+  // Re-validate when query changes; debounce-free is fine — invoke is sub-ms.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setNameValidation(null);
+      return;
+    }
+    let cancelled = false;
+    validateBranchName(trimmed).then((result) => {
+      if (!cancelled) setNameValidation(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
+
+  // Keep rows in sync with query + validation.
+  useEffect(() => {
+    setRows(buildRows(query));
+  }, [query, buildRows]);
+
   useEffect(() => {
     if (!open) return;
     setQuery("");
+    setNameValidation(null);
     inputRef.current?.focus();
 
     const onDocClick = (e: MouseEvent) => {
@@ -90,6 +153,9 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
   const onTriggerClick = useCallback(() => {
     setOpen((o) => !o);
   }, []);
+
+  const trimmedQuery = query.trim();
+  const showWarning = trimmedQuery.length > 0 && nameValidation !== null && !nameValidation.ok;
 
   return (
     <div ref={containerRef} className="branch-switcher relative inline-flex">
@@ -125,11 +191,13 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Filter branches"
+              placeholder="Filter or type new branch name"
               aria-label="Filter branches"
               aria-controls="branch-switcher-listbox"
               aria-activedescendant={
-                filtered[activeIndex] ? `branch-switcher-${filtered[activeIndex].name}` : undefined
+                filtered[activeIndex]
+                  ? `branch-switcher-${rowKey(filtered[activeIndex])}`
+                  : undefined
               }
               className="text-2xs font-inherit bg-bg-well text-text-primary border-border focus-ring px-card-x w-full rounded border py-1"
             />
@@ -143,30 +211,53 @@ export const BranchSwitcher = ({ branchName, isDetached }: BranchSwitcherProps) 
             {filtered.length === 0 && (
               <div className="text-text-muted text-2xs px-3 py-2">No branches match</div>
             )}
-            {filtered.map((b, i) => (
-              <div
-                key={b.name}
-                id={`branch-switcher-${b.name}`}
-                role="option"
-                aria-selected={i === activeIndex}
-                aria-current={b.is_head ? "true" : undefined}
-                onMouseEnter={() => setActiveIndex(i)}
-                onClick={() => void activate(b)}
-                className={clsx(
-                  "branch-switcher-item flex cursor-pointer items-center gap-2 px-3 py-1 text-xs",
-                  i === activeIndex && "bg-bg-hover",
-                  b.is_head && "text-accent-cyan"
-                )}
-              >
-                <span className="flex-1 truncate font-mono">{b.name}</span>
-                {b.is_head && (
-                  <span className="bg-accent-cyan/15 text-accent-cyan text-2xs rounded px-1 py-px font-medium">
-                    current
-                  </span>
-                )}
-              </div>
-            ))}
+            {filtered.map((row, i) =>
+              row.kind === "branch" ? (
+                <div
+                  key={rowKey(row)}
+                  id={`branch-switcher-${rowKey(row)}`}
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  aria-current={row.branch.is_head ? "true" : undefined}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onClick={() => void activate(row)}
+                  className={clsx(
+                    "branch-switcher-item flex cursor-pointer items-center gap-2 px-3 py-1 text-xs",
+                    i === activeIndex && "bg-bg-hover",
+                    row.branch.is_head && "text-accent-cyan"
+                  )}
+                >
+                  <span className="flex-1 truncate font-mono">{row.branch.name}</span>
+                  {row.branch.is_head && (
+                    <span className="bg-accent-cyan/15 text-accent-cyan text-2xs rounded px-1 py-px font-medium">
+                      current
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div
+                  key={rowKey(row)}
+                  id={`branch-switcher-${rowKey(row)}`}
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onClick={() => void activate(row)}
+                  className={clsx(
+                    "branch-switcher-item branch-switcher-create flex cursor-pointer items-center gap-2 px-3 py-1 text-xs italic",
+                    i === activeIndex && "bg-bg-hover"
+                  )}
+                >
+                  <IconPlus size={12} stroke={2} className="shrink-0 opacity-80" aria-hidden />
+                  <span className="flex-1 truncate font-mono">Create &lsquo;{row.name}&rsquo;</span>
+                </div>
+              )
+            )}
           </div>
+          {showWarning && nameValidation && !nameValidation.ok && (
+            <div className="branch-switcher-warning border-border text-text-muted text-2xs border-t px-3 py-1.5">
+              ⚠ {nameValidation.reason}
+            </div>
+          )}
         </div>
       )}
     </div>

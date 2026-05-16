@@ -52,6 +52,22 @@ export async function checkoutBranch(branchName: string): Promise<void> {
   return invoke("checkout_branch", { branchName });
 }
 
+export async function createBranch(name: string): Promise<void> {
+  return invoke("create_branch_and_checkout", { branchName: name });
+}
+
+export async function validateBranchName(
+  name: string
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    await invoke("validate_branch_name", { name });
+    return { ok: true };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason };
+  }
+}
+
 export async function getCommitFileDiff(hash: string, filePath: string): Promise<FileDiff> {
   return invoke("get_commit_file_diff", { hash, filePath });
 }

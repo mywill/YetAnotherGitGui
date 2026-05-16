@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BranchSwitcher } from "./BranchSwitcher";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { validateBranchName } from "../../services/git";
 import { mockStore } from "../../test/mockStores";
 import type { BranchInfo } from "../../types";
 
@@ -11,6 +12,9 @@ vi.mock("../../stores/repositoryStore", () => ({
 }));
 vi.mock("../../stores/dialogStore", () => ({
   useDialogStore: vi.fn(),
+}));
+vi.mock("../../services/git", () => ({
+  validateBranchName: vi.fn(),
 }));
 
 const branches: BranchInfo[] = [
@@ -22,14 +26,17 @@ const branches: BranchInfo[] = [
 
 describe("BranchSwitcher", () => {
   let checkoutBranch: ReturnType<typeof vi.fn>;
+  let createBranch: ReturnType<typeof vi.fn>;
   let showConfirm: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     checkoutBranch = vi.fn().mockResolvedValue(undefined);
+    createBranch = vi.fn().mockResolvedValue(undefined);
     showConfirm = vi.fn().mockResolvedValue(true);
-    mockStore(useRepositoryStore, { branches, checkoutBranch });
+    mockStore(useRepositoryStore, { branches, checkoutBranch, createBranch });
     mockStore(useDialogStore, { showConfirm });
+    vi.mocked(validateBranchName).mockResolvedValue({ ok: true });
   });
 
   it("renders the branch name on the trigger", () => {
@@ -113,5 +120,132 @@ describe("BranchSwitcher", () => {
     expect(showConfirm).not.toHaveBeenCalled();
     expect(checkoutBranch).not.toHaveBeenCalled();
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  describe("create branch", () => {
+    it("empty query: no create row, no warning, no validate call", () => {
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+
+      expect(screen.queryByText(/Create/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/⚠/)).not.toBeInTheDocument();
+      expect(validateBranchName).not.toHaveBeenCalled();
+    });
+
+    it("typing a valid non-matching name shows the Create row", async () => {
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      fireEvent.change(screen.getByLabelText("Filter branches"), {
+        target: { value: "feature/new" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Create ‘feature/new’")).toBeInTheDocument();
+      });
+      expect(validateBranchName).toHaveBeenCalledWith("feature/new");
+    });
+
+    it("typing a name that exactly matches an existing branch hides the Create row", async () => {
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      fireEvent.change(screen.getByLabelText("Filter branches"), {
+        target: { value: "feature/auth" },
+      });
+
+      await waitFor(() => {
+        expect(validateBranchName).toHaveBeenCalled();
+      });
+
+      expect(screen.getByText("feature/auth")).toBeInTheDocument();
+      expect(screen.queryByText(/Create ‘feature\/auth’/)).not.toBeInTheDocument();
+    });
+
+    it("typing an invalid name hides the Create row and shows the warning", async () => {
+      vi.mocked(validateBranchName).mockResolvedValue({
+        ok: false,
+        reason: "invalid branch name",
+      });
+
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      fireEvent.change(screen.getByLabelText("Filter branches"), {
+        target: { value: "bad name" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/invalid branch name/)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Create ‘bad name’/)).not.toBeInTheDocument();
+    });
+
+    it("clicking the Create row calls createBranch and closes the popover", async () => {
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      fireEvent.change(screen.getByLabelText("Filter branches"), {
+        target: { value: "feature/new" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Create ‘feature/new’")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Create ‘feature/new’"));
+
+      expect(createBranch).toHaveBeenCalledWith("feature/new");
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
+
+    it("Enter when the Create row is active calls createBranch", async () => {
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      const input = screen.getByLabelText("Filter branches");
+      // Type a name that doesn't match any existing branch — Create row becomes the only filtered row.
+      fireEvent.change(input, { target: { value: "feature/new" } });
+
+      await waitFor(() => {
+        expect(screen.getByText("Create ‘feature/new’")).toBeInTheDocument();
+      });
+
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      expect(createBranch).toHaveBeenCalledWith("feature/new");
+    });
+
+    it("popover still closes when createBranch rejects", async () => {
+      createBranch.mockRejectedValue(new Error("boom"));
+
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      fireEvent.change(screen.getByLabelText("Filter branches"), {
+        target: { value: "feature/new" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Create ‘feature/new’")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Create ‘feature/new’"));
+
+      await waitFor(() => {
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      });
+    });
+
+    it("validate is called once per distinct query value", async () => {
+      render(<BranchSwitcher branchName="main" isDetached={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Switch branch" }));
+      const input = screen.getByLabelText("Filter branches");
+
+      fireEvent.change(input, { target: { value: "a" } });
+      fireEvent.change(input, { target: { value: "ab" } });
+      fireEvent.change(input, { target: { value: "abc" } });
+
+      await waitFor(() => {
+        expect(validateBranchName).toHaveBeenCalledTimes(3);
+      });
+      expect(validateBranchName).toHaveBeenNthCalledWith(1, "a");
+      expect(validateBranchName).toHaveBeenNthCalledWith(2, "ab");
+      expect(validateBranchName).toHaveBeenNthCalledWith(3, "abc");
+    });
   });
 });

@@ -90,7 +90,7 @@ export const tauriMocks = `
           }
           return {
             path: args?.path || '/mock/repo/path',
-            current_branch: 'main',
+            current_branch: window.__MOCK_NEW_BRANCH__ || 'main',
             is_detached: false,
             remotes: ['origin'],
             head_hash: 'abc123def456789',
@@ -110,7 +110,7 @@ export const tauriMocks = `
           }
           return {
             path: '/mock/repo/path',
-            current_branch: 'main',
+            current_branch: window.__MOCK_NEW_BRANCH__ || 'main',
             is_detached: false,
             remotes: ['origin'],
             head_hash: 'abc123def456789',
@@ -324,13 +324,14 @@ export const tauriMocks = `
         case 'create_commit':
           return 'new-commit-hash-123';
 
-        case 'list_branches':
+        case 'list_branches': {
           if (window.__MOCK_EMPTY_REPO__) return [];
-          return [
+          const newBranch = window.__MOCK_NEW_BRANCH__;
+          const base = [
             {
               name: 'main',
               is_remote: false,
-              is_head: true,
+              is_head: !newBranch,
               target_hash: 'abc123def456789',
               upstream: 'origin/main',
               ahead: 2,
@@ -364,6 +365,38 @@ export const tauriMocks = `
               last_commit_time: Math.floor(Date.now() / 1000) - 7200
             }
           ];
+          if (newBranch) {
+            base.push({
+              name: newBranch,
+              is_remote: false,
+              is_head: true,
+              target_hash: 'abc123def456789',
+              upstream: null,
+              ahead: 0,
+              behind: 0,
+              last_commit_summary: 'Initial commit',
+              last_commit_author: 'Test User',
+              last_commit_time: Math.floor(Date.now() / 1000)
+            });
+          }
+          return base;
+        }
+
+        case 'validate_branch_name': {
+          const name = args?.name || '';
+          // Mirror git's essentials well enough for e2e: no spaces, no leading -,
+          // not empty, no special chars.
+          if (!name) throw new Error('invalid branch name');
+          if (/\\s/.test(name)) throw new Error('invalid branch name');
+          if (name.startsWith('-')) throw new Error('invalid branch name');
+          if (/[~^:?*]/.test(name)) throw new Error('invalid branch name');
+          if (name.includes('..')) throw new Error('invalid branch name');
+          return undefined;
+        }
+
+        case 'create_branch_and_checkout':
+          window.__MOCK_NEW_BRANCH__ = args?.branchName || args?.name;
+          return undefined;
 
         case 'list_tags':
           if (window.__MOCK_EMPTY_REPO__) return [];

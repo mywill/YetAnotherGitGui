@@ -555,4 +555,49 @@ describe("git service", () => {
       expect(result).toEqual(mockHunk);
     });
   });
+
+  describe("createBranch", () => {
+    it("invokes create_branch_and_checkout with branchName", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      await git.createBranch("feature/new");
+
+      expect(invoke).toHaveBeenCalledWith("create_branch_and_checkout", {
+        branchName: "feature/new",
+      });
+    });
+
+    it("propagates errors from the backend", async () => {
+      vi.mocked(invoke).mockRejectedValue(new Error("branch already exists"));
+
+      await expect(git.createBranch("existing")).rejects.toThrow("branch already exists");
+    });
+  });
+
+  describe("validateBranchName", () => {
+    it("returns { ok: true } when invoke resolves", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+
+      const result = await git.validateBranchName("feature/foo");
+
+      expect(invoke).toHaveBeenCalledWith("validate_branch_name", { name: "feature/foo" });
+      expect(result).toEqual({ ok: true });
+    });
+
+    it("returns { ok: false, reason } when invoke rejects with an Error", async () => {
+      vi.mocked(invoke).mockRejectedValue(new Error("invalid branch name"));
+
+      const result = await git.validateBranchName("bad name");
+
+      expect(result).toEqual({ ok: false, reason: "invalid branch name" });
+    });
+
+    it("returns { ok: false, reason } when invoke rejects with a string", async () => {
+      vi.mocked(invoke).mockRejectedValue("some git2 message");
+
+      const result = await git.validateBranchName("name");
+
+      expect(result).toEqual({ ok: false, reason: "some git2 message" });
+    });
+  });
 });

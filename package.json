@@ -36,7 +36,7 @@
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "lint:rust": "cd src-tauri && cargo clippy -- -D warnings",
+    "lint:rust": "cd src-tauri && cargo clippy -- -D warnings && cargo fmt --check",
     "format:rust": "cd src-tauri && cargo fmt",
     "check": "bash scripts/check.sh"
   },

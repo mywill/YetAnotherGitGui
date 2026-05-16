@@ -1894,3 +1894,52 @@ test.describe("Launch-time update check", () => {
     await expect(page.locator(".notification-toast-success")).toHaveCount(0);
   });
 });
+
+test.describe("Create branch from BranchSwitcher", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("typing a new name shows Create row, clicking it creates and updates status bar", async ({
+    page,
+  }) => {
+    const trigger = page.locator(".branch-switcher-trigger");
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+
+    const filter = page.getByLabel("Filter branches");
+    await filter.fill("feature/new");
+
+    const createRow = page.locator(".branch-switcher-create");
+    await expect(createRow).toBeVisible();
+    await expect(createRow).toContainText("Create");
+    await expect(createRow).toContainText("feature/new");
+
+    await createRow.click();
+
+    // Popover closes
+    await expect(page.locator(".branch-switcher-popover")).not.toBeVisible();
+    // Status bar trigger now shows the new branch
+    await expect(trigger).toContainText("feature/new");
+  });
+
+  test("invalid name hides Create row and shows warning", async ({ page }) => {
+    await page.locator(".branch-switcher-trigger").click();
+    await page.getByLabel("Filter branches").fill("bad name");
+
+    await expect(page.locator(".branch-switcher-warning")).toBeVisible();
+    await expect(page.locator(".branch-switcher-create")).toHaveCount(0);
+  });
+
+  test("exact match with existing branch hides the Create row", async ({ page }) => {
+    await page.locator(".branch-switcher-trigger").click();
+    await page.getByLabel("Filter branches").fill("feature/test");
+
+    // Existing branch row is visible; no Create row should appear.
+    await expect(page.locator(".branch-switcher-item").filter({ hasText: "feature/test" }))
+      .toBeVisible();
+    await expect(page.locator(".branch-switcher-create")).toHaveCount(0);
+  });
+});

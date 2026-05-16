@@ -117,6 +117,7 @@ interface RepositoryState {
   // Sidebar actions
   loadBranchesAndTags: () => Promise<void>;
   checkoutBranch: (branchName: string) => Promise<void>;
+  createBranch: (name: string) => Promise<void>;
   deleteBranch: (branchName: string, isRemote: boolean) => Promise<void>;
   deleteTag: (tagName: string) => Promise<void>;
 
@@ -607,6 +608,19 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().refreshRepository();
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+    }
+  },
+
+  createBranch: async (name: string) => {
+    try {
+      await git.createBranch(name);
+      // Same refresh path as checkoutBranch — repositoryInfo update triggers
+      // the App.tsx effect that reloads branches.
+      await get().refreshRepository();
+    } catch (err) {
+      useNotificationStore
+        .getState()
+        .showError(`Failed to create branch: ${cleanErrorMessage(String(err))}`);
     }
   },
 

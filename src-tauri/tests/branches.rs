@@ -337,3 +337,91 @@ fn checkout_branch_logic_routes_through_set_head() {
 
     assert_eq!(repo.head().unwrap().shorthand(), Some("audit-test"));
 }
+
+// Mirror of `create_branch_and_checkout` — same reason as `delete_branch_logic`.
+fn create_branch_and_checkout_logic(repo: &Repository, branch_name: &str) -> Result<(), AppError> {
+    let head_commit = repo.head()?.peel_to_commit()?;
+    repo.branch(branch_name, &head_commit, false)?;
+    let branch = repo.find_branch(branch_name, BranchType::Local)?;
+    let reference = branch.get();
+    let commit = reference.peel_to_commit()?;
+    let tree = commit.tree()?;
+    repo.checkout_tree(tree.as_object(), None)?;
+    let refname = reference
+        .name()
+        .ok_or_else(|| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
+    repo.set_head(refname)?;
+    Ok(())
+}
+
+#[test]
+fn create_branch_and_checkout_succeeds_at_head() {
+    let (temp_dir, repo) = create_test_repo();
+    create_initial_commit(&repo, &temp_dir);
+
+    let result = create_branch_and_checkout_logic(&repo, "feature/new");
+    assert!(result.is_ok(), "expected create to succeed, got {result:?}");
+
+    assert!(repo.find_branch("feature/new", BranchType::Local).is_ok());
+    assert_eq!(repo.head().unwrap().shorthand(), Some("feature/new"));
+}
+
+#[test]
+fn create_branch_and_checkout_rejects_duplicate() {
+    let (temp_dir, repo) = create_test_repo();
+    let oid = create_initial_commit(&repo, &temp_dir);
+    let commit = repo.find_commit(oid).unwrap();
+    repo.branch("existing", &commit, false).unwrap();
+
+    let head_before = repo.head().unwrap().shorthand().map(String::from);
+    let result = create_branch_and_checkout_logic(&repo, "existing");
+    assert!(result.is_err(), "expected duplicate to fail");
+    assert_eq!(
+        repo.head().unwrap().shorthand().map(String::from),
+        head_before,
+        "HEAD should not have moved after a failed create"
+    );
+}
+
+#[test]
+fn create_branch_and_checkout_rejects_invalid_name() {
+    let (temp_dir, repo) = create_test_repo();
+    create_initial_commit(&repo, &temp_dir);
+
+    let result = create_branch_and_checkout_logic(&repo, "bad name");
+    assert!(result.is_err(), "expected invalid name to fail");
+    assert!(repo.find_branch("bad name", BranchType::Local).is_err());
+}
+
+#[test]
+fn create_branch_and_checkout_uses_current_head() {
+    let (temp_dir, repo) = create_test_repo();
+    create_initial_commit(&repo, &temp_dir);
+    let second_oid =
+        create_commit_with_file(&repo, &temp_dir, "second.txt", "second", "second commit");
+
+    create_branch_and_checkout_logic(&repo, "from-head").unwrap();
+
+    let branch = repo.find_branch("from-head", BranchType::Local).unwrap();
+    let target = branch.get().peel_to_commit().unwrap().id();
+    assert_eq!(
+        target, second_oid,
+        "new branch should point at current HEAD"
+    );
+}
+
+#[test]
+fn create_branch_and_checkout_flips_head_to_new_branch() {
+    let (temp_dir, repo) = create_test_repo();
+    let main_oid = create_initial_commit(&repo, &temp_dir);
+    let main_name = repo.head().unwrap().shorthand().map(String::from).unwrap();
+
+    create_branch_and_checkout_logic(&repo, "feature").unwrap();
+
+    assert_eq!(repo.head().unwrap().shorthand(), Some("feature"));
+    let original = repo
+        .find_branch(&main_name, BranchType::Local)
+        .expect("original branch should still exist");
+    let original_target = original.get().peel_to_commit().unwrap().id();
+    assert_eq!(original_target, main_oid);
+}
