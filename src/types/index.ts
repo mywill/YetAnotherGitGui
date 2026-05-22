@@ -149,3 +149,9 @@ export interface StashDetails {
   branch_name: string;
   files_changed: CommitFileChange[];
 }
+
+export interface BulkResult {
+  item: string;
+  success: boolean;
+  error: string | null;
+}

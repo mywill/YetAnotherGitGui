@@ -10,6 +10,7 @@ import type {
   TagInfo,
   StashInfo,
   StashDetails,
+  BulkResult,
 } from "../types";
 
 export async function getCurrentDir(): Promise<string> {
@@ -206,4 +207,36 @@ export async function getCommitDiffHunk(
   hunkIndex: number
 ): Promise<DiffHunk> {
   return invoke("get_commit_diff_hunk", { hash, filePath, hunkIndex });
+}
+
+export async function listGoneBranches(): Promise<BranchInfo[]> {
+  return invoke("list_gone_branches");
+}
+
+export async function listMergedBranches(): Promise<BranchInfo[]> {
+  return invoke("list_merged_branches");
+}
+
+export async function deleteBranches(names: string[]): Promise<BulkResult[]> {
+  return invoke("delete_branches", { names });
+}
+
+export async function pruneRemote(remote: string): Promise<string[]> {
+  return invoke("prune_remote", { remote });
+}
+
+export async function listOldStashes(daysOld: number): Promise<StashInfo[]> {
+  return invoke("list_old_stashes", { daysOld });
+}
+
+export async function dropStashes(indices: number[]): Promise<BulkResult[]> {
+  return invoke("drop_stashes", { indices });
+}
+
+export async function listUntrackedFiles(): Promise<string[]> {
+  return invoke("list_untracked_files");
+}
+
+export async function cleanUntrackedFiles(paths: string[]): Promise<BulkResult[]> {
+  return invoke("clean_untracked_files", { paths });
 }

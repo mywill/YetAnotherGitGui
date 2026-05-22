@@ -6,7 +6,7 @@ use crate::state::AppState;
 
 #[tauri::command]
 pub fn list_stashes(state: State<AppState>) -> Result<Vec<git::StashInfo>, AppError> {
-    let mut repo = state.get_repo_mut()?;
+    let mut repo = state.get_repo()?;
 
     git::list_stashes(&mut repo)
 }
@@ -16,21 +16,21 @@ pub fn get_stash_details(
     index: usize,
     state: State<AppState>,
 ) -> Result<git::StashDetails, AppError> {
-    let mut repo = state.get_repo_mut()?;
+    let mut repo = state.get_repo()?;
 
     git::get_stash_details(&mut repo, index)
 }
 
 #[tauri::command]
 pub fn apply_stash(index: usize, state: State<AppState>) -> Result<(), AppError> {
-    let mut repo = state.get_repo_mut()?;
+    let mut repo = state.get_repo()?;
 
     git::apply_stash(&mut repo, index)
 }
 
 #[tauri::command]
 pub fn drop_stash(index: usize, state: State<AppState>) -> Result<(), AppError> {
-    let mut repo = state.get_repo_mut()?;
+    let mut repo = state.get_repo()?;
 
     git::drop_stash(&mut repo, index)
 }
@@ -41,7 +41,7 @@ pub fn get_stash_file_diff(
     file_path: String,
     state: State<AppState>,
 ) -> Result<git::FileDiff, AppError> {
-    let mut repo = state.get_repo_mut()?;
+    let mut repo = state.get_repo()?;
 
     git::get_stash_file_diff(&mut repo, index, &file_path)
 }

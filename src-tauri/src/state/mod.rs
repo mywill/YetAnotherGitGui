@@ -26,11 +26,6 @@ impl AppState {
         MutexGuard::try_map(self.repository.lock(), |opt| opt.as_mut())
             .map_err(|_| AppError::NoRepository)
     }
-
-    pub fn get_repo_mut(&self) -> Result<MappedMutexGuard<'_, Repository>, AppError> {
-        MutexGuard::try_map(self.repository.lock(), |opt| opt.as_mut())
-            .map_err(|_| AppError::NoRepository)
-    }
 }
 
 impl Default for AppState {

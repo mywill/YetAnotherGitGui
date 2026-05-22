@@ -265,7 +265,7 @@ describe("StashItem", () => {
       await waitFor(() => {
         expect(screen.getByText("Copy Name")).toBeInTheDocument();
         expect(screen.getByText("Apply")).toBeInTheDocument();
-        expect(screen.getByText("Delete")).toBeInTheDocument();
+        expect(screen.getByText("Drop")).toBeInTheDocument();
       });
     });
 
@@ -319,7 +319,7 @@ describe("StashItem", () => {
       });
     });
 
-    it("delete menu item shows confirmation dialog", async () => {
+    it("drop menu item shows confirmation dialog", async () => {
       const stash: StashInfo = {
         index: 0,
         message: "WIP on main: abc123 Test stash",
@@ -333,22 +333,22 @@ describe("StashItem", () => {
       fireEvent.contextMenu(item!);
 
       await waitFor(() => {
-        expect(screen.getByText("Delete")).toBeInTheDocument();
+        expect(screen.getByText("Drop")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Delete"));
+      fireEvent.click(screen.getByText("Drop"));
 
       await waitFor(() => {
         expect(mockShowConfirm).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "Delete Stash",
+            title: "Drop stash",
             message: expect.stringContaining("stash@{0}"),
           })
         );
       });
     });
 
-    it("delete calls dropStash when confirmed", async () => {
+    it("drop calls dropStash when confirmed", async () => {
       const stash: StashInfo = {
         index: 1,
         message: "WIP on main: abc123 Test stash",
@@ -362,10 +362,10 @@ describe("StashItem", () => {
       fireEvent.contextMenu(item!);
 
       await waitFor(() => {
-        expect(screen.getByText("Delete")).toBeInTheDocument();
+        expect(screen.getByText("Drop")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Delete"));
+      fireEvent.click(screen.getByText("Drop"));
 
       await waitFor(() => {
         expect(mockDropStash).toHaveBeenCalledWith(1);

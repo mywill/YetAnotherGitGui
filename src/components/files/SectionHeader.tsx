@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { YaggButton } from "../common/YaggButton";
 
 export const SECTION_ACTION_BTN_CLASS =
-  "section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex h-6 items-center gap-1 bg-transparent px-2 text-xs";
+  "section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex h-6 items-center gap-1 bg-transparent px-2 text-xs disabled:cursor-not-allowed";
 
 interface SectionHeaderProps {
   title: string;
@@ -33,6 +33,7 @@ interface SectionActionButtonProps {
   title: string;
   ariaLabel: string;
   children: ReactNode;
+  disabled?: boolean;
 }
 
 export function SectionActionButton({
@@ -40,6 +41,7 @@ export function SectionActionButton({
   title,
   ariaLabel,
   children,
+  disabled,
 }: SectionActionButtonProps) {
   return (
     <YaggButton
@@ -47,6 +49,7 @@ export function SectionActionButton({
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
+      disabled={disabled}
     >
       {children}
     </YaggButton>

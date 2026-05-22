@@ -6,6 +6,7 @@ import {
   switchToHistoryView,
   switchToBranchesView,
   switchToStashesView,
+  switchToCleanupView,
   expandBranchSection,
 } from "./helpers";
 import { assertContrastClean } from "./contrast-helper";
@@ -852,9 +853,9 @@ test.describe("Stash Operations", () => {
     const contextMenu = page.locator(".context-menu");
     await expect(contextMenu).toBeVisible();
 
-    // Should have Apply and Delete options
+    // Should have Apply and Drop options
     await expect(contextMenu.getByText("Apply")).toBeVisible();
-    await expect(contextMenu.getByText("Delete")).toBeVisible();
+    await expect(contextMenu.getByText("Drop")).toBeVisible();
   });
 });
 
@@ -1943,3 +1944,48 @@ test.describe("Create branch from BranchSwitcher", () => {
     await expect(page.locator(".branch-switcher-create")).toHaveCount(0);
   });
 });
+
+test.describe("Cleanup View", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(tauriMocks);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("renders all cleanup sections collapsed by default", async ({ page }) => {
+    await switchToCleanupView(page);
+
+    // Section headers are always visible.
+    const view = page.locator(".cleanup-view");
+    await expect(view.getByText("Branches with deleted remote", { exact: true })).toBeVisible();
+    await expect(view.getByText("Merged branches", { exact: true })).toBeVisible();
+    await expect(view.getByText("Stashes older than 30 days", { exact: true })).toBeVisible();
+    await expect(view.getByText("Untracked files", { exact: true })).toBeVisible();
+    await expect(view.getByText("Prune remote refs", { exact: true })).toBeVisible();
+    // ...but inner items are hidden until expanded.
+    await expect(view.getByText("feature/old")).toBeHidden();
+  });
+
+  test("expanding gone-branches section reveals the mocked branch", async ({ page }) => {
+    await switchToCleanupView(page);
+    await page.getByRole("button", { name: "Toggle Branches with deleted remote" }).click();
+    await expect(page.locator(".cleanup-view").getByText("feature/old")).toBeVisible();
+  });
+
+  test("Select all + Delete shows confirm dialog", async ({ page }) => {
+    await switchToCleanupView(page);
+
+    // Expand the gone-branches section first.
+    await page.getByRole("button", { name: "Toggle Branches with deleted remote" }).click();
+    await expect(page.locator(".cleanup-view").getByText("feature/old")).toBeVisible();
+
+    const goneSection = page
+      .locator(".cleanup-section")
+      .filter({ hasText: "Branches with deleted remote" });
+    await goneSection.getByRole("button", { name: "Select all" }).click();
+    await goneSection.getByRole("button", { name: /Delete 1 selected/i }).click();
+
+    await expect(page.getByText(/Delete 1 branch/)).toBeVisible();
+  });
+});
+

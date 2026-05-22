@@ -60,19 +60,21 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="dialog-title"
       >
-        <div className="confirm-dialog-header border-border border-b p-3">
-          <h2 id="dialog-title" className="text-text-primary font-semibold">
+        <div className="confirm-dialog-header border-border border-b px-4 py-3">
+          <h2 id="dialog-title" className="text-text-primary text-base font-semibold">
             {title}
           </h2>
         </div>
-        <div className="confirm-dialog-body max-h-96 overflow-y-auto p-3">
+        <div className="confirm-dialog-body max-h-96 overflow-y-auto px-4 py-4">
           {typeof message === "string" ? (
-            <p className="text-text-muted text-xs leading-normal whitespace-pre-line">{message}</p>
+            <p className="text-text-primary/70 text-sm leading-relaxed whitespace-pre-line">
+              {message}
+            </p>
           ) : (
             message
           )}
         </div>
-        <div className="confirm-dialog-actions border-border flex justify-end gap-2 border-t p-3">
+        <div className="confirm-dialog-actions border-border flex justify-end gap-3 border-t px-4 py-4">
           <YaggButton
             variant="outline"
             className="dialog-btn cancel text-text-muted hover:border-text-muted hover:bg-bg-hover text-xs transition-all duration-150"

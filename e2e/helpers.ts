@@ -46,3 +46,10 @@ export async function switchToStashesView(page: Page) {
   await stashesTab.click();
   await page.waitForSelector(".stash-list", { timeout: 10000 });
 }
+
+/** Switch to the Cleanup tab and wait for it to load. */
+export async function switchToCleanupView(page: Page) {
+  const cleanupTab = page.locator('button[role="tab"][aria-label="Cleanup"]');
+  await cleanupTab.click();
+  await page.waitForSelector(".cleanup-view", { timeout: 10000 });
+}

@@ -178,6 +178,32 @@ describe("settingsStore", () => {
     });
   });
 
+  describe("toggleSectionExpanded", () => {
+    beforeEach(() => {
+      // The outer beforeEach doesn't reset sectionExpanded, so do it here
+      // to keep these tests isolated from each other.
+      useSettingsStore.setState({ sectionExpanded: {} });
+    });
+
+    it("flips an unset key to true on first toggle", () => {
+      useSettingsStore.getState().toggleSectionExpanded("cleanup.gone");
+      expect(useSettingsStore.getState().sectionExpanded["cleanup.gone"]).toBe(true);
+    });
+
+    it("flips back to false on a second toggle", () => {
+      useSettingsStore.getState().toggleSectionExpanded("cleanup.gone");
+      useSettingsStore.getState().toggleSectionExpanded("cleanup.gone");
+      expect(useSettingsStore.getState().sectionExpanded["cleanup.gone"]).toBe(false);
+    });
+
+    it("does not clobber other keys when toggling one key", () => {
+      useSettingsStore.getState().setSectionExpanded("cleanup.merged", true);
+      useSettingsStore.getState().toggleSectionExpanded("cleanup.gone");
+      expect(useSettingsStore.getState().sectionExpanded["cleanup.merged"]).toBe(true);
+      expect(useSettingsStore.getState().sectionExpanded["cleanup.gone"]).toBe(true);
+    });
+  });
+
   describe("persistence", () => {
     it("calls writeSettings on density change", async () => {
       const { writeSettings } = await import("../services/settings");

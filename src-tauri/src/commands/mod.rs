@@ -1,4 +1,5 @@
 pub mod branches;
+pub mod cleanup;
 pub mod commit;
 pub mod commits;
 pub mod diff;
@@ -10,6 +11,7 @@ pub mod system;
 pub mod terminal;
 
 pub use branches::*;
+pub use cleanup::*;
 pub use commit::*;
 pub use commits::*;
 pub use diff::*;

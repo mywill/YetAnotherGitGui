@@ -1,4 +1,4 @@
-mod commands;
+pub mod commands;
 pub mod crash_handler;
 pub mod error;
 pub mod git;
@@ -64,6 +64,14 @@ pub fn run() {
             commands::apply_stash,
             commands::drop_stash,
             commands::get_stash_file_diff,
+            commands::list_gone_branches,
+            commands::list_merged_branches,
+            commands::delete_branches,
+            commands::prune_remote,
+            commands::list_old_stashes,
+            commands::drop_stashes,
+            commands::list_untracked_files,
+            commands::clean_untracked_files,
             commands::write_update_log,
             commands::get_update_log_path,
             commands::read_settings,

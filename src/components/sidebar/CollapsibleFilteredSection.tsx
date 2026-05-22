@@ -42,15 +42,15 @@ export function CollapsibleFilteredSection<T extends { name: string }>({
   const count = isFiltering ? filtered.length : items.length;
 
   return (
-    <div className="collapsible-section filterable-section border-border border-b">
+    <div className="collapsible-section filterable-section border-border overflow-hidden rounded border">
       <div
-        className="section-header-row py-header-y flex items-center gap-2 px-3"
+        className="section-header-row bg-bg-well border-border flex items-center gap-2 border-b px-2 py-1.5 text-xs"
         role="group"
         aria-label={`${title} section`}
       >
         <button
           type="button"
-          className="section-chevron text-text-muted hover:text-text-primary flex min-w-0 flex-1 shrink cursor-pointer items-center gap-1 bg-transparent"
+          className="section-chevron text-text-primary hover:text-text-primary flex min-w-0 flex-1 shrink cursor-pointer items-center gap-2 bg-transparent text-left"
           onClick={onToggle}
           aria-expanded={effectiveExpanded}
           aria-label={`Toggle ${title}`}
@@ -64,14 +64,12 @@ export function CollapsibleFilteredSection<T extends { name: string }>({
           >
             <IconChevronRight size={10} stroke={2} aria-hidden />
           </span>
-          <span className="section-title text-2xs truncate font-mono font-medium tracking-widest uppercase">
-            {title}
-          </span>
+          <span className="section-title truncate font-medium">{title}</span>
         </button>
 
         <span
           className={clsx(
-            "section-count bg-bg-well text-2xs inline-flex w-8 shrink-0 items-center justify-center rounded-full px-1.5 py-px font-mono tabular-nums",
+            "section-count bg-bg-canvas text-2xs inline-flex min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 py-px font-mono tabular-nums",
             isFiltering && count === 0 && "text-text-muted opacity-60"
           )}
           aria-label={`${count} ${isFiltering ? "matches" : "items"}`}

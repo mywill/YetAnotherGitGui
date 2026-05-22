@@ -14,7 +14,7 @@ export function BranchTagList() {
   }, [filterQuery]);
 
   return (
-    <div className="branch-tag-list flex flex-col">
+    <div className="branch-tag-list flex flex-col gap-3">
       <BranchList filterQuery={debouncedQuery} />
       <TagList filterQuery={debouncedQuery} />
     </div>

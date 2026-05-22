@@ -19,6 +19,10 @@ vi.mock("./StashesView", () => ({
   StashesView: () => <div data-testid="stashes-view">StashesView</div>,
 }));
 
+vi.mock("../views/CleanupView", () => ({
+  CleanupView: () => <div data-testid="cleanup-view">CleanupView</div>,
+}));
+
 describe("WorkspaceCenter", () => {
   beforeEach(() => {
     useSelectionStore.setState({ activeView: "status" });
@@ -55,6 +59,15 @@ describe("WorkspaceCenter", () => {
     render(<WorkspaceCenter />);
 
     expect(screen.getByTestId("stashes-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("status-view")).not.toBeInTheDocument();
+  });
+
+  it("renders CleanupView when activeView is cleanup", () => {
+    useSelectionStore.setState({ activeView: "cleanup" });
+
+    render(<WorkspaceCenter />);
+
+    expect(screen.getByTestId("cleanup-view")).toBeInTheDocument();
     expect(screen.queryByTestId("status-view")).not.toBeInTheDocument();
   });
 

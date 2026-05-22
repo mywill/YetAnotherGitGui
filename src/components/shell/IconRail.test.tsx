@@ -14,11 +14,11 @@ describe("IconRail", () => {
     expect(screen.getByRole("tablist", { name: "Navigation" })).toBeInTheDocument();
   });
 
-  it("renders four tab buttons", () => {
+  it("renders five tab buttons", () => {
     render(<IconRail />);
 
     const tabs = screen.getAllByRole("tab");
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(5);
   });
 
   it("renders tabs with correct aria-labels", () => {
@@ -28,6 +28,7 @@ describe("IconRail", () => {
     expect(screen.getByRole("tab", { name: "History" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Branches & Tags" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Stashes" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Cleanup" })).toBeInTheDocument();
   });
 
   it("marks the active tab with aria-selected=true", () => {

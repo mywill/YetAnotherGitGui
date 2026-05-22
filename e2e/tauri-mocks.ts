@@ -470,6 +470,49 @@ export const tauriMocks = `
         case 'drop_stash':
           return undefined;
 
+        case 'list_gone_branches':
+          return window.__MOCK_GONE_BRANCHES__ ?? [
+            {
+              name: 'feature/old',
+              is_remote: false,
+              is_head: false,
+              target_hash: 'aaa111',
+              upstream: null,
+              ahead: 0,
+              behind: 0,
+              last_commit_summary: 'Add stuff',
+              last_commit_author: 'Test User',
+              last_commit_time: Math.floor(Date.now() / 1000) - 86400 * 30
+            }
+          ];
+
+        case 'list_merged_branches':
+          return window.__MOCK_MERGED_BRANCHES__ ?? [];
+
+        case 'delete_branches': {
+          const names = args?.names ?? [];
+          return names.map((name) => ({ item: name, success: true, error: null }));
+        }
+
+        case 'prune_remote':
+          return window.__MOCK_PRUNED_REFS__ ?? [];
+
+        case 'list_old_stashes':
+          return window.__MOCK_OLD_STASHES__ ?? [];
+
+        case 'drop_stashes': {
+          const indices = args?.indices ?? [];
+          return indices.map((i) => ({ item: \`stash@{\${i}}\`, success: true, error: null }));
+        }
+
+        case 'list_untracked_files':
+          return window.__MOCK_UNTRACKED_FILES__ ?? [];
+
+        case 'clean_untracked_files': {
+          const paths = args?.paths ?? [];
+          return paths.map((p) => ({ item: p, success: true, error: null }));
+        }
+
         case 'check_cli_installed':
           return window.__MOCK_CLI_INSTALLED__ !== undefined ? window.__MOCK_CLI_INSTALLED__ : true;
 

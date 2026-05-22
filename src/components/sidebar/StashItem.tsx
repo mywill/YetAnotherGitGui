@@ -8,6 +8,7 @@ import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
 import { cleanStashMessage } from "../../utils/stashMessage";
+import { buildStashDropMessage } from "../../utils/dialogText";
 import { SidebarListItem } from "./SidebarListItem";
 
 interface StashItemProps {
@@ -69,15 +70,15 @@ export function StashItem({ stash }: StashItemProps) {
   const handleDelete = useCallback(async () => {
     closeContextMenu();
     const confirmed = await showConfirm({
-      title: "Delete Stash",
-      message: `Delete "${stashName}"? This cannot be undone.`,
-      confirmLabel: "Delete",
+      title: "Drop stash",
+      message: buildStashDropMessage([stash]),
+      confirmLabel: "Drop",
       cancelLabel: "Cancel",
     });
     if (confirmed) {
       dropStash(stash.index);
     }
-  }, [stash.index, stashName, closeContextMenu, dropStash, showConfirm]);
+  }, [stash, closeContextMenu, dropStash, showConfirm]);
 
   const contextMenuItems = [
     {
@@ -89,7 +90,7 @@ export function StashItem({ stash }: StashItemProps) {
       onClick: handleApply,
     },
     {
-      label: "Delete",
+      label: "Drop",
       onClick: handleDelete,
     },
   ];

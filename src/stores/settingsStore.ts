@@ -23,6 +23,7 @@ interface SettingsState {
   setTheme: (t: Theme) => void;
   setLayoutSize: (key: string, px: number) => void;
   setSectionExpanded: (key: string, value: boolean) => void;
+  toggleSectionExpanded: (key: string) => void;
   setAutoCheckForUpdates: (value: boolean) => void;
 }
 
@@ -35,6 +36,7 @@ const DEFAULTS: Omit<
   | "setTheme"
   | "setLayoutSize"
   | "setSectionExpanded"
+  | "toggleSectionExpanded"
   | "setAutoCheckForUpdates"
 > = {
   density: "compact",
@@ -152,6 +154,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setSectionExpanded: (key, value) => {
     set((s) => ({
       sectionExpanded: { ...s.sectionExpanded, [key]: value },
+    }));
+    persistDebounced(get, true);
+  },
+
+  toggleSectionExpanded: (key) => {
+    set((s) => ({
+      sectionExpanded: { ...s.sectionExpanded, [key]: !s.sectionExpanded[key] },
     }));
     persistDebounced(get, true);
   },
