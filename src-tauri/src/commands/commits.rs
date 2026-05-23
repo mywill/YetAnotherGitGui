@@ -5,21 +5,6 @@ use crate::git;
 use crate::state::AppState;
 
 #[tauri::command]
-pub fn get_commit_graph(
-    skip: usize,
-    limit: usize,
-    state: State<AppState>,
-) -> Result<Vec<git::GraphCommit>, AppError> {
-    let repo = state.get_repo()?;
-
-    let commits = git::get_commits(&repo, skip, limit)?;
-    let refs = git::collect_refs(&repo)?;
-    let graph = git::build_commit_graph(commits, refs);
-
-    Ok(graph)
-}
-
-#[tauri::command]
 pub async fn get_all_commit_graph(
     state: State<'_, AppState>,
 ) -> Result<Vec<git::GraphCommit>, AppError> {

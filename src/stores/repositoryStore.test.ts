@@ -215,6 +215,32 @@ describe("repositoryStore", () => {
 
       expect(mockShowError).toHaveBeenCalledWith("Error: Stage failed");
     });
+
+    it("does not refresh diff when a different file is being viewed", async () => {
+      useRepositoryStore.setState({
+        currentDiffPath: "other.ts",
+        currentDiffStaged: false,
+      });
+
+      vi.mocked(git.stageFile).mockResolvedValue(undefined);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+      vi.mocked(git.getFileDiff).mockResolvedValue({
+        path: "test.ts",
+        hunks: [],
+        is_binary: false,
+        total_lines: 0,
+      });
+
+      const { stageFile } = useRepositoryStore.getState();
+      await stageFile("test.ts");
+
+      expect(git.stageFile).toHaveBeenCalledWith("test.ts");
+      expect(git.getFileDiff).not.toHaveBeenCalled();
+    });
   });
 
   describe("unstageFile", () => {
@@ -677,6 +703,33 @@ describe("repositoryStore", () => {
 
       expect(useRepositoryStore.getState().currentDiffPath).toBe("test.ts");
       expect(useRepositoryStore.getState().currentDiffStaged).toBe(true);
+    });
+
+    it("discards a stale response when a newer loadFileDiff supersedes it", async () => {
+      const slowDiff = { path: "a.ts", hunks: [], is_binary: false, total_lines: 0 };
+      const fastDiff = { path: "b.ts", hunks: [], is_binary: false, total_lines: 1 };
+
+      let resolveSlow!: (v: typeof slowDiff) => void;
+      const slowPromise = new Promise<typeof slowDiff>((r) => {
+        resolveSlow = r;
+      });
+
+      vi.mocked(git.getFileDiff)
+        .mockImplementationOnce(() => slowPromise)
+        .mockResolvedValueOnce(fastDiff);
+
+      const { loadFileDiff } = useRepositoryStore.getState();
+      const p1 = loadFileDiff("a.ts", false);
+      const p2 = loadFileDiff("b.ts", false);
+      await p2;
+
+      expect(useRepositoryStore.getState().currentDiff).toEqual(fastDiff);
+      expect(useRepositoryStore.getState().diffLoading).toBe(false);
+
+      resolveSlow(slowDiff);
+      await p1;
+
+      expect(useRepositoryStore.getState().currentDiff).toEqual(fastDiff);
     });
   });
 

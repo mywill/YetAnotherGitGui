@@ -91,7 +91,7 @@ jobs:
 
       - name: Generate PR comment markdown
         if: always() && github.event_name == 'pull_request'
-        run: pnpm exec fallow audit --base origin/main --format pr-comment-github --coverage coverage/coverage-final.json > .fallow/pr-comment.md || true
+        run: pnpm exec fallow audit --base origin/main --format pr-comment-github --coverage coverage/coverage-final.json --production-dead-code --production-health --production-dupes > .fallow/pr-comment.md || true
 
       - name: Post PR comment with audit summary
         if: always() && github.event_name == 'pull_request'

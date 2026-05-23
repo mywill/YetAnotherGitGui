@@ -25,10 +25,6 @@ export async function getRepositoryInfo(): Promise<RepositoryInfo> {
   return invoke("get_repository_info");
 }
 
-export async function getCommitGraph(skip: number, limit: number): Promise<GraphCommit[]> {
-  return invoke("get_commit_graph", { skip, limit });
-}
-
 export async function getAllCommitGraph(): Promise<GraphCommit[]> {
   return invoke("get_all_commit_graph");
 }

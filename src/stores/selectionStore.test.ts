@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useSelectionStore, makeSelectionKey, parseSelectionKey } from "./selectionStore";
+import { useSelectionStore, makeSelectionKey } from "./selectionStore";
 
 describe("selectionStore", () => {
   beforeEach(() => {
@@ -250,44 +250,6 @@ describe("selectionStore", () => {
         // Should be selected in unstaged but not in staged
         expect(isFileSelected("file1.ts", false)).toBe(true);
         expect(isFileSelected("file1.ts", true)).toBe(false);
-      });
-    });
-  });
-
-  describe("parseSelectionKey", () => {
-    it("parses a staged key", () => {
-      expect(parseSelectionKey("staged:src/main.ts")).toEqual({
-        path: "src/main.ts",
-        staged: true,
-      });
-    });
-
-    it("parses an unstaged key", () => {
-      expect(parseSelectionKey("unstaged:src/main.ts")).toEqual({
-        path: "src/main.ts",
-        staged: false,
-      });
-    });
-
-    it("preserves path segments containing colons", () => {
-      // The key uses indexOf(":") so only the first colon is the separator —
-      // a path with colons (e.g. Windows drive letters) should round-trip.
-      expect(parseSelectionKey("unstaged:C:/repo/file.ts")).toEqual({
-        path: "C:/repo/file.ts",
-        staged: false,
-      });
-    });
-
-    it("returns null for malformed keys with no separator", () => {
-      expect(parseSelectionKey("nopeNoColon")).toBeNull();
-    });
-
-    it("treats unknown prefixes as 'not staged'", () => {
-      // Defensive: anything that's not literally "staged" before the colon
-      // is treated as unstaged. Keeps round-trip stable through makeSelectionKey.
-      expect(parseSelectionKey("garbage:foo.ts")).toEqual({
-        path: "foo.ts",
-        staged: false,
       });
     });
   });

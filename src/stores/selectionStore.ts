@@ -9,14 +9,6 @@ function makeSelectionKey(path: string, staged: boolean): SelectionKey {
   return `${staged ? "staged" : "unstaged"}:${path}`;
 }
 
-function parseSelectionKey(key: SelectionKey): { path: string; staged: boolean } | null {
-  const colonIdx = key.indexOf(":");
-  if (colonIdx === -1) return null;
-  const prefix = key.slice(0, colonIdx);
-  const path = key.slice(colonIdx + 1);
-  return { path, staged: prefix === "staged" };
-}
-
 interface SelectionState {
   selectedCommitHash: string | null;
   selectedFilePath: string | null;
@@ -125,4 +117,4 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
 }));
 
 // Export helpers for use in other components
-export { makeSelectionKey, parseSelectionKey };
+export { makeSelectionKey };

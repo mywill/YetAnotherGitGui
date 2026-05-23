@@ -55,32 +55,6 @@ describe("git service", () => {
     });
   });
 
-  describe("getCommitGraph", () => {
-    it("invokes get_commit_graph command with skip and limit", async () => {
-      const mockCommits = [
-        {
-          hash: "abc123",
-          short_hash: "abc123",
-          message: "Test commit",
-          author_name: "Test",
-          author_email: "test@test.com",
-          timestamp: 1234567890,
-          parent_hashes: [],
-          column: 0,
-          lines: [],
-          refs: [],
-          is_tip: true,
-        },
-      ];
-      vi.mocked(invoke).mockResolvedValue(mockCommits);
-
-      const result = await git.getCommitGraph(0, 50);
-
-      expect(invoke).toHaveBeenCalledWith("get_commit_graph", { skip: 0, limit: 50 });
-      expect(result).toEqual(mockCommits);
-    });
-  });
-
   describe("getCommitDetails", () => {
     it("invokes get_commit_details command with hash", async () => {
       const mockDetails = {

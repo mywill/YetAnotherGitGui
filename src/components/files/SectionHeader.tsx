@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { YaggButton } from "../common/YaggButton";
 
-export const SECTION_ACTION_BTN_CLASS =
+const SECTION_ACTION_BTN_CLASS =
   "section-action-btn border-border text-text-muted hover:border-text-muted hover:bg-bg-hover inline-flex h-6 items-center gap-1 bg-transparent px-2 text-xs disabled:cursor-not-allowed";
 
 interface SectionHeaderProps {

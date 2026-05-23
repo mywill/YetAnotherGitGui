@@ -23,7 +23,6 @@ pub fn run() {
             commands::get_current_dir,
             commands::open_repository,
             commands::get_repository_info,
-            commands::get_commit_graph,
             commands::get_all_commit_graph,
             commands::get_commit_details,
             commands::get_commit_file_diff,
