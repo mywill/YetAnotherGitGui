@@ -8,9 +8,10 @@ Run these in order, then **paste the full per-file coverage tables in your respo
 
 1. **TypeScript type check** — `npx tsc --noEmit` (catches errors Vite/esbuild skip; CI uses full `tsc`).
 2. **Linters** — `pnpm lint && pnpm format:check` and `pnpm lint:rust`.
-3. **Frontend tests + coverage** — `pnpm test:coverage --run` then `pnpm test:e2e`. If Playwright browsers are missing, run `npx playwright install` yourself — don't ask the user.
-4. **Rust tests + coverage** — `source ~/.cargo/env && cd src-tauri && cargo test` then `cargo llvm-cov --summary-only`. If `llvm-cov` is missing: `cargo install cargo-llvm-cov`.
-5. **Visual validation** — if you touched CSS/layout/visual components, take a screenshot (procedure in rule 3 below).
+3. **Frontend audit (advisory)** — `pnpm fallow:audit` (diff vs `origin/main`). Surfaces dead code, duplication, complexity hotspots, PR risk. Report findings to the user; don't block on them while the rollout is advisory. Once the baseline is clean, treat any new high-severity finding as a failure and fix it before continuing.
+4. **Frontend tests + coverage** — `pnpm test:coverage --run` then `pnpm test:e2e`. If Playwright browsers are missing, run `npx playwright install` yourself — don't ask the user.
+5. **Rust tests + coverage** — `source ~/.cargo/env && cd src-tauri && cargo test` then `cargo llvm-cov --summary-only`. If `llvm-cov` is missing: `cargo install cargo-llvm-cov`.
+6. **Visual validation** — if you touched CSS/layout/visual components, take a screenshot (procedure in rule 3 below).
 
 Paste the **complete** per-file tables, not summaries — every file, no truncation:
 
@@ -125,6 +126,15 @@ cd src-tauri && cargo test
 
 # Type check TypeScript
 npx tsc --noEmit
+
+# Static-analysis audit (dead code, duplication, complexity, PR risk)
+pnpm fallow           # full report
+pnpm fallow:audit     # diff-only vs origin/main
+pnpm fallow:watch     # live-watch alongside pnpm dev
+pnpm fallow:health    # health score readout
+
+# One-time on fresh clone: install the pre-commit hook (runs fallow:audit)
+pnpm simple-git-hooks
 ```
 
 ## Architecture

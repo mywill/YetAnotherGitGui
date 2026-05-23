@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema/fallowrc.schema.json",
+  "ignorePatterns": [
+    "src-tauri/**",
+    "dist/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
+    "node_modules/**",
+    ".pnpm-store/**",
+    "src/vite-env.d.ts"
+  ],
+  "rules": {
+    "unused-files": "warn",
+    "unused-exports": "warn",
+    "unused-types": "warn",
+    "unused-dependencies": "warn",
+    "unused-dev-dependencies": "warn",
+    "unused-enum-members": "warn",
+    "unused-class-members": "warn",
+    "unresolved-imports": "warn",
+    "unlisted-dependencies": "warn",
+    "duplicate-exports": "warn",
+    "circular-dependencies": "error"
+  },
+  "audit": {
+    "gate": "new-only"
+  }
+}

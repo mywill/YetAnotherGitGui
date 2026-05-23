@@ -27,13 +27,31 @@ run_step() {
   fi
 }
 
+# Records pass/fail but never increments FAILED. Promote callers to run_step
+# once the underlying check has a clean baseline.
+run_step_advisory() {
+  local label="$1"
+  shift
+  printf "${BLUE}▶${NC} ${BOLD}%s${NC} (advisory)..." "$label"
+  if output=$("$@" 2>&1); then
+    printf " ${GREEN}✓${NC}\n"
+    PASSED=$((PASSED + 1))
+    RESULTS+=("${GREEN}✓${NC} (advisory) $label")
+  else
+    printf " ${BLUE}!${NC}\n"
+    echo "$output"
+    RESULTS+=("${BLUE}!${NC} (advisory) $label")
+  fi
+}
+
 echo ""
 printf "${BOLD}Running all checks...${NC}\n\n"
 
 # Lint
-run_step "ESLint"              pnpm lint
-run_step "Prettier"            pnpm format:check
-run_step "TypeScript"          npx tsc --noEmit
+run_step "ESLint"                       pnpm lint
+run_step "Prettier"                     pnpm format:check
+run_step_advisory "Fallow audit"        pnpm fallow:audit
+run_step "TypeScript"                   npx tsc --noEmit
 run_step "Rust fmt"            cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 run_step "Rust clippy"         cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
