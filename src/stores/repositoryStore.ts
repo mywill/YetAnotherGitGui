@@ -78,6 +78,7 @@ interface RepositoryState {
     isConflicted?: boolean
   ) => Promise<void>;
   clearDiff: () => void;
+  clearDiffIfPathMatches: (path: string) => void;
   resolveConflict: (path: string, strategy: string) => Promise<void>;
   abortOperation: () => Promise<void>;
   continueOperation: () => Promise<void>;
@@ -394,6 +395,12 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     });
   },
 
+  clearDiffIfPathMatches: (path: string) => {
+    if (get().currentDiffPath === path) {
+      set({ currentDiff: null, currentDiffPath: null });
+    }
+  },
+
   stageFile: async (path: string) => {
     await withStagingRefresh(() => git.stageFile(path), get, {
       conditionalPath: path,
@@ -455,14 +462,8 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   createCommit: async (message: string) => {
     try {
       await git.createCommit(message);
-      // Clear diff view since the committed file is no longer in the staging area
       get().clearDiff();
-      // Refresh only the data that actually changed: new commit in history and
-      // empty/updated staging area. Repository info (branch name, remotes,
-      // repo state) does not change on a plain commit.
-      const info = await git.getRepositoryInfo();
-      set({ repositoryInfo: info });
-      await Promise.all([get().loadAllCommits(), get().loadFileStatuses()]);
+      await get().refreshRepository();
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -481,12 +482,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     try {
       await git.revertFile(path);
       await get().loadFileStatuses();
-
-      // Clear diff if viewing the reverted file
-      const { currentDiffPath } = get();
-      if (currentDiffPath === path) {
-        set({ currentDiff: null, currentDiffPath: null });
-      }
+      get().clearDiffIfPathMatches(path);
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
@@ -504,12 +500,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     try {
       await git.deleteFile(path);
       await get().loadFileStatuses();
-
-      // Clear diff if viewing the deleted file
-      const { currentDiffPath } = get();
-      if (currentDiffPath === path) {
-        set({ currentDiff: null, currentDiffPath: null });
-      }
+      get().clearDiffIfPathMatches(path);
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }

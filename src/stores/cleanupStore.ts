@@ -65,6 +65,27 @@ function idForUntracked(p: string): string {
   return p;
 }
 
+const categoryFetchers = {
+  gone: () => git.listGoneBranches(),
+  merged: () => git.listMergedBranches(),
+  stashes: () => git.listOldStashes(STASH_DAYS_OLD),
+  untracked: () => git.listUntrackedFiles(),
+} as const;
+
+const categoryDeleters: Record<CleanupCategory, (ids: string[]) => Promise<BulkResult[]>> = {
+  gone: (ids) => git.deleteBranches(ids),
+  merged: (ids) => git.deleteBranches(ids),
+  stashes: (ids) => git.dropStashes(ids.map(Number)),
+  untracked: (ids) => git.cleanUntrackedFiles(ids),
+};
+
+const sidebarRefreshAfterRun: Record<CleanupCategory, () => Promise<void>> = {
+  gone: () => useRepositoryStore.getState().loadBranchesAndTags(),
+  merged: () => useRepositoryStore.getState().loadBranchesAndTags(),
+  stashes: () => useRepositoryStore.getState().loadStashes(),
+  untracked: () => useRepositoryStore.getState().loadFileStatuses(),
+};
+
 export const useCleanupStore = create<CleanupState>((set, get) => ({
   gone: emptyCategory(),
   merged: emptyCategory(),
@@ -85,60 +106,8 @@ export const useCleanupStore = create<CleanupState>((set, get) => ({
       (state) => ({ [category]: { ...state[category], loading: true } }) as Partial<CleanupState>
     );
     try {
-      switch (category) {
-        case "gone": {
-          const candidates = await git.listGoneBranches();
-          set({
-            gone: {
-              candidates,
-              selected: new Set(),
-              loading: false,
-              lastResult: null,
-              lastSelectedId: null,
-            },
-          });
-          break;
-        }
-        case "merged": {
-          const candidates = await git.listMergedBranches();
-          set({
-            merged: {
-              candidates,
-              selected: new Set(),
-              loading: false,
-              lastResult: null,
-              lastSelectedId: null,
-            },
-          });
-          break;
-        }
-        case "stashes": {
-          const candidates = await git.listOldStashes(STASH_DAYS_OLD);
-          set({
-            stashes: {
-              candidates,
-              selected: new Set(),
-              loading: false,
-              lastResult: null,
-              lastSelectedId: null,
-            },
-          });
-          break;
-        }
-        case "untracked": {
-          const candidates = await git.listUntrackedFiles();
-          set({
-            untracked: {
-              candidates,
-              selected: new Set(),
-              loading: false,
-              lastResult: null,
-              lastSelectedId: null,
-            },
-          });
-          break;
-        }
-      }
+      const candidates = await categoryFetchers[category]();
+      set({ [category]: { ...emptyCategory(), candidates } } as Partial<CleanupState>);
     } catch (err) {
       set(
         (state) => ({ [category]: { ...state[category], loading: false } }) as Partial<CleanupState>
@@ -231,19 +200,7 @@ export const useCleanupStore = create<CleanupState>((set, get) => ({
     );
 
     try {
-      let results: BulkResult[];
-      switch (category) {
-        case "gone":
-        case "merged":
-          results = await git.deleteBranches(selectedIds);
-          break;
-        case "stashes":
-          results = await git.dropStashes(selectedIds.map(Number));
-          break;
-        case "untracked":
-          results = await git.cleanUntrackedFiles(selectedIds);
-          break;
-      }
+      const results = await categoryDeleters[category](selectedIds);
 
       const succeeded = results.filter((r) => r.success).length;
       const failed = results.length - succeeded;
@@ -257,14 +214,7 @@ export const useCleanupStore = create<CleanupState>((set, get) => ({
       }
 
       await get().refreshCategory(category);
-      // Branch / stash deletions affect the sidebar lists.
-      if (category === "gone" || category === "merged") {
-        await useRepositoryStore.getState().loadBranchesAndTags();
-      } else if (category === "stashes") {
-        await useRepositoryStore.getState().loadStashes();
-      } else if (category === "untracked") {
-        await useRepositoryStore.getState().loadFileStatuses();
-      }
+      await sidebarRefreshAfterRun[category]();
 
       // Set lastResult AFTER refresh so the post-run summary persists.
       set(

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef } from "react";
 import clsx from "clsx";
 import {
   IconRefresh,
@@ -15,6 +15,7 @@ import { useDialogStore } from "../../stores/dialogStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { SectionActionButton } from "../files/SectionHeader";
 import { buildStashDropMessage, formatList } from "../../utils/dialogText";
+import { useSelectionListNav } from "./useSelectionListNav";
 
 const SECTION_KEYS = {
   prune: "cleanup.prune",
@@ -28,6 +29,25 @@ function useSectionExpanded(key: string): [boolean, () => void] {
   const expanded = useSettingsStore((s) => s.sectionExpanded[key] ?? false);
   const toggleSectionExpanded = useSettingsStore((s) => s.toggleSectionExpanded);
   return [expanded, () => toggleSectionExpanded(key)];
+}
+
+type ConfirmOptions = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+};
+
+async function confirmAndRun(args: {
+  selectedCount: number;
+  dialog: ConfirmOptions;
+  showConfirm: (cfg: ConfirmOptions) => Promise<boolean>;
+  runCategory: (c: CleanupCategory) => Promise<void>;
+  category: CleanupCategory;
+}) {
+  if (args.selectedCount === 0) return;
+  const confirmed = await args.showConfirm(args.dialog);
+  if (confirmed) await args.runCategory(args.category);
 }
 
 export function CleanupView() {
@@ -138,20 +158,20 @@ function BranchSection({ category, title, description, emptyText }: BranchSectio
   const runCategory = useCleanupStore((s) => s.runCategory);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const handleRun = async () => {
-    const selectedCount = data.selected.size;
-    if (selectedCount === 0) return;
-    const list = formatList(Array.from(data.selected));
-    const confirmed = await showConfirm({
-      title: "Delete branches",
-      message: `Delete ${selectedCount} branch${selectedCount === 1 ? "" : "es"}? This cannot be undone.\n\n${list}`,
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
+  const selectedCount = data.selected.size;
+  const handleRun = () =>
+    confirmAndRun({
+      selectedCount,
+      dialog: {
+        title: "Delete branches",
+        message: `Delete ${selectedCount} branch${selectedCount === 1 ? "" : "es"}? This cannot be undone.\n\n${formatList(Array.from(data.selected))}`,
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      },
+      showConfirm,
+      runCategory,
+      category,
     });
-    if (confirmed) {
-      await runCategory(category);
-    }
-  };
 
   const allIds = data.candidates.map((b) => b.name);
 
@@ -190,21 +210,22 @@ function StashSection() {
   const runCategory = useCleanupStore((s) => s.runCategory);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const handleRun = async () => {
-    const selectedCount = data.selected.size;
-    if (selectedCount === 0) return;
-    // Look up each selected stash to include its message in the dialog list.
-    const selectedStashes = data.candidates.filter((s) => data.selected.has(String(s.index)));
-    const confirmed = await showConfirm({
-      title: selectedCount === 1 ? "Drop stash" : "Drop stashes",
-      message: buildStashDropMessage(selectedStashes),
-      confirmLabel: "Drop",
-      cancelLabel: "Cancel",
+  const selectedCount = data.selected.size;
+  // Look up each selected stash so the dialog list includes its message.
+  const selectedStashes = data.candidates.filter((s) => data.selected.has(String(s.index)));
+  const handleRun = () =>
+    confirmAndRun({
+      selectedCount,
+      dialog: {
+        title: selectedCount === 1 ? "Drop stash" : "Drop stashes",
+        message: buildStashDropMessage(selectedStashes),
+        confirmLabel: "Drop",
+        cancelLabel: "Cancel",
+      },
+      showConfirm,
+      runCategory,
+      category: "stashes",
     });
-    if (confirmed) {
-      await runCategory("stashes");
-    }
-  };
 
   const allIds = data.candidates.map((s) => String(s.index));
 
@@ -246,20 +267,20 @@ function UntrackedSection() {
   const runCategory = useCleanupStore((s) => s.runCategory);
   const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const handleRun = async () => {
-    const selectedCount = data.selected.size;
-    if (selectedCount === 0) return;
-    const list = formatList(Array.from(data.selected));
-    const confirmed = await showConfirm({
-      title: "Delete untracked files",
-      message: `Permanently delete ${selectedCount} untracked file${selectedCount === 1 ? "" : "s"}? This cannot be undone.\n\n${list}`,
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
+  const selectedCount = data.selected.size;
+  const handleRun = () =>
+    confirmAndRun({
+      selectedCount,
+      dialog: {
+        title: "Delete untracked files",
+        message: `Permanently delete ${selectedCount} untracked file${selectedCount === 1 ? "" : "s"}? This cannot be undone.\n\n${formatList(Array.from(data.selected))}`,
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+      },
+      showConfirm,
+      runCategory,
+      category: "untracked",
     });
-    if (confirmed) {
-      await runCategory("untracked");
-    }
-  };
 
   const allIds = data.candidates;
 
@@ -328,104 +349,13 @@ function CategorySection(props: CategorySectionProps) {
   } = props;
 
   const [expanded, toggleExpanded] = useSectionExpanded(sectionKey);
-  const toggleSelection = useCleanupStore((s) => s.toggleSelection);
   const selectAllCategory = useCleanupStore((s) => s.selectAll);
   const selectNoneCategory = useCleanupStore((s) => s.selectNone);
-  const setRangeSelection = useCleanupStore((s) => s.setRangeSelection);
-  const extendSelection = useCleanupStore((s) => s.extendSelection);
-  const lastSelectedId = useCleanupStore((s) => s[category].lastSelectedId);
   const selectedCount = selected.size;
   const allSelected = total > 0 && selectedCount === total;
 
-  // Active-row index for keyboard nav. Clamp so list shrinkage doesn't leave
-  // the index past the end.
-  const [activeIndex, setActiveIndex] = useState(0);
-  useEffect(() => {
-    if (activeIndex >= allIds.length && allIds.length > 0) {
-      setActiveIndex(allIds.length - 1);
-    }
-  }, [allIds.length, activeIndex]);
-
-  const listboxId = useId();
-  const rowIdFor = (i: number) => `${listboxId}-row-${i}`;
-  const listRef = useRef<HTMLUListElement>(null);
-
-  const handleRowClick = (id: string, index: number, e: React.MouseEvent) => {
-    setActiveIndex(index);
-    const isCtrl = e.ctrlKey || e.metaKey;
-    const isShift = e.shiftKey;
-    if (isShift && lastSelectedId) {
-      const start = allIds.indexOf(lastSelectedId);
-      const end = allIds.indexOf(id);
-      if (start !== -1 && end !== -1) {
-        const [lo, hi] = start < end ? [start, end] : [end, start];
-        setRangeSelection(category, allIds.slice(lo, hi + 1));
-        return;
-      }
-    }
-    if (isCtrl) {
-      toggleSelection(category, id);
-      return;
-    }
-    // Plain click: replace selection with this single item.
-    if (selected.size === 1 && selected.has(id)) {
-      selectNoneCategory(category);
-    } else {
-      setRangeSelection(category, [id]);
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
-    if (allIds.length === 0) return;
-    const moveTo = (next: number) => {
-      const clamped = Math.max(0, Math.min(allIds.length - 1, next));
-      setActiveIndex(clamped);
-      if (e.shiftKey && lastSelectedId) {
-        const anchorIdx = allIds.indexOf(lastSelectedId);
-        if (anchorIdx !== -1) {
-          const [lo, hi] = anchorIdx < clamped ? [anchorIdx, clamped] : [clamped, anchorIdx];
-          // extendSelection preserves the anchor so the user can keep
-          // expanding from the same point with repeated Shift+Arrow.
-          extendSelection(category, allIds.slice(lo, hi + 1));
-        }
-      }
-    };
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        moveTo(activeIndex + 1);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        moveTo(activeIndex - 1);
-        break;
-      case "Home":
-        e.preventDefault();
-        moveTo(0);
-        break;
-      case "End":
-        e.preventDefault();
-        moveTo(allIds.length - 1);
-        break;
-      case " ": {
-        e.preventDefault();
-        const id = allIds[activeIndex];
-        if (id !== undefined) toggleSelection(category, id);
-        break;
-      }
-      case "Enter":
-        e.preventDefault();
-        if (selectedCount > 0) onRun();
-        break;
-      case "a":
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          selectAllCategory(category);
-        }
-        break;
-    }
-  };
+  const { activeIndex, listboxId, listRef, rowIdFor, handleRowClick, handleKeyDown } =
+    useSelectionListNav({ category, allIds, selected, onRun });
 
   const getRowProps = (id: string, index: number): RowProps => ({
     selected: selected.has(id),
