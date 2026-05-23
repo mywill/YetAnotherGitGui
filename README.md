@@ -1,195 +1,182 @@
 # Yet Another Git Gui
 
-A cross-platform Git GUI for macOS and Linux — built to complement the CLI, not replace it.
+A Git GUI for macOS and Linux built with Tauri 2.0. It's meant to sit alongside the `git` CLI and cover the parts that are nicer in a GUI — reading the commit graph, staging hunks, resolving conflicts, browsing stashes — without trying to replace the CLI for everything else.
 
-![YAGG](YAGG-Default.png)
+| History | Status |
+| :---: | :---: |
+| ![History view with commit graph and details panel](docs/screenshots/history.png) | ![Status view with staged/unstaged files and a diff hunk](docs/screenshots/status.png) |
 
-This is a largely vibe-coded project for me to get the feel of vibe coding. I will be tightening up the code as time allows and welcome any additions. This was created from a desire for a Mac and Linux simple Git GUI that offers basic features that I like doing through a GUI, like looking at the commit graph and staging hunks, looking at diffs, etc.
+## What it does
 
-This is not a full featured git tool and is intended for use along with the CLI which is the main driver and is not intended to do everything the git CLI offers.
+- **Inspect history** — commit graph with branch and merge lines, commit details panel, files changed per commit, right-click context menu (copy hash, checkout, revert).
+- **Stage and commit** — file-level, hunk-level, and line-level staging; discard hunks or selected lines; commit message editor.
+- **Branches and tags** — current-branch indicator, prune-deleted-remote button, and a quick-swap dropdown that filters as you type and offers to create the branch if the name doesn't exist.
+- **Stashes** — list with a details panel showing the files in each stash; apply, drop.
+- **Cleanup view** — one place to prune remote refs, delete branches whose remote was deleted or that are merged, drop stashes older than 14 days, and remove untracked files. Each section is multi-select with a bulk action.
+- **Command palette** — `Cmd/Ctrl+K` searches commits (hash + message), branches, tags, authors, files, and stashes; number keys 1–6 switch filter tabs.
+- **Embedded terminal** — xterm.js panel at the bottom, toggled with `` Cmd/Ctrl+` ``.
+- **Revert** — a whole commit, a single file from a commit, or selected lines from a file in a commit. The result is staged for review before you commit it.
+- **Open repositories** — landing screen with a path input / file picker when launched without a repo, or `yagg [path]` from the CLI.
+- **Settings** — density (compact / comfortable / spacious), text size, theme, auto-update toggle, and a "Install CLI Tool" affordance on macOS.
+- **Updates** — auto-update on macOS and Linux where the platform supports it, with an in-app dialog.
 
-## Features
+## Screenshot tour
 
-- Commit graph visualization with branch and merge lines
-- File staging with hunk-level and line-level control
-- Branch, tag, and stash management
-- Command palette for quick searches (hashes, branches, authors, commit messages) and navigation
-- Full keyboard and/or mouse interactivity
-- Revert commits and files from history
-- Cross-platform: macOS and Linux
+### History
 
-## Installation
+Commit graph with refs, selectable rows, and a details panel that lists files changed in the selected commit with a Revert button.
+
+![History view](docs/screenshots/history.png)
+
+### Status
+
+Working copy split into Staged, Unstaged, and Untracked. The diff viewer on the right supports per-hunk and per-line staging or discard, and the commit message editor lives at the bottom.
+
+![Status view](docs/screenshots/status.png)
+
+### Branches and tags
+
+Collapsible Local / Remote / Tags sections, a `Prune branches` button for branches whose remote was deleted, and a quick-swap dropdown (bottom-left) that filters branches as you type and offers `Create '<name>'` when the typed name doesn't exist yet.
+
+![Branches view with the quick-swap dropdown open](docs/screenshots/branches.png)
+
+### Stashes
+
+Stash list on the left, details on the right (branch, created time, commit hash, files changed).
+
+![Stashes view](docs/screenshots/stashes.png)
+
+### Cleanup
+
+Grouped candidates for safe-ish cleanup: prune remote refs, branches with deleted remote, merged branches, old stashes, and untracked files. Each section is multi-select with its own delete button.
+
+![Cleanup view with categories of stale items](docs/screenshots/cleanup.png)
+
+### Command palette
+
+`Cmd/Ctrl+K` opens a single search box across commits, branches, tags, authors, files, and stashes. Filter chips at the top (and number keys `1`–`6`) narrow the result type.
+
+![Command palette](docs/screenshots/command-palette.png)
+
+### Embedded terminal
+
+A docked xterm.js panel for the times a GUI shortcut doesn't exist. Toggle with `` Cmd/Ctrl+` `` or the status-bar button.
+
+![Terminal panel docked at the bottom](docs/screenshots/terminal.png)
+
+### Conflict / rebase state
+
+When the repo is mid-rebase, mid-cherry-pick, or mid-revert, a banner across the top shows the state, the conflict count, and explicit Abort and Continue buttons. Continue stays disabled until all conflicts are resolved.
+
+![Repo state banner during a rebase with Abort and Continue buttons](docs/screenshots/conflict-banner.png)
+
+### Welcome screen
+
+What you see when you launch without a repo (or pass a path that isn't one). Type a path or click Browse.
+
+![Welcome screen when launched without a repository](docs/screenshots/welcome.png)
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Cmd/Ctrl+K` | Open command palette |
+| `Cmd/Ctrl+L` | Switch to History view |
+| `Cmd/Ctrl+R` or `F5` | Refresh repository |
+| `` Cmd/Ctrl+` `` | Toggle terminal panel |
+| `↑` / `↓` | Move selection in lists |
+| `Space` | Toggle stage / select for the focused item |
+| `Enter` | Activate the focused item |
+| `Delete` | Discard (unstaged) or unstage (staged) |
+| `Shift+↑` / `Shift+↓` | Extend selection range |
+| `Cmd/Ctrl+A` | Select all in the focused list |
+
+## Install
 
 ### Linux
 
-**Debian/Ubuntu (.deb):**
 ```bash
-sudo dpkg -i Yet.Another.Git.Gui_*.deb 
-```
+# Debian / Ubuntu
+sudo dpkg -i Yet.Another.Git.Gui_*.deb
 
-**Fedora/RHEL (.rpm):**
-```bash
+# Fedora / RHEL
 sudo rpm -i Yet.Another.Git.Gui_*.rpm
+
+# Any distro (AppImage)
+chmod +x Yet.Another.Git.Gui_*.AppImage
+./Yet.Another.Git.Gui_*.AppImage
 ```
 
-**AppImage (any distro):**
-```bash
-chmod +x "Yet.Another.Git.Gui_*.AppImage"
-./"Yet.Another.Git.Gui_*.AppImage"
-```
+The `.deb` and `.rpm` packages install a `yagg` command on `$PATH`:
 
-After installing via .deb or .rpm, the `yagg` command is available system-wide:
 ```bash
-yagg                  # Open current directory
-yagg /path/to/repo    # Open specific repository
+yagg                  # open the current directory
+yagg /path/to/repo    # open a specific repo
 ```
 
 ### macOS
 
-1. Open the `.dmg` file
-2. Drag **Yet Another Git Gui** to your Applications folder
-3. Launch the app    
-   a. If this will not launch see Troubleshooting section with options.  This may not be signed by an offical Apple cert and may require a work around.   
-4. Click **"Install CLI Tool"** in the sidebar to enable terminal usage
+1. Open the `.dmg` and drag **Yet Another Git Gui** to Applications.
+2. Launch it. The first launch may be blocked by Gatekeeper — see [Troubleshooting](#troubleshooting) for the two ways around that.
+3. Click **Install CLI Tool** in the Settings menu to put `yagg` on your `$PATH`.
 
-After installing the CLI tool:
-```bash
-yagg                  # Open current directory
-yagg /path/to/repo    # Open specific repository
-```
+### From source
 
-### From Source
-
-Prerequisites: Node.js 22+, Rust (latest stable), platform-specific [Tauri dependencies](https://tauri.app/start/prerequisites/)
+Prerequisites: Node.js 22+, Rust (stable), and the platform-specific [Tauri prerequisites](https://tauri.app/start/prerequisites/).
 
 ```bash
-# Clone the repository
 git clone https://github.com/mywill/YetAnotherGitGui.git
 cd YetAnotherGitGui
-
-# Install dependencies
 pnpm install
-
-# Run in development mode
-pnpm tauri dev
-
-# Build for production
-pnpm tauri build
+pnpm tauri dev          # development with hot reload
+pnpm tauri build        # production bundle
 ```
 
-## Development
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `pnpm tauri dev` | Start development server with hot reload |
-| `pnpm tauri build` | Build production release |
-| `pnpm test` | Run unit tests |
-| `pnpm test:e2e` | Run E2E tests |
-| `pnpm lint` | Lint code |
-| `pnpm format` | Format code |
-| `pnpm check` | Run all linters, type checks, and tests |
-
-### Testing
+## Develop
 
 ```bash
-# Frontend unit tests
-pnpm test
-
-# Frontend unit tests with coverage
-pnpm test:coverage
-
-# E2E tests (requires Playwright browsers)
-pnpm test:e2e
-
-# Rust tests
+pnpm tauri dev          # run the app
+pnpm test               # frontend unit tests (Vitest)
+pnpm test:e2e           # E2E tests (Playwright, uses mocked Tauri)
 cd src-tauri && cargo test
-
-# Rust tests with coverage (requires cargo-llvm-cov)
-cd src-tauri && cargo llvm-cov --summary-only
+pnpm check              # lint + type check + tests
 ```
 
-See [TESTING.md](TESTING.md) for comprehensive testing documentation.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, including the optional Podman-based container setup for contributors and AI agents, the commit-message convention used for releases, and the CI matrix. [TESTING.md](TESTING.md) covers test patterns, coverage targets, and the accessibility checks.
 
-## Supply Chain Security
+## Project status
 
-This project enforces a **7-day dependency cooldown** to reduce the risk of supply chain attacks. Newly published npm package versions cannot enter the dependency graph until they have been available on the registry for at least 7 days, giving the community time to detect and flag malicious releases.
-
-### How It Works
-
-pnpm's built-in [`minimumReleaseAge`](https://pnpm.io/settings#minimumreleaseage) setting in `pnpm-workspace.yaml` blocks resolution of any package version published less than 10,080 minutes (7 days) ago. This applies to both direct and transitive dependencies.
-
-The cooldown is enforced at **resolution time** — when pnpm resolves new versions during `pnpm install`, `pnpm add`, or `pnpm update`. It is **not** re-checked during `--frozen-lockfile` installs (CI) or by Dependabot, which resolves versions using its own updater.
-
-### Overriding the Cooldown
-
-For urgent updates (e.g., a critical security patch published today), add the package to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`:
-
-```yaml
-minimumReleaseAgeExclude:
-  - 'package-name@1.2.3'    # exact version
-  - '@scope/*'               # all packages from a scope
-```
-
-### Rust Dependencies
-
-For Cargo/Rust dependencies, [`cargo-cooldown`](https://crates.io/crates/cargo-cooldown) provides equivalent functionality as a lightweight cargo wrapper. It is not currently configured in this project but can be added by installing the tool and creating a `cooldown.toml` in `src-tauri/`.
-
-## Tech Stack
-
-- **Frontend:** React 19, TypeScript, Zustand, Vite, Tailwind CSS 4, react-window, date-fns
-- **Backend:** Rust, Tauri 2.0, git2
-- **Testing:** Vitest, Playwright, axe-core, cargo test
+This is a side project, not a commercial product. It does the subset of Git operations I personally want a GUI for; for anything beyond that, drop into the terminal — the embedded terminal panel exists for exactly that reason. Issues and PRs are welcome.
 
 ## Troubleshooting
 
-### Linux: "No display server" error
-Ensure you're running in a graphical environment. If running via SSH, use X11 forwarding or VNC.
-
 ### macOS: "Cannot be opened because Apple cannot verify it"
-Since the app is not signed with an Apple Developer certificate, macOS Gatekeeper will block it on first launch. To open the app, use one of these methods:
 
-**Option A — Right-click to open (easiest):**
-1. Right-click (or Control-click) the app in Finder
-2. Select **Open** from the context menu
-3. Click **Open** in the dialog that appears
+The app isn't signed with an Apple Developer certificate, so Gatekeeper blocks the first launch. Either:
 
-You only need to do this once — subsequent launches will work normally.
+- **Right-click the app in Finder → Open**, then click Open in the dialog. One-time only.
+- Or remove the quarantine flag:
 
-**Option B — Remove the quarantine flag:**
-```bash
-xattr -cr /Applications/Yet\ Another\ Git\ Gui.app
-```
+  ```bash
+  xattr -cr /Applications/Yet\ Another\ Git\ Gui.app
+  ```
 
-### Build fails with missing dependencies
-Check that you have all [Tauri prerequisites](https://tauri.app/start/prerequisites/) installed for your platform.
+### Linux: "No display server"
 
-## AI Agent / YOLO Container
+You need a graphical session. Over SSH, use X11 forwarding or VNC.
 
-This project includes setup scripts for running AI coding agents inside a [YOLO](https://github.com/mywill/yolo)-managed Podman container. YOLO supports multiple harnesses (Claude Code, OpenCode, with others planned) and provides an isolated, reproducible environment where the agent can develop and test without touching your host system.
+### Build fails with missing system libraries
 
-The scripts live in `.yolo/`:
-
-| Script | Runs as | Purpose |
-|--------|---------|---------|
-| `root-setup.sh` | root | Installs Tauri 2.0 system libraries and Playwright's Chromium runtime deps via `apt-get` |
-| `user-setup.sh` | claude | Installs Rust (stable + clippy + rustfmt), cargo-llvm-cov, Node 22 via NVM, pnpm 10.33.0, and Playwright Chromium browsers |
-
-After YOLO builds the container, all development and test commands work out of the box:
-
-```bash
-pnpm install && pnpm tauri dev   # run the app
-pnpm test && pnpm test:e2e       # all tests
-cd src-tauri && cargo test       # Rust tests
-```
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-Please note that this project is released with a [Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+Install the platform-specific [Tauri prerequisites](https://tauri.app/start/prerequisites/).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
+
+## Related docs
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, commit conventions, optional container
+- [TESTING.md](TESTING.md) — test patterns and coverage
+- [SECURITY.md](SECURITY.md) — vulnerability reporting and dependency-cooldown policy
+- [CHANGELOG.md](CHANGELOG.md) — release notes
+- [AGENTS.md](AGENTS.md) — guidance for AI coding agents working on this repo

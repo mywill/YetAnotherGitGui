@@ -32,6 +32,25 @@ pnpm lint:rust
 npx tsc --noEmit
 ```
 
+## Containerized Development (Optional)
+
+The repo includes setup scripts for running development and AI coding agents inside a [YOLO](https://github.com/mywill/yolo)-managed Podman container. YOLO supports multiple harnesses (Claude Code, OpenCode, with others planned) and provides an isolated, reproducible environment where the agent can develop and test without touching your host system.
+
+The scripts live in `.yolo/`:
+
+| Script | Runs as | Purpose |
+|--------|---------|---------|
+| `root-setup.sh` | root | Installs Tauri 2.0 system libraries and Playwright's Chromium runtime deps via `apt-get` |
+| `user-setup.sh` | claude | Installs Rust (stable + clippy + rustfmt), cargo-llvm-cov, Node 22 via NVM, pnpm 10.33.0, and Playwright Chromium browsers |
+
+After YOLO builds the container, all development and test commands work out of the box:
+
+```bash
+pnpm install && pnpm tauri dev   # run the app
+pnpm test && pnpm test:e2e       # all tests
+cd src-tauri && cargo test       # Rust tests
+```
+
 ## Code Style
 
 ### TypeScript/React
