@@ -39,10 +39,10 @@
     "lint:rust": "cd src-tauri && cargo clippy -- -D warnings && cargo fmt --check",
     "format:rust": "cd src-tauri && cargo fmt",
     "fallow": "fallow",
-    "fallow:audit": "fallow audit --base origin/main",
-    "fallow:health": "fallow health",
+    "fallow:audit": "pnpm test:coverage --run && fallow audit --base origin/main --coverage coverage/coverage-final.json",
+    "fallow:health": "pnpm test:coverage --run && fallow health --coverage coverage/coverage-final.json",
     "fallow:watch": "fallow watch",
-    "fallow:ci": "mkdir -p .fallow && (fallow audit --base origin/main --format json > .fallow/audit.json || true)",
+    "fallow:ci": "mkdir -p .fallow && pnpm test:coverage --run && (fallow audit --base origin/main --format json --coverage coverage/coverage-final.json > .fallow/audit.json || true)",
     "check": "bash scripts/check.sh"
   },
   "simple-git-hooks": {
