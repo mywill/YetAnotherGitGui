@@ -2345,4 +2345,141 @@ describe("repositoryStore", () => {
       expect(mockShowError).toHaveBeenCalledWith("Error: Commit hunk load failed");
     });
   });
+
+  describe("abortOperation", () => {
+    const baseRepoInfo = {
+      path: "/test/repo",
+      current_branch: "main",
+      is_detached: false,
+      remotes: [],
+      head_hash: "abc123",
+      repo_state: "rebase",
+    };
+
+    beforeEach(() => {
+      useRepositoryStore.setState({
+        repositoryInfo: baseRepoInfo,
+        currentDiff: { hunks: [], is_binary: false, conflict_markers: [] } as never,
+        currentDiffPath: "file.ts",
+        currentDiffIsConflicted: false,
+      });
+      vi.mocked(git.getRepositoryInfo).mockResolvedValue(baseRepoInfo);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+    });
+
+    it("calls git.abortOperation, clears diff, and refreshes the repository", async () => {
+      vi.mocked(git.abortOperation).mockResolvedValue(undefined);
+
+      await useRepositoryStore.getState().abortOperation();
+
+      expect(git.abortOperation).toHaveBeenCalledTimes(1);
+      const state = useRepositoryStore.getState();
+      expect(state.currentDiff).toBeNull();
+      expect(state.currentDiffPath).toBeNull();
+      expect(state.currentDiffIsConflicted).toBe(false);
+      expect(git.getRepositoryInfo).toHaveBeenCalled();
+    });
+
+    it("shows a success notification with the current state label", async () => {
+      vi.mocked(git.abortOperation).mockResolvedValue(undefined);
+
+      await useRepositoryStore.getState().abortOperation();
+
+      expect(mockShowSuccess).toHaveBeenCalledWith("Rebase aborted");
+    });
+
+    it("falls back to 'operation' when repo_state is unknown", async () => {
+      useRepositoryStore.setState({
+        repositoryInfo: { ...baseRepoInfo, repo_state: "" },
+      });
+      vi.mocked(git.abortOperation).mockResolvedValue(undefined);
+
+      await useRepositoryStore.getState().abortOperation();
+
+      expect(mockShowSuccess).toHaveBeenCalledWith("operation aborted");
+    });
+
+    it("shows an error notification when git.abortOperation rejects", async () => {
+      vi.mocked(git.abortOperation).mockRejectedValue(new Error("abort failed"));
+
+      await useRepositoryStore.getState().abortOperation();
+
+      expect(mockShowError).toHaveBeenCalledWith("Error: abort failed");
+      expect(mockShowSuccess).not.toHaveBeenCalled();
+      expect(git.getRepositoryInfo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("continueOperation", () => {
+    const baseRepoInfo = {
+      path: "/test/repo",
+      current_branch: "main",
+      is_detached: false,
+      remotes: [],
+      head_hash: "abc123",
+      repo_state: "cherry-pick",
+    };
+
+    beforeEach(() => {
+      useRepositoryStore.setState({
+        repositoryInfo: baseRepoInfo,
+        currentDiff: { hunks: [], is_binary: false, conflict_markers: [] } as never,
+        currentDiffPath: "file.ts",
+        currentDiffIsConflicted: false,
+      });
+      vi.mocked(git.getRepositoryInfo).mockResolvedValue(baseRepoInfo);
+      vi.mocked(git.getAllCommitGraph).mockResolvedValue([]);
+      vi.mocked(git.getFileStatuses).mockResolvedValue({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      });
+    });
+
+    it("calls git.continueOperation, clears diff, and refreshes the repository", async () => {
+      vi.mocked(git.continueOperation).mockResolvedValue("abcdef1234567890");
+
+      await useRepositoryStore.getState().continueOperation();
+
+      expect(git.continueOperation).toHaveBeenCalledTimes(1);
+      const state = useRepositoryStore.getState();
+      expect(state.currentDiff).toBeNull();
+      expect(state.currentDiffPath).toBeNull();
+      expect(state.currentDiffIsConflicted).toBe(false);
+      expect(git.getRepositoryInfo).toHaveBeenCalled();
+    });
+
+    it("includes the 7-char abbreviated OID in the success message", async () => {
+      vi.mocked(git.continueOperation).mockResolvedValue("abcdef1234567890");
+
+      await useRepositoryStore.getState().continueOperation();
+
+      expect(mockShowSuccess).toHaveBeenCalledWith("Cherry-pick continued (abcdef1)");
+    });
+
+    it("uses the current state label in the success message", async () => {
+      useRepositoryStore.setState({
+        repositoryInfo: { ...baseRepoInfo, repo_state: "revert" },
+      });
+      vi.mocked(git.continueOperation).mockResolvedValue("1234567890abcdef");
+
+      await useRepositoryStore.getState().continueOperation();
+
+      expect(mockShowSuccess).toHaveBeenCalledWith("Revert continued (1234567)");
+    });
+
+    it("shows an error notification when git.continueOperation rejects", async () => {
+      vi.mocked(git.continueOperation).mockRejectedValue(new Error("continue failed"));
+
+      await useRepositoryStore.getState().continueOperation();
+
+      expect(mockShowError).toHaveBeenCalledWith("Error: continue failed");
+      expect(mockShowSuccess).not.toHaveBeenCalled();
+    });
+  });
 });

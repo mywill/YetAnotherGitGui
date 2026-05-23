@@ -640,5 +640,3 @@ function ResultSummary({ results }: { results: BulkResult[] }) {
     </div>
   );
 }
-
-export type { CleanupCategory };

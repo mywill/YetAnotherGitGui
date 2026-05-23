@@ -8,7 +8,11 @@
     "test-results/**",
     "node_modules/**",
     ".pnpm-store/**",
-    "src/vite-env.d.ts"
+    "src/vite-env.d.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/test/**",
+    "e2e/**"
   ],
   "rules": {
     "unused-files": "warn",
