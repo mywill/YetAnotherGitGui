@@ -1,6 +1,7 @@
 pub mod commit;
 pub mod diff;
 pub mod graph;
+pub mod operations;
 pub mod repository;
 pub mod staging;
 pub mod stash;

@@ -321,6 +321,14 @@ export const tauriMocks = `
         case 'revert_commit_file_lines':
           return undefined;
 
+        case 'abort_operation':
+          window.__MOCK_REPO_STATE__ = 'clean';
+          return undefined;
+
+        case 'continue_operation':
+          window.__MOCK_REPO_STATE__ = 'clean';
+          return 'newcommitabc1234567890';
+
         case 'create_commit':
           return 'new-commit-hash-123';
 

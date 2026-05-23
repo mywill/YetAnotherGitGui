@@ -55,6 +55,8 @@ pub fn run() {
             commands::delete_file,
             commands::delete_files,
             commands::resolve_conflict,
+            commands::abort_operation,
+            commands::continue_operation,
             commands::install_cli,
             commands::uninstall_cli,
             commands::check_cli_installed,

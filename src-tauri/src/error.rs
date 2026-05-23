@@ -15,6 +15,12 @@ pub enum AppError {
     #[error("Revert conflict: {0}")]
     RevertConflict(String),
 
+    #[error("No rebase, cherry-pick, or revert in progress")]
+    NoOperationInProgress,
+
+    #[error("Resolve conflicts in: {0:?}")]
+    ConflictsRemaining(Vec<String>),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 

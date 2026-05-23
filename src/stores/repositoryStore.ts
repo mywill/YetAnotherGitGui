@@ -21,6 +21,12 @@ import { cleanErrorMessage } from "../utils/errorMessages";
 let diffRequestId = 0;
 let commitDetailsRequestId = 0;
 
+const OPERATION_STATE_LABELS: Record<string, string> = {
+  rebase: "Rebase",
+  "cherry-pick": "Cherry-pick",
+  revert: "Revert",
+};
+
 interface RepositoryState {
   // Repository info
   repositoryInfo: RepositoryInfo | null;
@@ -73,6 +79,8 @@ interface RepositoryState {
   ) => Promise<void>;
   clearDiff: () => void;
   resolveConflict: (path: string, strategy: string) => Promise<void>;
+  abortOperation: () => Promise<void>;
+  continueOperation: () => Promise<void>;
   stageFile: (path: string) => Promise<void>;
   unstageFile: (path: string) => Promise<void>;
   stageFiles: (paths: string[]) => Promise<void>;
@@ -310,6 +318,34 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       await get().loadFileStatuses();
       // Clear the conflict diff since the file is now resolved
       set({ currentDiff: null, currentDiffPath: null, currentDiffIsConflicted: false });
+    } catch (err) {
+      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+    }
+  },
+
+  abortOperation: async () => {
+    const stateLabel =
+      OPERATION_STATE_LABELS[get().repositoryInfo?.repo_state ?? ""] ?? "operation";
+    try {
+      await git.abortOperation();
+      get().clearDiff();
+      await get().refreshRepository();
+      useNotificationStore.getState().showSuccess(`${stateLabel} aborted`);
+    } catch (err) {
+      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+    }
+  },
+
+  continueOperation: async () => {
+    const stateLabel =
+      OPERATION_STATE_LABELS[get().repositoryInfo?.repo_state ?? ""] ?? "Operation";
+    try {
+      const newOid = await git.continueOperation();
+      get().clearDiff();
+      await get().refreshRepository();
+      useNotificationStore
+        .getState()
+        .showSuccess(`${stateLabel} continued (${newOid.slice(0, 7)})`);
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }

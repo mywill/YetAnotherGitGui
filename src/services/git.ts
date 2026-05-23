@@ -146,6 +146,14 @@ export async function resolveConflict(path: string, strategy: string): Promise<v
   return invoke("resolve_conflict", { path, strategy });
 }
 
+export async function abortOperation(): Promise<void> {
+  return invoke("abort_operation");
+}
+
+export async function continueOperation(): Promise<string> {
+  return invoke("continue_operation");
+}
+
 export async function revertCommit(hash: string): Promise<void> {
   return invoke("revert_commit", { hash });
 }
