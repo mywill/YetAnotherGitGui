@@ -165,9 +165,9 @@ xattr -cr /Applications/Yet\ Another\ Git\ Gui.app
 ### Build fails with missing dependencies
 Check that you have all [Tauri prerequisites](https://tauri.app/start/prerequisites/) installed for your platform.
 
-## Claude Code / YOLO Container
+## AI Agent / YOLO Container
 
-This project includes setup scripts for running [Claude Code](https://github.com/anthropics/claude-code) inside a [YOLO](https://github.com/mywill/yolo)-managed Podman container. YOLO provides an isolated, reproducible environment where Claude Code can develop and test without touching your host system.
+This project includes setup scripts for running AI coding agents inside a [YOLO](https://github.com/mywill/yolo)-managed Podman container. YOLO supports multiple harnesses (Claude Code, OpenCode, with others planned) and provides an isolated, reproducible environment where the agent can develop and test without touching your host system.
 
 The scripts live in `.yolo/`:
 

@@ -6,7 +6,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --defaul
 source "$HOME/.cargo/env"
 rustup component add clippy rustfmt
 
-# cargo-llvm-cov: required by CLAUDE.md for coverage reporting
+# cargo-llvm-cov: required by AGENTS.md for coverage reporting
 cargo install cargo-llvm-cov
 
 # --- Node.js via NVM ---
