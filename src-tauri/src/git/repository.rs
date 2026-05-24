@@ -28,12 +28,22 @@ fn map_repo_state(state: RepositoryState) -> &'static str {
     }
 }
 
+// open_repo intentionally uses direct `log::info!` / `log::error!` calls
+// instead of the `log_git_op!` macro. The macro is hard-coded to the
+// `yagg::git` target with the `op=name k=v` shape — this site needs the
+// `yagg::lifecycle` target on the success line and additional `err={e}`
+// context on the error line. Don't "fix" this back to the macro.
 pub fn open_repo(path: &Path) -> Result<Repository, AppError> {
-    let repo = Repository::open(path)?;
+    log::info!(target: "yagg::lifecycle", "open_repo path={:?}", path);
+    let repo = Repository::open(path).map_err(|e| {
+        log::error!(target: "yagg::error", "open_repo failed path={:?} err={e}", path);
+        AppError::from(e)
+    })?;
     Ok(repo)
 }
 
 pub fn get_repo_info(repo: &Repository) -> Result<RepositoryInfo, AppError> {
+    crate::log_git_op_debug!("get_repo_info");
     let path = repo
         .workdir()
         .unwrap_or_else(|| repo.path())

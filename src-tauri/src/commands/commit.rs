@@ -6,6 +6,7 @@ use crate::state::AppState;
 
 #[tauri::command]
 pub fn create_commit(message: String, state: State<AppState>) -> Result<String, AppError> {
+    crate::log_cmd!("create_commit", msg_len = message.len());
     let repo = state.get_repo()?;
 
     // Get the signature from git config

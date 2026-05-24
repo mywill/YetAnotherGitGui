@@ -336,12 +336,14 @@ pub fn clean_untracked(repo: &Repository, paths: &[String]) -> Result<Vec<BulkRe
 
 #[tauri::command]
 pub fn list_gone_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError> {
+    crate::log_cmd_debug!("list_gone_branches");
     let repo = state.get_repo()?;
     find_gone_branches(&repo)
 }
 
 #[tauri::command]
 pub fn list_merged_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError> {
+    crate::log_cmd_debug!("list_merged_branches");
     let repo = state.get_repo()?;
     find_merged_branches(&repo)
 }
@@ -351,18 +353,21 @@ pub fn delete_branches(
     names: Vec<String>,
     state: State<AppState>,
 ) -> Result<Vec<BulkResult>, AppError> {
+    crate::log_cmd!("delete_branches", count = names.len());
     let repo = state.get_repo()?;
     Ok(delete_branches_bulk(&repo, &names))
 }
 
 #[tauri::command]
 pub fn prune_remote(remote: String, state: State<AppState>) -> Result<Vec<String>, AppError> {
+    crate::log_cmd!("prune_remote", remote = remote);
     let repo = state.get_repo()?;
     run_remote_prune(&repo, &remote)
 }
 
 #[tauri::command]
 pub fn list_old_stashes(days_old: u32, state: State<AppState>) -> Result<Vec<StashInfo>, AppError> {
+    crate::log_cmd_debug!("list_old_stashes", days_old = days_old);
     let mut repo = state.get_repo()?;
     find_old_stashes(&mut repo, days_old)
 }
@@ -372,12 +377,14 @@ pub fn drop_stashes(
     indices: Vec<usize>,
     state: State<AppState>,
 ) -> Result<Vec<BulkResult>, AppError> {
+    crate::log_cmd!("drop_stashes", count = indices.len());
     let mut repo = state.get_repo()?;
     Ok(drop_stashes_bulk(&mut repo, &indices))
 }
 
 #[tauri::command]
 pub fn list_untracked_files(state: State<AppState>) -> Result<Vec<String>, AppError> {
+    crate::log_cmd_debug!("list_untracked_files");
     let repo = state.get_repo()?;
     find_untracked_files(&repo)
 }
@@ -387,6 +394,7 @@ pub fn clean_untracked_files(
     paths: Vec<String>,
     state: State<AppState>,
 ) -> Result<Vec<BulkResult>, AppError> {
+    crate::log_cmd!("clean_untracked_files", count = paths.len());
     let repo = state.get_repo()?;
     clean_untracked(&repo, &paths)
 }

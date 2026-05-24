@@ -165,6 +165,7 @@ impl DiffPrintCollector {
 }
 
 pub fn get_file_diff(repo: &Repository, path: &str, staged: bool) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_file_diff", path = path, staged = staged);
     get_file_diff_with_config(repo, path, staged, &DiffConfig::default())
 }
 
@@ -174,6 +175,7 @@ pub fn get_file_diff_with_config(
     staged: bool,
     config: &DiffConfig,
 ) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_file_diff_with_config", path = path, staged = staged);
     let mut diff_opts = DiffOptions::new();
     diff_opts.pathspec(path);
     diff_opts.include_untracked(true);
@@ -199,6 +201,7 @@ pub fn get_file_diff_with_config(
 
 /// Get diff for an untracked file by reading its content directly
 pub fn get_untracked_file_diff(repo: &Repository, path: &str) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_untracked_file_diff", path = path);
     get_untracked_file_diff_with_config(repo, path, &DiffConfig::default())
 }
 
@@ -207,6 +210,7 @@ pub fn get_untracked_file_diff_with_config(
     path: &str,
     config: &DiffConfig,
 ) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_untracked_file_diff_with_config", path = path);
     let workdir = repo
         .workdir()
         .ok_or(AppError::InvalidPath("No working directory".into()))?;
@@ -350,6 +354,7 @@ const CONFLICT_CONTEXT_LINES: usize = 3;
 /// Get diff for a conflicted file by reading the workdir copy and parsing conflict markers.
 /// Returns one hunk per conflict region with surrounding context lines.
 pub fn get_conflicted_file_diff(repo: &Repository, path: &str) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_conflicted_file_diff", path = path);
     let workdir = repo
         .workdir()
         .ok_or(AppError::InvalidPath("No working directory".into()))?;
@@ -515,6 +520,7 @@ pub fn get_conflicted_diff_hunk(
     path: &str,
     hunk_index: usize,
 ) -> Result<DiffHunk, AppError> {
+    crate::log_git_op_debug!("get_conflicted_diff_hunk", path = path, hunk = hunk_index);
     let file_diff = get_conflicted_file_diff(repo, path)?;
 
     file_diff
@@ -529,6 +535,7 @@ pub fn get_commit_file_diff(
     hash: &str,
     path: &str,
 ) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_commit_file_diff", hash = hash, path = path);
     get_commit_file_diff_with_config(repo, hash, path, &DiffConfig::default())
 }
 
@@ -538,6 +545,7 @@ pub fn get_commit_file_diff_with_config(
     path: &str,
     config: &DiffConfig,
 ) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_commit_file_diff_with_config", hash = hash, path = path);
     let oid = Oid::from_str(hash)?;
     let commit = repo.find_commit(oid)?;
     let tree = commit.tree()?;
@@ -568,6 +576,12 @@ pub fn get_diff_hunk(
     staged: bool,
     hunk_index: usize,
 ) -> Result<DiffHunk, AppError> {
+    crate::log_git_op_debug!(
+        "get_diff_hunk",
+        path = path,
+        staged = staged,
+        hunk = hunk_index
+    );
     // Re-run the diff with no budget limit
     let no_limit = DiffConfig {
         max_diff_bytes: usize::MAX,
@@ -588,6 +602,7 @@ pub fn get_untracked_diff_hunk(
     path: &str,
     hunk_index: usize,
 ) -> Result<DiffHunk, AppError> {
+    crate::log_git_op_debug!("get_untracked_diff_hunk", path = path, hunk = hunk_index);
     let no_limit = DiffConfig {
         max_diff_bytes: usize::MAX,
         max_file_size: u64::MAX,
@@ -608,6 +623,12 @@ pub fn get_commit_diff_hunk(
     path: &str,
     hunk_index: usize,
 ) -> Result<DiffHunk, AppError> {
+    crate::log_git_op_debug!(
+        "get_commit_diff_hunk",
+        hash = hash,
+        path = path,
+        hunk = hunk_index
+    );
     let no_limit = DiffConfig {
         max_diff_bytes: usize::MAX,
         max_file_size: u64::MAX,

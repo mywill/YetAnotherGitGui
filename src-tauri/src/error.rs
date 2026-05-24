@@ -36,7 +36,9 @@ impl Serialize for AppError {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        let s = self.to_string();
+        log::error!(target: "yagg::error", "{s}");
+        serializer.serialize_str(&s)
     }
 }
 

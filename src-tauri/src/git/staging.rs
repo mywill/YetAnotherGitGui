@@ -73,6 +73,7 @@ pub struct FileStatuses {
 }
 
 pub fn get_file_statuses(repo: &Repository) -> Result<FileStatuses, AppError> {
+    crate::log_git_op_debug!("get_file_statuses");
     let mut opts = StatusOptions::new();
     opts.include_untracked(true)
         .recurse_untracked_dirs(true)
@@ -141,6 +142,7 @@ pub fn get_file_statuses(repo: &Repository) -> Result<FileStatuses, AppError> {
 }
 
 pub fn stage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
+    crate::log_git_op!("stage_file", path = path);
     let mut index = repo.index()?;
     let workdir = repo
         .workdir()
@@ -159,6 +161,7 @@ pub fn stage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
 }
 
 pub fn unstage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
+    crate::log_git_op!("unstage_file", path = path);
     let head_tree = repo
         .head()
         .ok()
@@ -198,6 +201,7 @@ pub fn unstage_file(repo: &Repository, path: &str) -> Result<(), AppError> {
 /// only once at the end — avoiding N IPC calls and N disk writes when the
 /// user stages many files at once.
 pub fn stage_files(repo: &Repository, paths: &[String]) -> Result<(), AppError> {
+    crate::log_git_op!("stage_files", count = paths.len());
     let mut index = repo.index()?;
     let workdir = repo
         .workdir()
@@ -222,6 +226,7 @@ pub fn stage_files(repo: &Repository, paths: &[String]) -> Result<(), AppError> 
 /// Equivalent to calling `unstage_file` for each path, but writes the index
 /// only once at the end.
 pub fn unstage_files(repo: &Repository, paths: &[String]) -> Result<(), AppError> {
+    crate::log_git_op!("unstage_files", count = paths.len());
     let head_tree = repo
         .head()
         .ok()
@@ -254,6 +259,7 @@ pub fn unstage_files(repo: &Repository, paths: &[String]) -> Result<(), AppError
 }
 
 pub fn stage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<(), AppError> {
+    crate::log_git_op!("stage_hunk", path = path, hunk = hunk_index);
     // Get the current diff hunks
     let diff = super::diff::get_file_diff(repo, path, false)?;
 
@@ -286,6 +292,7 @@ pub fn stage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<()
 }
 
 pub fn unstage_hunk(repo: &Repository, path: &str, hunk_index: usize) -> Result<(), AppError> {
+    crate::log_git_op!("unstage_hunk", path = path, hunk = hunk_index);
     // Get the staged diff hunks
     let diff = super::diff::get_file_diff(repo, path, true)?;
 
@@ -441,6 +448,12 @@ pub fn discard_hunk(
     hunk_index: usize,
     line_indices: Option<Vec<usize>>,
 ) -> Result<(), AppError> {
+    crate::log_git_op!(
+        "discard_hunk",
+        path = path,
+        hunk = hunk_index,
+        lines = line_indices.as_ref().map(|v| v.len())
+    );
     // Get the unstaged diff
     let diff = super::diff::get_file_diff(repo, path, false)?;
 
@@ -474,6 +487,12 @@ pub fn stage_lines(
     hunk_index: usize,
     line_indices: Vec<usize>,
 ) -> Result<(), AppError> {
+    crate::log_git_op!(
+        "stage_lines",
+        path = path,
+        hunk = hunk_index,
+        lines = line_indices.len()
+    );
     // Get the current diff hunks
     let diff = super::diff::get_file_diff(repo, path, false)?;
 
@@ -569,6 +588,7 @@ fn apply_selected_lines_to_content(
 }
 
 pub fn revert_commit(repo: &Repository, hash: &str) -> Result<(), AppError> {
+    crate::log_git_op!("revert_commit", hash = hash);
     let oid = Oid::from_str(hash)?;
     let commit = repo.find_commit(oid)?;
 
@@ -582,6 +602,7 @@ pub fn revert_commit(repo: &Repository, hash: &str) -> Result<(), AppError> {
 }
 
 pub fn revert_commit_file(repo: &Repository, hash: &str, path: &str) -> Result<(), AppError> {
+    crate::log_git_op!("revert_commit_file", hash = hash, path = path);
     let oid = Oid::from_str(hash)?;
     let commit = repo.find_commit(oid)?;
     let our_commit = repo.head()?.peel_to_commit()?;
@@ -637,6 +658,13 @@ pub fn revert_commit_file_lines(
     hunk_index: usize,
     line_indices: Vec<usize>,
 ) -> Result<(), AppError> {
+    crate::log_git_op!(
+        "revert_commit_file_lines",
+        hash = hash,
+        path = path,
+        hunk = hunk_index,
+        lines = line_indices.len()
+    );
     // Get the commit's diff for this file
     let diff = super::diff::get_commit_file_diff(repo, hash, path)?;
 
@@ -704,6 +732,7 @@ pub fn revert_commit_file_lines(
 /// Reads the workdir file, strips conflict markers keeping the chosen content,
 /// writes the resolved file back, and stages it.
 pub fn resolve_conflict(repo: &Repository, path: &str, strategy: &str) -> Result<(), AppError> {
+    crate::log_git_op!("resolve_conflict", path = path, strategy = strategy);
     let workdir = repo
         .workdir()
         .ok_or(AppError::InvalidPath("No working directory".into()))?;

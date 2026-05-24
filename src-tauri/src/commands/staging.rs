@@ -43,6 +43,7 @@ fn resolve_repo_path(workdir: &Path, user_path: &str) -> Result<PathBuf, AppErro
 
 #[tauri::command]
 pub async fn get_file_statuses(state: State<'_, AppState>) -> Result<git::FileStatuses, AppError> {
+    crate::log_cmd_debug!("get_file_statuses");
     let repository = state.repository.clone();
     tokio::task::spawn_blocking(move || {
         let guard = repository.lock();
@@ -55,6 +56,7 @@ pub async fn get_file_statuses(state: State<'_, AppState>) -> Result<git::FileSt
 
 #[tauri::command]
 pub fn stage_file(path: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("stage_file", path = path);
     let repo = state.get_repo()?;
 
     git::stage_file(&repo, &path)
@@ -62,6 +64,7 @@ pub fn stage_file(path: String, state: State<AppState>) -> Result<(), AppError> 
 
 #[tauri::command]
 pub fn unstage_file(path: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("unstage_file", path = path);
     let repo = state.get_repo()?;
 
     git::unstage_file(&repo, &path)
@@ -69,6 +72,7 @@ pub fn unstage_file(path: String, state: State<AppState>) -> Result<(), AppError
 
 #[tauri::command]
 pub fn stage_files(paths: Vec<String>, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("stage_files", count = paths.len());
     let repo = state.get_repo()?;
 
     git::stage_files(&repo, &paths)
@@ -76,6 +80,7 @@ pub fn stage_files(paths: Vec<String>, state: State<AppState>) -> Result<(), App
 
 #[tauri::command]
 pub fn unstage_files(paths: Vec<String>, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("unstage_files", count = paths.len());
     let repo = state.get_repo()?;
 
     git::unstage_files(&repo, &paths)
@@ -83,6 +88,7 @@ pub fn unstage_files(paths: Vec<String>, state: State<AppState>) -> Result<(), A
 
 #[tauri::command]
 pub fn stage_hunk(path: String, hunk_index: usize, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("stage_hunk", path = path, hunk = hunk_index);
     let repo = state.get_repo()?;
 
     git::stage_hunk(&repo, &path, hunk_index)
@@ -94,6 +100,7 @@ pub fn unstage_hunk(
     hunk_index: usize,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!("unstage_hunk", path = path, hunk = hunk_index);
     let repo = state.get_repo()?;
 
     git::unstage_hunk(&repo, &path, hunk_index)
@@ -106,6 +113,12 @@ pub fn stage_lines(
     line_indices: Vec<usize>,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!(
+        "stage_lines",
+        path = path,
+        hunk = hunk_index,
+        lines = line_indices.len()
+    );
     let repo = state.get_repo()?;
 
     git::stage_lines(&repo, &path, hunk_index, line_indices)
@@ -118,6 +131,12 @@ pub fn discard_hunk(
     line_indices: Option<Vec<usize>>,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!(
+        "discard_hunk",
+        path = path,
+        hunk = hunk_index,
+        lines = line_indices.as_ref().map(|v| v.len())
+    );
     let repo = state.get_repo()?;
 
     git::discard_hunk(&repo, &path, hunk_index, line_indices)
@@ -125,6 +144,7 @@ pub fn discard_hunk(
 
 #[tauri::command]
 pub fn revert_file(path: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("revert_file", path = path);
     let repo = state.get_repo()?;
 
     // Checkout the file from HEAD to discard changes
@@ -142,6 +162,7 @@ pub fn revert_file(path: String, state: State<AppState>) -> Result<(), AppError>
 
 #[tauri::command]
 pub fn revert_commit(hash: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("revert_commit", hash = hash);
     let repo = state.get_repo()?;
 
     git::revert_commit(&repo, &hash)
@@ -153,6 +174,7 @@ pub fn revert_commit_file(
     path: String,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!("revert_commit_file", hash = hash, path = path);
     let repo = state.get_repo()?;
 
     git::revert_commit_file(&repo, &hash, &path)
@@ -166,6 +188,13 @@ pub fn revert_commit_file_lines(
     line_indices: Vec<usize>,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!(
+        "revert_commit_file_lines",
+        hash = hash,
+        path = path,
+        hunk = hunk_index,
+        lines = line_indices.len()
+    );
     let repo = state.get_repo()?;
 
     git::revert_commit_file_lines(&repo, &hash, &path, hunk_index, line_indices)
@@ -173,6 +202,7 @@ pub fn revert_commit_file_lines(
 
 #[tauri::command]
 pub fn delete_file(path: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("delete_file", path = path);
     let repo = state.get_repo()?;
 
     let workdir = repo
@@ -185,6 +215,7 @@ pub fn delete_file(path: String, state: State<AppState>) -> Result<(), AppError>
 
 #[tauri::command]
 pub fn delete_files(paths: Vec<String>, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("delete_files", count = paths.len());
     let repo = state.get_repo()?;
 
     let workdir = repo
@@ -203,6 +234,7 @@ pub fn resolve_conflict(
     strategy: String,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!("resolve_conflict", path = path, strategy = strategy);
     let repo = state.get_repo()?;
     git::resolve_conflict(&repo, &path, &strategy)
 }

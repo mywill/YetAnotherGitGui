@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { logError } from "../utils/logger";
 
 export interface AppInfo {
   version: string;
@@ -35,8 +36,8 @@ export async function getAppInfo(): Promise<AppInfo> {
 export async function writeUpdateLog(message: string): Promise<void> {
   try {
     await invoke("write_update_log", { message });
-  } catch {
-    // Logging should never block the update flow
+  } catch (e) {
+    logError("yagg::fe::system", `write_update_log failed: ${String(e)}`);
   }
 }
 
@@ -48,8 +49,8 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
   let appInfo: AppInfo | undefined;
   try {
     appInfo = await getAppInfo();
-  } catch {
-    // best-effort
+  } catch (e) {
+    logError("yagg::fe::system", `get_app_info failed: ${String(e)}`);
   }
   const infoStr = appInfo
     ? `current version: ${appInfo.version}, platform: ${appInfo.platform}, arch: ${appInfo.arch}`
@@ -70,6 +71,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     await writeUpdateLog("No update available (up to date)");
     return { available: false };
   } catch (error) {
+    logError("yagg::fe::system", `update check failed: ${String(error)}`);
     await writeUpdateLog(`ERROR checking for update: ${String(error)}`);
     throw error;
   }
@@ -87,6 +89,7 @@ export async function downloadAndInstallUpdate(): Promise<void> {
     await writeUpdateLog("Update downloaded and installed, relaunching...");
     await relaunch();
   } catch (error) {
+    logError("yagg::fe::system", `update install failed: ${String(error)}`);
     await writeUpdateLog(`ERROR during download/install: ${String(error)}`);
     throw error;
   }

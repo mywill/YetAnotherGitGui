@@ -32,6 +32,7 @@ pub struct TagInfo {
 
 #[tauri::command]
 pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError> {
+    crate::log_cmd_debug!("list_branches");
     let repo = state.get_repo()?;
 
     let head = repo.head().ok();
@@ -92,6 +93,7 @@ pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError
 
 #[tauri::command]
 pub fn checkout_commit(hash: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("checkout_commit", hash = hash);
     let repo = state.get_repo()?;
 
     let oid = Oid::from_str(&hash)?;
@@ -109,6 +111,7 @@ pub fn checkout_commit(hash: String, state: State<AppState>) -> Result<(), AppEr
 
 #[tauri::command]
 pub fn list_tags(state: State<AppState>) -> Result<Vec<TagInfo>, AppError> {
+    crate::log_cmd_debug!("list_tags");
     let repo = state.get_repo()?;
 
     let mut tags = Vec::new();
@@ -160,6 +163,7 @@ pub fn list_tags(state: State<AppState>) -> Result<Vec<TagInfo>, AppError> {
 
 #[tauri::command]
 pub fn checkout_branch(branch_name: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("checkout_branch", branch = branch_name);
     let repo = state.get_repo()?;
 
     // Find the branch
@@ -185,6 +189,7 @@ pub fn create_branch_and_checkout(
     branch_name: String,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!("create_branch_and_checkout", branch = branch_name);
     let repo = state.get_repo()?;
 
     // Create the new branch at HEAD. force=false ensures we fail if it already
@@ -208,6 +213,7 @@ pub fn create_branch_and_checkout(
 
 #[tauri::command]
 pub fn validate_branch_name(name: String) -> Result<(), AppError> {
+    crate::log_cmd!("validate_branch_name", name = name);
     // Reject leading dash explicitly: git's ref naming rules allow it, but it
     // is universally a footgun (mistaken for a CLI flag by many tools).
     if name.starts_with('-') {
@@ -227,6 +233,7 @@ pub fn delete_branch(
     is_remote: bool,
     state: State<AppState>,
 ) -> Result<(), AppError> {
+    crate::log_cmd!("delete_branch", branch = branch_name, is_remote = is_remote);
     let repo = state.get_repo()?;
 
     if is_remote {
@@ -259,6 +266,7 @@ pub fn delete_branch(
 
 #[tauri::command]
 pub fn delete_tag(tag_name: String, state: State<AppState>) -> Result<(), AppError> {
+    crate::log_cmd!("delete_tag", tag = tag_name);
     let repo = state.get_repo()?;
 
     // Delete the tag

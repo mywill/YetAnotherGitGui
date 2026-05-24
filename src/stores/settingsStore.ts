@@ -3,6 +3,8 @@ import { readSettings, writeSettings } from "../services/settings";
 import type { SettingsData } from "../services/settings";
 import { useNotificationStore } from "./notificationStore";
 import { cleanErrorMessage } from "../utils/errorMessages";
+import { setDebugLoggingEnabled as setDebugLoggingEnabledBackend } from "../services/logging";
+import { logError } from "../utils/logger";
 
 export type Density = "compact" | "comfortable" | "spacious";
 export type TextSize = "small" | "medium" | "large";
@@ -15,6 +17,7 @@ interface SettingsState {
   layoutSizes: Record<string, number>;
   sectionExpanded: Record<string, boolean>;
   autoCheckForUpdates: boolean;
+  debugLoggingEnabled: boolean;
   loaded: boolean;
 
   load: () => Promise<void>;
@@ -25,6 +28,7 @@ interface SettingsState {
   setSectionExpanded: (key: string, value: boolean) => void;
   toggleSectionExpanded: (key: string) => void;
   setAutoCheckForUpdates: (value: boolean) => void;
+  setDebugLoggingEnabled: (value: boolean) => void;
 }
 
 const DEFAULTS: Omit<
@@ -38,6 +42,7 @@ const DEFAULTS: Omit<
   | "setSectionExpanded"
   | "toggleSectionExpanded"
   | "setAutoCheckForUpdates"
+  | "setDebugLoggingEnabled"
 > = {
   density: "compact",
   textSize: "medium",
@@ -45,6 +50,7 @@ const DEFAULTS: Omit<
   layoutSizes: {},
   sectionExpanded: {},
   autoCheckForUpdates: true,
+  debugLoggingEnabled: false,
 };
 
 // Module-level so concurrent setter calls coalesce into one persist write.
@@ -78,8 +84,15 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
   const delay = immediate ? 0 : 500;
   persistTimer = setTimeout(() => {
     persistTimer = null;
-    const { density, textSize, theme, layoutSizes, sectionExpanded, autoCheckForUpdates } =
-      getState();
+    const {
+      density,
+      textSize,
+      theme,
+      layoutSizes,
+      sectionExpanded,
+      autoCheckForUpdates,
+      debugLoggingEnabled,
+    } = getState();
     const data: SettingsData = {
       density,
       textSize,
@@ -87,6 +100,7 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
       layoutSizes,
       sectionExpanded,
       autoCheckForUpdates,
+      debugLoggingEnabled,
     };
     writeSettings(data).catch((err: unknown) => {
       const raw = err instanceof Error ? err.message : String(err);
@@ -108,6 +122,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const layoutSizes = saved.layoutSizes ?? DEFAULTS.layoutSizes;
       const sectionExpanded = saved.sectionExpanded ?? DEFAULTS.sectionExpanded;
       const autoCheckForUpdates = saved.autoCheckForUpdates ?? DEFAULTS.autoCheckForUpdates;
+      const debugLoggingEnabled = saved.debugLoggingEnabled ?? DEFAULTS.debugLoggingEnabled;
 
       applyToDOM(density, textSize, theme);
       set({
@@ -117,9 +132,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         layoutSizes,
         sectionExpanded,
         autoCheckForUpdates,
+        debugLoggingEnabled,
         loaded: true,
       });
-    } catch {
+    } catch (e) {
+      logError("yagg::fe::settings", `settings load failed: ${String(e)}`);
       // If reading fails, use defaults
       applyToDOM(DEFAULTS.density, DEFAULTS.textSize, DEFAULTS.theme);
       set({ ...DEFAULTS, loaded: true });
@@ -167,6 +184,20 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setAutoCheckForUpdates: (autoCheckForUpdates) => {
     set({ autoCheckForUpdates });
+    persistDebounced(get, true);
+  },
+
+  setDebugLoggingEnabled: (debugLoggingEnabled) => {
+    // Two distinct effects with one source of truth each:
+    //   1. Local state updates first so the toggle UI reflects the choice.
+    //   2. Backend setter flips the LIVE log level (log::set_max_level).
+    //   3. persistDebounced writes settings.json — sole writer; the backend
+    //      does NOT touch the file. Next launch reads this value via
+    //      main.rs::read_debug_logging_from_disk.
+    set({ debugLoggingEnabled });
+    setDebugLoggingEnabledBackend(debugLoggingEnabled).catch((err: unknown) => {
+      logError("yagg::fe::settings", `set_debug_logging_enabled failed: ${String(err)}`);
+    });
     persistDebounced(get, true);
   },
 }));

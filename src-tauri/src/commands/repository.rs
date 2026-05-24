@@ -7,7 +7,11 @@ use crate::state::AppState;
 
 #[tauri::command]
 pub fn get_current_dir() -> Result<String, AppError> {
-    let cwd = std::env::current_dir().map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    crate::log_cmd_debug!("get_current_dir");
+    let cwd = std::env::current_dir().map_err(|e| {
+        log::error!(target: "yagg::error", "current_dir failed: {e}");
+        AppError::InvalidPath(e.to_string())
+    })?;
 
     // If cwd ends with src-tauri, use parent directory
     if cwd.ends_with("src-tauri") {
@@ -24,13 +28,21 @@ pub fn open_repository(
     path: String,
     state: State<AppState>,
 ) -> Result<git::RepositoryInfo, AppError> {
+    crate::log_cmd!("open_repository", path = path);
     let path = PathBuf::from(&path);
-    let canonical_path = path
-        .canonicalize()
-        .map_err(|_| AppError::InvalidPath(path.display().to_string()))?;
+    let canonical_path = path.canonicalize().map_err(|e| {
+        log::error!(target: "yagg::error", "canonicalize failed path={:?} err={e}", path);
+        AppError::InvalidPath(path.display().to_string())
+    })?;
 
     let repo = git::open_repo(&canonical_path)?;
     let info = git::get_repo_info(&repo)?;
+
+    log::info!(
+        target: "yagg::lifecycle",
+        "repo opened path={:?}",
+        canonical_path
+    );
 
     let mut repo_lock = state.repository.lock();
     *repo_lock = Some(repo);
@@ -40,6 +52,7 @@ pub fn open_repository(
 
 #[tauri::command]
 pub fn get_repository_info(state: State<AppState>) -> Result<git::RepositoryInfo, AppError> {
+    crate::log_cmd_debug!("get_repository_info");
     let repo = state.get_repo()?;
 
     git::get_repo_info(&repo)

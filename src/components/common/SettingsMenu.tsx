@@ -11,11 +11,20 @@ import { useNotificationStore } from "../../stores/notificationStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import type { Density, TextSize, Theme } from "../../stores/settingsStore";
 import { usePlatform } from "../../hooks/usePlatform";
-import { IconSettings } from "@tabler/icons-react";
+import { IconSettings, IconChevronRight } from "@tabler/icons-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
 import { UpdateDialog } from "./UpdateDialog";
 import { YaggButton } from "./YaggButton";
+import { openLogDir } from "../../services/logging";
+import { logError } from "../../utils/logger";
+
+// Delay before a hover-out closes the Help submenu. Lets the user travel from
+// the trigger row to the submenu without the panel snapping shut underneath.
+const HELP_CLOSE_DELAY_MS = 150;
+
+const GITHUB_URL = "https://github.com/mywill/YetAnotherGitGui";
 
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,6 +38,8 @@ export function SettingsMenu() {
   const setTextSize = useSettingsStore((s) => s.setTextSize);
   const autoCheckForUpdates = useSettingsStore((s) => s.autoCheckForUpdates);
   const setAutoCheckForUpdates = useSettingsStore((s) => s.setAutoCheckForUpdates);
+  const debugLoggingEnabled = useSettingsStore((s) => s.debugLoggingEnabled);
+  const setDebugLoggingEnabled = useSettingsStore((s) => s.setDebugLoggingEnabled);
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
@@ -36,7 +47,9 @@ export function SettingsMenu() {
   const [updateChecking, setUpdateChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const helpCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isMac) {
@@ -46,9 +59,36 @@ export function SettingsMenu() {
     }
   }, [isMac]);
 
+  // Cancel any pending help-close timer when the help submenu re-opens, when
+  // the parent menu closes, or on unmount.
+  const cancelHelpClose = useCallback(() => {
+    if (helpCloseTimerRef.current) {
+      clearTimeout(helpCloseTimerRef.current);
+      helpCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHelpClose = useCallback(() => {
+    cancelHelpClose();
+    helpCloseTimerRef.current = setTimeout(() => {
+      setHelpOpen(false);
+      helpCloseTimerRef.current = null;
+    }, HELP_CLOSE_DELAY_MS);
+  }, [cancelHelpClose]);
+
+  const openHelp = useCallback(() => {
+    cancelHelpClose();
+    setHelpOpen(true);
+  }, [cancelHelpClose]);
+
   const closeMenu = useCallback(() => {
     setIsOpen(false);
-  }, []);
+    setHelpOpen(false);
+    cancelHelpClose();
+  }, [cancelHelpClose]);
+
+  // Clean up the close timer on unmount.
+  useEffect(() => cancelHelpClose, [cancelHelpClose]);
 
   // Close on click outside
   useEffect(() => {
@@ -62,17 +102,21 @@ export function SettingsMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, closeMenu]);
 
-  // Close on Escape
+  // Escape closes the submenu first (if open), then the menu on a second press.
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key !== "Escape") return;
+      if (helpOpen) {
+        setHelpOpen(false);
+        cancelHelpClose();
+      } else {
         closeMenu();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, closeMenu]);
+  }, [isOpen, helpOpen, closeMenu, cancelHelpClose]);
 
   const handleInstall = async () => {
     setShowInstallDialog(false);
@@ -93,6 +137,26 @@ export function SettingsMenu() {
       setCliInstalled(false);
     } catch (error) {
       useNotificationStore.getState().showError(String(error));
+    }
+  };
+
+  const handleViewLogs = async () => {
+    closeMenu();
+    try {
+      await openLogDir();
+    } catch (e) {
+      logError("yagg::fe::ui", `open log dir failed: ${String(e)}`);
+      useNotificationStore.getState().showError(`Failed to open log folder: ${String(e)}`);
+    }
+  };
+
+  const handleOpenGitHub = async () => {
+    closeMenu();
+    try {
+      await openUrl(GITHUB_URL);
+    } catch (e) {
+      logError("yagg::fe::ui", `open GitHub URL failed: ${String(e)}`);
+      useNotificationStore.getState().showError(`Failed to open GitHub: ${String(e)}`);
     }
   };
 
@@ -141,7 +205,10 @@ export function SettingsMenu() {
 
         {isOpen && (
           <div
-            className="settings-menu-dropdown border-border bg-bg-panel shadow-menu absolute top-full right-0 z-100 mt-1 min-w-45 overflow-hidden rounded-md border"
+            // No `overflow-hidden` so the Help fly-out submenu can extend past
+            // the dropdown's left edge. The submenu carries its own border +
+            // rounded corners, so the parent panel still looks clean.
+            className="settings-menu-dropdown border-border bg-bg-panel shadow-menu absolute top-full right-0 z-100 mt-1 min-w-45 rounded-md border"
             role="menu"
           >
             {isMac && !cliInstalled && (
@@ -288,6 +355,77 @@ export function SettingsMenu() {
             >
               About
             </YaggButton>
+            <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
+            <div
+              className="settings-menu-help-row relative"
+              onMouseEnter={openHelp}
+              onMouseLeave={scheduleHelpClose}
+            >
+              <YaggButton
+                variant="menu-item"
+                className="settings-menu-item flex w-full items-center gap-1.5 px-3 py-2 text-xs"
+                role="menuitem"
+                aria-haspopup="menu"
+                aria-expanded={helpOpen}
+                onClick={() => (helpOpen ? setHelpOpen(false) : openHelp())}
+              >
+                <span>Help</span>
+                <IconChevronRight size={12} stroke={1.75} aria-hidden />
+              </YaggButton>
+              {helpOpen && (
+                <div
+                  className="settings-menu-help-submenu border-border bg-bg-panel shadow-menu absolute top-0 right-full z-100 mr-1 min-w-45 rounded-md border"
+                  role="menu"
+                  aria-label="Help"
+                  onMouseEnter={openHelp}
+                  onMouseLeave={scheduleHelpClose}
+                >
+                  <YaggButton
+                    variant="menu-item"
+                    className="settings-menu-item px-3 py-2 text-xs"
+                    role="menuitem"
+                    onClick={handleViewLogs}
+                  >
+                    View Logs
+                  </YaggButton>
+                  <YaggButton
+                    variant="menu-item"
+                    className="settings-menu-item px-3 py-2 text-xs"
+                    role="menuitem"
+                    onClick={handleOpenGitHub}
+                  >
+                    GitHub
+                  </YaggButton>
+                  <div className="settings-menu-group px-3 py-2">
+                    <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
+                      Verbose debug logging
+                    </div>
+                    <div className="flex gap-1">
+                      <YaggButton
+                        variant={debugLoggingEnabled ? "selection" : "outline"}
+                        size="sm"
+                        className="text-2xs flex-1"
+                        role="menuitemradio"
+                        aria-checked={debugLoggingEnabled}
+                        onClick={() => setDebugLoggingEnabled(true)}
+                      >
+                        On
+                      </YaggButton>
+                      <YaggButton
+                        variant={!debugLoggingEnabled ? "selection" : "outline"}
+                        size="sm"
+                        className="text-2xs flex-1"
+                        role="menuitemradio"
+                        aria-checked={!debugLoggingEnabled}
+                        onClick={() => setDebugLoggingEnabled(false)}
+                      >
+                        Off
+                      </YaggButton>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

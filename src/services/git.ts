@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logDebug } from "../utils/logger";
 import type {
   RepositoryInfo,
   GraphCommit,
@@ -61,6 +62,9 @@ export async function validateBranchName(
     return { ok: true };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
+    // Validation failures are normal user input — log at debug, not error,
+    // so they don't fill the log on every rejected keystroke.
+    logDebug("yagg::fe::git", `validate_branch_name rejected: ${reason}`);
     return { ok: false, reason };
   }
 }

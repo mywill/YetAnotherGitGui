@@ -1,74 +1,37 @@
-use std::io::Write;
+//! Auto-update logging.
+//!
+//! Historically wrote to a separate `<data_dir>/yagg/update.log`. The contents
+//! now route through the unified per-instance logger so a user only ever has to
+//! collect one file when reporting an issue. The public API is kept for
+//! backward compatibility with the frontend update flow and the existing Tauri
+//! commands `write_update_log` / `get_update_log_path`.
 
-/// Writes a timestamped entry to `<data_dir>/yagg/update.log`.
+/// Records an auto-update event.
 pub fn write_log(message: &str) {
-    let data_dir = dirs::data_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-    let log_dir = data_dir.join("yagg");
-    let log_path = log_dir.join("update.log");
-
-    if std::fs::create_dir_all(&log_dir).is_err() {
-        return;
-    }
-
-    let mut file = match std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
-        Ok(f) => f,
-        Err(_) => return,
-    };
-
-    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z");
-
-    let _ = writeln!(file, "=== UPDATE at {timestamp} ===\n{message}\n");
+    log::info!(target: "yagg::update", "{message}");
 }
 
-/// Returns the path to `update.log` if the data directory can be resolved.
+/// Returns the path to the current per-instance log file (where update events
+/// now land). Returns `None` only if the data directory cannot be resolved.
 pub fn get_log_path() -> Option<String> {
-    let data_dir = dirs::data_dir()?;
-    let log_path = data_dir.join("yagg").join("update.log");
-    Some(log_path.to_string_lossy().into_owned())
+    crate::logger::current_log_path().map(|p| p.to_string_lossy().into_owned())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
-    fn test_write_log_creates_file_and_appends() {
-        let data_dir =
-            dirs::data_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-        let log_path = data_dir.join("yagg").join("update.log");
-
-        // Remove the file if it exists so we start fresh
-        let _ = fs::remove_file(&log_path);
-
-        write_log("Test message one");
-
-        let contents = fs::read_to_string(&log_path).expect("update.log should exist");
-        assert!(contents.contains("=== UPDATE at"));
-        assert!(contents.contains("Test message one"));
-
-        // Write a second entry and verify append
-        write_log("Test message two");
-
-        let contents = fs::read_to_string(&log_path).expect("update.log should exist");
-        assert!(contents.contains("Test message one"));
-        assert!(contents.contains("Test message two"));
-
-        // Clean up
-        let _ = fs::remove_file(&log_path);
+    fn write_log_does_not_panic_without_init() {
+        // The log facade swallows messages when no logger is installed.
+        write_log("test update event");
     }
 
     #[test]
-    fn test_get_log_path_returns_some() {
-        let path = get_log_path();
-        // On most systems dirs::data_dir() returns Some
-        if dirs::data_dir().is_some() {
-            assert!(path.is_some());
-            assert!(path.unwrap().contains("update.log"));
+    fn get_log_path_returns_unified_path() {
+        if let Some(p) = get_log_path() {
+            assert!(p.contains("yagg"));
+            assert!(p.ends_with(".log"));
         }
     }
 }

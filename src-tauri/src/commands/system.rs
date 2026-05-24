@@ -12,6 +12,7 @@ pub struct AppInfo {
 
 #[tauri::command]
 pub fn get_app_info() -> AppInfo {
+    crate::log_cmd_debug!("get_app_info");
     AppInfo {
         version: env!("CARGO_PKG_VERSION").to_string(),
         tauri_version: tauri::VERSION.to_string(),
@@ -22,6 +23,7 @@ pub fn get_app_info() -> AppInfo {
 
 #[tauri::command]
 pub fn uninstall_cli() -> Result<String, AppError> {
+    crate::log_cmd!("uninstall_cli");
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
@@ -103,6 +105,7 @@ fn escape_for_applescript(s: &str) -> String {
 
 #[tauri::command]
 pub fn install_cli() -> Result<String, AppError> {
+    crate::log_cmd!("install_cli");
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
@@ -157,6 +160,7 @@ pub fn install_cli() -> Result<String, AppError> {
 
 #[tauri::command]
 pub fn check_cli_installed() -> bool {
+    crate::log_cmd_debug!("check_cli_installed");
     // Only show CLI install option on macOS
     #[cfg(target_os = "macos")]
     {
@@ -171,11 +175,13 @@ pub fn check_cli_installed() -> bool {
 
 #[tauri::command]
 pub fn write_update_log(message: String) {
+    crate::log_cmd!("write_update_log", bytes = message.len());
     update_logger::write_log(&message);
 }
 
 #[tauri::command]
 pub fn get_update_log_path() -> Option<String> {
+    crate::log_cmd_debug!("get_update_log_path");
     update_logger::get_log_path()
 }
 
@@ -243,7 +249,11 @@ mod tests {
         let path = get_update_log_path();
         if dirs::data_dir().is_some() {
             assert!(path.is_some());
-            assert!(path.unwrap().contains("update.log"));
+            // Update events route through the unified per-instance log file —
+            // the basename must look like `app-YYYY-MM-DD-pid<N>.log`.
+            let p = path.unwrap();
+            assert!(p.contains("/app-"), "expected unified log basename, got {p}");
+            assert!(p.ends_with(".log"), "expected .log suffix, got {p}");
         }
     }
 

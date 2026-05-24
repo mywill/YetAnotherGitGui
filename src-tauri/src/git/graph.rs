@@ -52,6 +52,7 @@ pub fn build_commit_graph(
     commits: Vec<CommitInfo>,
     branch_refs: HashMap<String, Vec<RefInfo>>,
 ) -> Vec<GraphCommit> {
+    crate::log_git_op_debug!("build_commit_graph", count = commits.len());
     let mut result: Vec<GraphCommit> = Vec::with_capacity(commits.len());
     let mut column_map: HashMap<String, usize> = HashMap::new();
     let mut active_columns: Vec<Option<String>> = Vec::new();
@@ -232,6 +233,7 @@ pub fn build_commit_graph(
 }
 
 pub fn collect_refs(repo: &git2::Repository) -> Result<HashMap<String, Vec<RefInfo>>, git2::Error> {
+    crate::log_git_op_debug!("collect_refs");
     let mut refs_map: HashMap<String, Vec<RefInfo>> = HashMap::new();
 
     let head = repo.head().ok();

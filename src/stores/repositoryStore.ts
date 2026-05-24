@@ -14,6 +14,7 @@ import type {
 import * as git from "../services/git";
 import { useNotificationStore } from "./notificationStore";
 import { cleanErrorMessage } from "../utils/errorMessages";
+import { logInfo } from "../utils/logger";
 
 // Monotonic request counters used to discard stale async responses.
 // When a user rapidly clicks through files/commits, we want to keep only
@@ -206,6 +207,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   stashFileDiffs: new Map(),
 
   openRepository: async (path: string) => {
+    logInfo("yagg::fe::lifecycle", `repo open requested path=${path}`);
     set({ isLoading: true, fileStatusesLoading: true, commitsLoading: true });
     try {
       const info = await git.openRepository(path);

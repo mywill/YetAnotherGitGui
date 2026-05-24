@@ -12,6 +12,13 @@ pub async fn get_file_diff(
     is_conflicted: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<git::FileDiff, AppError> {
+    crate::log_cmd_debug!(
+        "get_file_diff",
+        path = path,
+        staged = staged,
+        is_untracked = is_untracked,
+        is_conflicted = is_conflicted
+    );
     let repository = state.repository.clone();
     tokio::task::spawn_blocking(move || {
         let guard = repository.lock();
@@ -41,6 +48,14 @@ pub fn get_diff_hunk(
     is_conflicted: Option<bool>,
     state: State<AppState>,
 ) -> Result<git::DiffHunk, AppError> {
+    crate::log_cmd_debug!(
+        "get_diff_hunk",
+        path = path,
+        staged = staged,
+        hunk = hunk_index,
+        is_untracked = is_untracked,
+        is_conflicted = is_conflicted
+    );
     let repo = state.get_repo()?;
 
     if is_conflicted.unwrap_or(false) {

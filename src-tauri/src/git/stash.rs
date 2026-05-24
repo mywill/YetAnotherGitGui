@@ -24,6 +24,7 @@ pub struct StashDetails {
 }
 
 pub fn list_stashes(repo: &mut Repository) -> Result<Vec<StashInfo>, AppError> {
+    crate::log_git_op_debug!("list_stashes");
     // First pass: collect basic info without accessing repo inside closure
     let mut raw_stashes: Vec<(usize, String, git2::Oid)> = Vec::new();
 
@@ -72,6 +73,7 @@ fn parse_branch_from_stash_message(message: &str) -> String {
 }
 
 pub fn get_stash_details(repo: &mut Repository, index: usize) -> Result<StashDetails, AppError> {
+    crate::log_git_op_debug!("get_stash_details", index = index);
     // First pass: find the stash at the given index
     let mut found_stash: Option<(String, git2::Oid)> = None;
 
@@ -160,12 +162,14 @@ pub fn get_stash_details(repo: &mut Repository, index: usize) -> Result<StashDet
 }
 
 pub fn apply_stash(repo: &mut Repository, index: usize) -> Result<(), AppError> {
+    crate::log_git_op!("apply_stash", index = index);
     let mut opts = StashApplyOptions::new();
     repo.stash_apply(index, Some(&mut opts))?;
     Ok(())
 }
 
 pub fn drop_stash(repo: &mut Repository, index: usize) -> Result<(), AppError> {
+    crate::log_git_op!("drop_stash", index = index);
     repo.stash_drop(index)?;
     Ok(())
 }
@@ -175,6 +179,7 @@ pub fn get_stash_file_diff(
     index: usize,
     path: &str,
 ) -> Result<FileDiff, AppError> {
+    crate::log_git_op_debug!("get_stash_file_diff", index = index, path = path);
     // Get the stash commit
     let mut stash_oid: Option<git2::Oid> = None;
 

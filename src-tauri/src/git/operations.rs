@@ -3,6 +3,7 @@ use git2::{Repository, RepositoryState, ResetType, Status, StatusOptions};
 use crate::error::AppError;
 
 pub fn abort_operation(repo: &Repository) -> Result<(), AppError> {
+    crate::log_git_op!("abort_operation", state = format!("{:?}", repo.state()));
     match repo.state() {
         RepositoryState::Rebase
         | RepositoryState::RebaseInteractive
@@ -25,6 +26,7 @@ pub fn abort_operation(repo: &Repository) -> Result<(), AppError> {
 }
 
 pub fn continue_operation(repo: &Repository) -> Result<String, AppError> {
+    crate::log_git_op!("continue_operation", state = format!("{:?}", repo.state()));
     let conflicts = list_conflicted_paths(repo)?;
     if !conflicts.is_empty() {
         return Err(AppError::ConflictsRemaining(conflicts));

@@ -39,6 +39,7 @@ pub fn get_commits(
     skip: usize,
     limit: usize,
 ) -> Result<Vec<CommitInfo>, AppError> {
+    crate::log_git_op_debug!("get_commits", skip = skip, limit = limit);
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL)?;
 
@@ -70,6 +71,7 @@ pub fn get_commits(
 }
 
 pub fn get_all_commits(repo: &Repository) -> Result<Vec<CommitInfo>, AppError> {
+    crate::log_git_op_debug!("get_all_commits");
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL)?;
 
@@ -99,6 +101,7 @@ pub fn get_all_commits(repo: &Repository) -> Result<Vec<CommitInfo>, AppError> {
 }
 
 pub fn get_commit_details(repo: &Repository, hash: &str) -> Result<CommitDetails, AppError> {
+    crate::log_git_op_debug!("get_commit_details", hash = hash);
     let oid = Oid::from_str(hash)?;
     let commit = repo.find_commit(oid)?;
 

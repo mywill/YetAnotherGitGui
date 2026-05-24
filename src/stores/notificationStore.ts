@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { logError } from "../utils/logger";
 
 export interface Notification {
   id: number;
@@ -31,6 +32,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
 
   showError: (message: string, opts?: NotificationOptions) => {
+    logError("yagg::fe::ui", message);
     const id = _nextId++;
     set((state) => ({
       notifications: [

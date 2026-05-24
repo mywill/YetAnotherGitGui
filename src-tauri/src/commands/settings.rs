@@ -11,23 +11,59 @@ fn settings_path() -> Result<PathBuf, AppError> {
 
 #[tauri::command]
 pub fn read_settings() -> Result<String, AppError> {
+    crate::log_cmd_debug!("read_settings");
     let path = settings_path()?;
     if !path.exists() {
+        log::info!(target: "yagg::lifecycle", "settings loaded (no file, returning defaults)");
         return Ok("{}".to_string());
     }
-    fs::read_to_string(&path)
-        .map_err(|e| AppError::InvalidPath(format!("Failed to read settings: {}", e)))
+    let body = fs::read_to_string(&path).map_err(|e| {
+        log::error!(target: "yagg::error", "settings read failed path={:?} err={e}", path);
+        AppError::InvalidPath(format!("Failed to read settings: {}", e))
+    })?;
+    log::info!(target: "yagg::lifecycle", "settings loaded bytes={}", body.len());
+    Ok(body)
 }
 
 #[tauri::command]
 pub fn write_settings(data: String) -> Result<(), AppError> {
+    crate::log_cmd!("write_settings", bytes = data.len());
     let path = settings_path()?;
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| AppError::InvalidPath(format!("Failed to create settings dir: {}", e)))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            log::error!(target: "yagg::error", "settings create_dir failed err={e}");
+            AppError::InvalidPath(format!("Failed to create settings dir: {}", e))
+        })?;
     }
-    fs::write(&path, data)
-        .map_err(|e| AppError::InvalidPath(format!("Failed to write settings: {}", e)))
+    fs::write(&path, &data).map_err(|e| {
+        log::error!(target: "yagg::error", "settings write failed path={:?} err={e}", path);
+        AppError::InvalidPath(format!("Failed to write settings: {}", e))
+    })?;
+    log::info!(target: "yagg::lifecycle", "settings written bytes={}", data.len());
+    Ok(())
+}
+
+/// Settings JSON key that controls verbose debug logging. Stored camelCase to
+/// match the rest of the frontend-written settings (autoCheckForUpdates,
+/// layoutSizes, sectionExpanded, textSize, …).
+const DEBUG_LOGGING_KEY: &str = "debugLoggingEnabled";
+
+/// Read the debug-logging flag from settings.json without requiring Tauri
+/// state — used by `main.rs` before the Tauri runtime starts. Returns `false`
+/// for any read or parse failure (logging defaults to off).
+pub fn read_debug_logging_from_disk() -> bool {
+    let path = match settings_path() {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    serde_json::from_str::<serde_json::Value>(&content)
+        .ok()
+        .and_then(|v| v.get(DEBUG_LOGGING_KEY).and_then(|b| b.as_bool()))
+        .unwrap_or(false)
 }
 
 #[cfg(test)]

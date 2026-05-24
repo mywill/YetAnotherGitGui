@@ -2,10 +2,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    // Install crash handler first — covers all panics in all modes
+    // Install crash handler first — covers all panics in all modes.
     yagg_lib::crash_handler::setup();
 
-    // On Unix release builds, detach from the terminal so the shell prompt returns immediately
+    // On Unix release builds, detach from the terminal so the shell prompt
+    // returns immediately. The detach re-spawns the binary and the parent
+    // exits — so anything that creates per-process state (notably the log
+    // file) MUST happen after this check, otherwise every release launch
+    // leaves a ghost log file from the short-lived parent.
     #[cfg(all(not(debug_assertions), unix))]
     {
         if std::env::var("YAGG_DETACHED").is_err() {
@@ -13,6 +17,23 @@ fn main() {
             return;
         }
     }
+
+    // Init unified logger (reads debug flag from settings.json before Tauri).
+    // Sweep old log files (7-day retention) and emit a startup line so each
+    // file is self-identifying.
+    let debug_enabled = yagg_lib::commands::settings::read_debug_logging_from_disk();
+    if let Err(e) = yagg_lib::logger::init(debug_enabled) {
+        // The logger isn't installed yet — print to stderr so a
+        // terminal-launched user at least sees that logging is dead.
+        eprintln!("yagg: logger init failed: {e}");
+    }
+    yagg_lib::logger::sweep_old_logs(7);
+    log::info!(
+        target: "yagg::lifecycle",
+        "startup pid={} version={}",
+        std::process::id(),
+        env!("CARGO_PKG_VERSION")
+    );
 
     yagg_lib::run()
 }

@@ -10,14 +10,21 @@ pub fn setup() {
     }));
 }
 
-/// Writes panic details to `<data_dir>/yagg/crash.log`, returning the path on success.
+/// Appends panic details to the unified per-instance log file, returning the
+/// path on success.
+///
+/// Bypasses the `log` facade intentionally: a panic hook must not depend on
+/// the logger's internal mutex (it may be poisoned mid-panic). Opens the
+/// underlying file with `append(true)` and writes a single multi-line record.
 fn write_crash_log(info: &panic::PanicHookInfo<'_>) -> Option<String> {
-    let data_dir = dirs::data_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-    let log_dir = data_dir.join("yagg");
-    let log_path = log_dir.join("crash.log");
+    // Prefer the path resolved during logger::init so the panic lands in the
+    // same file as the rest of this instance's log lines.
+    let log_path = crate::logger::current_log_path()?;
 
-    if std::fs::create_dir_all(&log_dir).is_err() {
-        return None;
+    if let Some(parent) = log_path.parent() {
+        if std::fs::create_dir_all(parent).is_err() {
+            return None;
+        }
     }
 
     let mut file = match std::fs::OpenOptions::new()
@@ -29,7 +36,7 @@ fn write_crash_log(info: &panic::PanicHookInfo<'_>) -> Option<String> {
         Err(_) => return None,
     };
 
-    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z");
+    let formatted_ts = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z");
 
     let message = if let Some(s) = info.payload().downcast_ref::<&str>() {
         (*s).to_string()
@@ -48,7 +55,7 @@ fn write_crash_log(info: &panic::PanicHookInfo<'_>) -> Option<String> {
 
     let _ = writeln!(
         file,
-        "=== CRASH at {timestamp} ===\nMessage: {message}\nLocation: {location}\nBacktrace:\n{backtrace}\n"
+        "=== CRASH at {formatted_ts} ===\nMessage: {message}\nLocation: {location}\nBacktrace:\n{backtrace}\n"
     );
 
     Some(log_path.to_string_lossy().into_owned())
@@ -134,27 +141,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_write_crash_log_creates_file() {
-        // We can't easily construct a PanicHookInfo, but we can test that
-        // the data directory resolution works
-        let data_dir =
-            dirs::data_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-        let log_dir = data_dir.join("yagg");
-        assert!(
-            std::fs::create_dir_all(&log_dir).is_ok(),
-            "Should be able to create yagg data directory"
-        );
+    fn test_log_dir_resolves() {
+        // Panic hook appends to the unified log path. Verify the directory it
+        // lives under is createable in this environment.
+        if let Some(dir) = crate::logger::log_dir() {
+            assert!(
+                std::fs::create_dir_all(&dir).is_ok(),
+                "should be able to create yagg logs directory"
+            );
+        }
     }
 
     #[test]
     fn test_setup_installs_hook() {
-        // Verify setup doesn't panic when called
-        // Note: we can't easily test the hook itself without actually panicking,
-        // but we can verify the function completes without error.
-        // In a real test environment, we'd need to fork the process.
-        // Just verify the function signature is correct.
-        let _ = std::panic::take_hook(); // save current hook
+        // Verify setup doesn't panic when called. We can't easily exercise the
+        // hook itself without actually panicking the test thread.
+        let _ = std::panic::take_hook();
         setup();
-        let _ = std::panic::take_hook(); // restore by taking ours
+        let _ = std::panic::take_hook();
     }
 }

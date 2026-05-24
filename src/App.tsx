@@ -21,6 +21,7 @@ import { useKeyboardShortcuts, type ShortcutHandler } from "./hooks/useKeyboardS
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { YaggButton } from "./components/common/YaggButton";
 import { IconSearch, IconRefresh } from "@tabler/icons-react";
+import { logInfo } from "./utils/logger";
 import "./styles/index.css";
 
 export function App() {
@@ -53,11 +54,13 @@ export function App() {
 
   // Load persisted settings (density, theme, layout sizes) on mount
   useEffect(() => {
+    logInfo("yagg::fe::lifecycle", "settings load triggered");
     useSettingsStore.getState().load();
   }, []);
 
   useEffect(() => {
     if (repoPath && !cliLoading) {
+      logInfo("yagg::fe::lifecycle", `repo open from CLI args path=${repoPath}`);
       openRepository(repoPath);
     }
   }, [repoPath, cliLoading, openRepository]);
@@ -65,6 +68,7 @@ export function App() {
   // Load branches and tags when repository is loaded
   useEffect(() => {
     if (repositoryInfo) {
+      logInfo("yagg::fe::lifecycle", `repo info changed path=${repositoryInfo.path}`);
       loadBranchesAndTags();
     }
   }, [repositoryInfo, loadBranchesAndTags]);

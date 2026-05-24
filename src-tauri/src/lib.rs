@@ -2,9 +2,77 @@ pub mod commands;
 pub mod crash_handler;
 pub mod error;
 pub mod git;
+pub mod logger;
 mod state;
 pub mod terminal;
 pub mod update_logger;
+
+/// Log a Tauri command invocation. Captures the command name and (optionally)
+/// key parameters by identifier and value. Never log file contents, diff
+/// payloads, commit message bodies, or terminal stdin — only identifiers and
+/// lengths.
+///
+/// **Wire format.** Output is a single line on the `yagg::cmd` target:
+/// `cmd=<name> <k1>={:?} <k2>={:?} …`. Values use Rust's `{:?}` formatter,
+/// so string args render with surrounding quotes (`path="src/foo.rs"`,
+/// `hash="abc123"`); numbers and bools render bare. Examples:
+///
+/// - `log_cmd!("list_branches")` → `cmd=list_branches`
+/// - `log_cmd!("stage_file", path = path)` → `cmd=stage_file path="src/x"`
+/// - `log_cmd!("delete_branch", branch = name, is_remote = b)`
+///   → `cmd=delete_branch branch="foo" is_remote=false`
+#[macro_export]
+macro_rules! log_cmd {
+    ($name:literal) => {
+        log::info!(target: "yagg::cmd", "cmd={}", $name);
+    };
+    ($name:literal, $($k:ident = $v:expr),+ $(,)?) => {
+        log::info!(target: "yagg::cmd",
+            concat!("cmd=", $name, $(" ", stringify!($k), "={:?}"),+),
+            $($v),+);
+    };
+}
+
+/// Log a git helper call. Use at the top of every public `pub fn` in `git/`.
+#[macro_export]
+macro_rules! log_git_op {
+    ($name:literal) => {
+        log::info!(target: "yagg::git", "op={}", $name);
+    };
+    ($name:literal, $($k:ident = $v:expr),+ $(,)?) => {
+        log::info!(target: "yagg::git",
+            concat!("op=", $name, $(" ", stringify!($k), "={:?}"),+),
+            $($v),+);
+    };
+}
+
+/// Debug-level counterpart to `log_cmd!`. Use for pure read commands so the
+/// default-on log doesn't fill with `cmd=list_branches` on every refresh.
+/// Same wire format on the same `yagg::cmd` target — only the level differs.
+#[macro_export]
+macro_rules! log_cmd_debug {
+    ($name:literal) => {
+        log::debug!(target: "yagg::cmd", "cmd={}", $name);
+    };
+    ($name:literal, $($k:ident = $v:expr),+ $(,)?) => {
+        log::debug!(target: "yagg::cmd",
+            concat!("cmd=", $name, $(" ", stringify!($k), "={:?}"),+),
+            $($v),+);
+    };
+}
+
+/// Debug-level counterpart to `log_git_op!`. Use for read-only git helpers.
+#[macro_export]
+macro_rules! log_git_op_debug {
+    ($name:literal) => {
+        log::debug!(target: "yagg::git", "op={}", $name);
+    };
+    ($name:literal, $($k:ident = $v:expr),+ $(,)?) => {
+        log::debug!(target: "yagg::git",
+            concat!("op=", $name, $(" ", stringify!($k), "={:?}"),+),
+            $($v),+);
+    };
+}
 
 use state::AppState;
 use tauri::Manager;
@@ -75,6 +143,11 @@ pub fn run() {
             commands::clean_untracked_files,
             commands::write_update_log,
             commands::get_update_log_path,
+            commands::get_log_dir,
+            commands::open_log_dir,
+            commands::log_from_frontend,
+            commands::set_debug_logging_enabled,
+            commands::get_debug_logging_enabled,
             commands::read_settings,
             commands::write_settings,
             commands::spawn_terminal,
@@ -84,10 +157,13 @@ pub fn run() {
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
+                log::info!(target: "yagg::lifecycle", "window destroyed");
                 let state = window.state::<AppState>();
                 state.terminal_manager.kill_all();
             }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    log::info!(target: "yagg::lifecycle", "shutdown");
 }

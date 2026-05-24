@@ -8,6 +8,7 @@ use crate::state::AppState;
 pub async fn get_all_commit_graph(
     state: State<'_, AppState>,
 ) -> Result<Vec<git::GraphCommit>, AppError> {
+    crate::log_cmd_debug!("get_all_commit_graph");
     // Clone the Arc so the blocking work can own the handle and run off the
     // async runtime without holding the mutex across an .await point.
     let repository = state.repository.clone();
@@ -30,6 +31,7 @@ pub fn get_commit_details(
     hash: String,
     state: State<AppState>,
 ) -> Result<git::CommitDetails, AppError> {
+    crate::log_cmd_debug!("get_commit_details", hash = hash);
     let repo = state.get_repo()?;
 
     git::get_commit_details(&repo, &hash)
@@ -41,6 +43,7 @@ pub fn get_commit_file_diff(
     file_path: String,
     state: State<AppState>,
 ) -> Result<git::FileDiff, AppError> {
+    crate::log_cmd_debug!("get_commit_file_diff", hash = hash, file = file_path);
     let repo = state.get_repo()?;
 
     git::get_commit_file_diff(&repo, &hash, &file_path)
@@ -53,6 +56,12 @@ pub fn get_commit_diff_hunk(
     hunk_index: usize,
     state: State<AppState>,
 ) -> Result<git::DiffHunk, AppError> {
+    crate::log_cmd_debug!(
+        "get_commit_diff_hunk",
+        hash = hash,
+        file = file_path,
+        hunk = hunk_index
+    );
     let repo = state.get_repo()?;
 
     git::get_commit_diff_hunk(&repo, &hash, &file_path, hunk_index)
