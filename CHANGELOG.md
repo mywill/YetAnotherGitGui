@@ -1,3 +1,13 @@
+# [1.13.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.12.0...v1.13.0) (2026-05-25)
+
+
+### Features
+
+* added a abort and continue button to warning when your in conflict mode for most used flows ([7996bb3](https://github.com/mywill/YetAnotherGitGui/commit/7996bb37e2f7fc5aedd2d0902147c22ae5f7bfa1))
+* added a cleanup view and added assesory methods for handy cleanup like branch prunes and stash drops ([d9f85be](https://github.com/mywill/YetAnotherGitGui/commit/d9f85be63b3f5d39c2621a5218d1cc6bfa2ef0a2))
+* added proper logging and help menus to help users with any issues the have ([03b15d0](https://github.com/mywill/YetAnotherGitGui/commit/03b15d0cdfaa82962e8d35b01a2e0c792d001b95))
+* added the ability to create branches from the quick swap menu ([16726c0](https://github.com/mywill/YetAnotherGitGui/commit/16726c01b07ee193f0e74f6264502c604a999abd))
+
 # [1.12.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.11.0...v1.12.0) (2026-05-15)
 
 
