@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import clsx from "clsx";
 import {
   IconRefresh,
@@ -11,11 +11,11 @@ import {
 import type { BranchInfo, StashInfo, BulkResult } from "../../types";
 import { useCleanupStore, STASH_DAYS_OLD, type CleanupCategory } from "../../stores/cleanupStore";
 import { useRepositoryStore } from "../../stores/repositoryStore";
-import { useDialogStore } from "../../stores/dialogStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { SectionActionButton } from "../files/SectionHeader";
 import { buildStashDropMessage, formatList } from "../../utils/dialogText";
 import { useSelectionListNav } from "./useSelectionListNav";
+import { useCleanupConfirm } from "../../hooks/useCleanupConfirm";
 
 const SECTION_KEYS = {
   prune: "cleanup.prune",
@@ -29,25 +29,6 @@ function useSectionExpanded(key: string): [boolean, () => void] {
   const expanded = useSettingsStore((s) => s.sectionExpanded[key] ?? false);
   const toggleSectionExpanded = useSettingsStore((s) => s.toggleSectionExpanded);
   return [expanded, () => toggleSectionExpanded(key)];
-}
-
-type ConfirmOptions = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-};
-
-async function confirmAndRun(args: {
-  selectedCount: number;
-  dialog: ConfirmOptions;
-  showConfirm: (cfg: ConfirmOptions) => Promise<boolean>;
-  runCategory: (c: CleanupCategory) => Promise<void>;
-  category: CleanupCategory;
-}) {
-  if (args.selectedCount === 0) return;
-  const confirmed = await args.showConfirm(args.dialog);
-  if (confirmed) await args.runCategory(args.category);
 }
 
 export function CleanupView() {
@@ -155,23 +136,13 @@ interface BranchSectionProps {
 
 function BranchSection({ category, title, description, emptyText }: BranchSectionProps) {
   const data = useCleanupStore((s) => s[category]);
-  const runCategory = useCleanupStore((s) => s.runCategory);
-  const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const selectedCount = data.selected.size;
-  const handleRun = () =>
-    confirmAndRun({
-      selectedCount,
-      dialog: {
-        title: "Delete branches",
-        message: `Delete ${selectedCount} branch${selectedCount === 1 ? "" : "es"}? This cannot be undone.\n\n${formatList(Array.from(data.selected))}`,
-        confirmLabel: "Delete",
-        cancelLabel: "Cancel",
-      },
-      showConfirm,
-      runCategory,
-      category,
-    });
+  const handleRun = useCleanupConfirm(category, (n) => ({
+    title: "Delete branches",
+    message: `Delete ${n} branch${n === 1 ? "" : "es"}? This cannot be undone.\n\n${formatList(Array.from(data.selected))}`,
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+  }));
 
   const allIds = data.candidates.map((b) => b.name);
 
@@ -207,25 +178,16 @@ function BranchSection({ category, title, description, emptyText }: BranchSectio
 
 function StashSection() {
   const data = useCleanupStore((s) => s.stashes);
-  const runCategory = useCleanupStore((s) => s.runCategory);
-  const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const selectedCount = data.selected.size;
-  // Look up each selected stash so the dialog list includes its message.
-  const selectedStashes = data.candidates.filter((s) => data.selected.has(String(s.index)));
-  const handleRun = () =>
-    confirmAndRun({
-      selectedCount,
-      dialog: {
-        title: selectedCount === 1 ? "Drop stash" : "Drop stashes",
-        message: buildStashDropMessage(selectedStashes),
-        confirmLabel: "Drop",
-        cancelLabel: "Cancel",
-      },
-      showConfirm,
-      runCategory,
-      category: "stashes",
-    });
+  const handleRun = useCleanupConfirm("stashes", (n, sel) => {
+    const selectedStashes = data.candidates.filter((s) => sel.has(String(s.index)));
+    return {
+      title: n === 1 ? "Drop stash" : "Drop stashes",
+      message: buildStashDropMessage(selectedStashes),
+      confirmLabel: "Drop",
+      cancelLabel: "Cancel",
+    };
+  });
 
   const allIds = data.candidates.map((s) => String(s.index));
 
@@ -264,23 +226,13 @@ function StashSection() {
 
 function UntrackedSection() {
   const data = useCleanupStore((s) => s.untracked);
-  const runCategory = useCleanupStore((s) => s.runCategory);
-  const showConfirm = useDialogStore((s) => s.showConfirm);
 
-  const selectedCount = data.selected.size;
-  const handleRun = () =>
-    confirmAndRun({
-      selectedCount,
-      dialog: {
-        title: "Delete untracked files",
-        message: `Permanently delete ${selectedCount} untracked file${selectedCount === 1 ? "" : "s"}? This cannot be undone.\n\n${formatList(Array.from(data.selected))}`,
-        confirmLabel: "Delete",
-        cancelLabel: "Cancel",
-      },
-      showConfirm,
-      runCategory,
-      category: "untracked",
-    });
+  const handleRun = useCleanupConfirm("untracked", (n) => ({
+    title: "Delete untracked files",
+    message: `Permanently delete ${n} untracked file${n === 1 ? "" : "s"}? This cannot be undone.\n\n${formatList(Array.from(data.selected))}`,
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+  }));
 
   const allIds = data.candidates;
 
@@ -331,6 +283,133 @@ interface CategorySectionProps {
   children: (getRowProps: (id: string, index: number) => RowProps) => React.ReactNode;
 }
 
+interface CategorySectionActionsProps {
+  expanded: boolean;
+  total: number;
+  allSelected: boolean;
+  category: CleanupCategory;
+  selectAllCategory: (c: CleanupCategory) => void;
+  selectNoneCategory: (c: CleanupCategory) => void;
+  onRun: () => void;
+  runLabel: string;
+  selectedCount: number;
+  loading: boolean;
+}
+
+function CategorySectionActions({
+  expanded,
+  total,
+  allSelected,
+  category,
+  selectAllCategory,
+  selectNoneCategory,
+  onRun,
+  runLabel,
+  selectedCount,
+  loading,
+}: CategorySectionActionsProps) {
+  if (!expanded || total === 0) return null;
+  return (
+    <>
+      <SectionActionButton
+        onClick={
+          allSelected ? () => selectNoneCategory(category) : () => selectAllCategory(category)
+        }
+        title={allSelected ? "Deselect all" : "Select all"}
+        ariaLabel={allSelected ? "Deselect all" : "Select all"}
+      >
+        {allSelected ? (
+          <IconDeselect size={12} stroke={2} aria-hidden />
+        ) : (
+          <IconCheckbox size={12} stroke={2} aria-hidden />
+        )}
+        <span>{allSelected ? "Deselect" : "All"}</span>
+      </SectionActionButton>
+      <SectionActionButton
+        onClick={onRun}
+        title={`${runLabel} ${selectedCount} selected`}
+        ariaLabel={`${runLabel} ${selectedCount} selected`}
+        disabled={selectedCount === 0 || loading}
+      >
+        <IconTrash size={12} stroke={2} aria-hidden />
+        <span>
+          {runLabel} {selectedCount}
+        </span>
+      </SectionActionButton>
+    </>
+  );
+}
+
+interface CategorySectionContentProps {
+  description: string;
+  loading: boolean;
+  total: number;
+  emptyText: string;
+  listRef: RefObject<HTMLUListElement | null>;
+  listboxId: string;
+  allIds: string[];
+  activeIndex: number;
+  rowIdFor: (index: number) => string;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLUListElement>) => void;
+  children: (getRowProps: (id: string, index: number) => RowProps) => React.ReactNode;
+  getRowProps: (id: string, index: number) => RowProps;
+  lastResult: BulkResult[] | null;
+}
+
+function CategorySectionContent({
+  description,
+  loading,
+  total,
+  emptyText,
+  listRef,
+  listboxId,
+  allIds,
+  activeIndex,
+  rowIdFor,
+  handleKeyDown,
+  children,
+  getRowProps,
+  lastResult,
+}: CategorySectionContentProps) {
+  return (
+    <>
+      <p className="text-text-muted px-3 pt-2 pb-1 text-xs">
+        {description}{" "}
+        <span className="text-text-muted/70">
+          Click to select; Ctrl/⌘ to add, Shift for a range. Arrows + Space to navigate.
+        </span>
+      </p>
+      <div className="pt-1 pb-2">
+        {loading && total === 0 ? (
+          <p className="text-text-muted px-3 text-xs">Loading…</p>
+        ) : total === 0 ? (
+          <p className="text-text-muted px-3 text-xs italic">{emptyText}</p>
+        ) : (
+          <ul
+            ref={listRef}
+            id={listboxId}
+            role="listbox"
+            aria-multiselectable="true"
+            aria-activedescendant={
+              allIds.length > 0 ? rowIdFor(Math.min(activeIndex, allIds.length - 1)) : undefined
+            }
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+            className="focus-ring flex flex-col outline-none"
+          >
+            {children(getRowProps)}
+          </ul>
+        )}
+        {lastResult && lastResult.length > 0 && (
+          <div className="px-3">
+            <ResultSummary results={lastResult} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function CategorySection(props: CategorySectionProps) {
   const {
     category,
@@ -373,75 +452,36 @@ function CategorySection(props: CategorySectionProps) {
         onToggle={toggleExpanded}
         selectedCount={selectedCount}
         actions={
-          expanded && total > 0 ? (
-            <>
-              <SectionActionButton
-                onClick={
-                  allSelected
-                    ? () => selectNoneCategory(category)
-                    : () => selectAllCategory(category)
-                }
-                title={allSelected ? "Deselect all" : "Select all"}
-                ariaLabel={allSelected ? "Deselect all" : "Select all"}
-              >
-                {allSelected ? (
-                  <IconDeselect size={12} stroke={2} aria-hidden />
-                ) : (
-                  <IconCheckbox size={12} stroke={2} aria-hidden />
-                )}
-                <span>{allSelected ? "Deselect" : "All"}</span>
-              </SectionActionButton>
-              <SectionActionButton
-                onClick={onRun}
-                title={`${runLabel} ${selectedCount} selected`}
-                ariaLabel={`${runLabel} ${selectedCount} selected`}
-                disabled={selectedCount === 0 || loading}
-              >
-                <IconTrash size={12} stroke={2} aria-hidden />
-                <span>
-                  {runLabel} {selectedCount}
-                </span>
-              </SectionActionButton>
-            </>
-          ) : null
+          <CategorySectionActions
+            expanded={expanded}
+            total={total}
+            allSelected={allSelected}
+            category={category}
+            selectAllCategory={selectAllCategory}
+            selectNoneCategory={selectNoneCategory}
+            onRun={onRun}
+            runLabel={runLabel}
+            selectedCount={selectedCount}
+            loading={loading}
+          />
         }
       />
       {expanded && (
-        <>
-          <p className="text-text-muted px-3 pt-2 pb-1 text-xs">
-            {description}{" "}
-            <span className="text-text-muted/70">
-              Click to select; Ctrl/⌘ to add, Shift for a range. Arrows + Space to navigate.
-            </span>
-          </p>
-          <div className="pt-1 pb-2">
-            {loading && total === 0 ? (
-              <p className="text-text-muted px-3 text-xs">Loading…</p>
-            ) : total === 0 ? (
-              <p className="text-text-muted px-3 text-xs italic">{emptyText}</p>
-            ) : (
-              <ul
-                ref={listRef}
-                id={listboxId}
-                role="listbox"
-                aria-multiselectable="true"
-                aria-activedescendant={
-                  allIds.length > 0 ? rowIdFor(Math.min(activeIndex, allIds.length - 1)) : undefined
-                }
-                tabIndex={0}
-                onKeyDown={handleKeyDown}
-                className="focus-ring flex flex-col outline-none"
-              >
-                {children(getRowProps)}
-              </ul>
-            )}
-            {lastResult && lastResult.length > 0 && (
-              <div className="px-3">
-                <ResultSummary results={lastResult} />
-              </div>
-            )}
-          </div>
-        </>
+        <CategorySectionContent
+          description={description}
+          loading={loading}
+          total={total}
+          emptyText={emptyText}
+          listRef={listRef}
+          listboxId={listboxId}
+          allIds={allIds}
+          activeIndex={activeIndex}
+          rowIdFor={rowIdFor}
+          handleKeyDown={handleKeyDown}
+          children={children}
+          getRowProps={getRowProps}
+          lastResult={lastResult}
+        />
       )}
     </section>
   );

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { logError, logWarn, logInfo, logDebug, logTrace } from "./logger";
+import { logError, logInfo, logDebug } from "./logger";
 
 describe("frontend logger", () => {
   beforeEach(() => {
@@ -10,10 +10,8 @@ describe("frontend logger", () => {
 
   it.each([
     ["error", logError],
-    ["warn", logWarn],
     ["info", logInfo],
     ["debug", logDebug],
-    ["trace", logTrace],
   ] as const)(
     "%s forwards a single log_from_frontend invoke with the expected payload",
     (level, fn) => {

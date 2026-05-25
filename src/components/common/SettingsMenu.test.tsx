@@ -630,5 +630,39 @@ describe("SettingsMenu", () => {
 
       expect(screen.queryByText("About Yet Another Git Gui")).not.toBeInTheDocument();
     });
+
+    it("shows symlink-specific message on update check symlink error", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockRejectedValue(new Error("symlink loop"));
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("outdated symlink"));
+      });
+    });
+
+    it("shows generic message on update check other errors", async () => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+      vi.mocked(checkForUpdate).mockRejectedValue(new Error("network error"));
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Check for Updates"));
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("network error"));
+      });
+    });
   });
 });

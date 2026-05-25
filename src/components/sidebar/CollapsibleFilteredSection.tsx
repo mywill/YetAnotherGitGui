@@ -19,6 +19,57 @@ interface CollapsibleFilteredSectionProps<T extends { name: string }> {
   emptyLabel: string;
 }
 
+function FilteredSectionEmpty({
+  isFiltering,
+  emptyLabel,
+}: {
+  isFiltering: boolean;
+  emptyLabel: string;
+}) {
+  return (
+    <div className="text-text-muted text-2xs px-3 py-2 font-mono italic">
+      {isFiltering ? "No matches" : emptyLabel}
+    </div>
+  );
+}
+
+function FilteredSectionList<T extends { name: string }>({
+  filtered,
+  filterQuery,
+  listAriaLabel,
+  onActivate,
+  onSecondaryActivate,
+  renderItem,
+}: {
+  filtered: T[];
+  filterQuery: string;
+  listAriaLabel: string;
+  onActivate: (item: T) => void;
+  onSecondaryActivate: (item: T) => void;
+  renderItem: (item: T) => ReactNode;
+}) {
+  return (
+    <KeyboardList
+      key={`${filtered.length}-${filterQuery}`}
+      aria-label={listAriaLabel}
+      onActivate={(i) => {
+        const it = filtered[i];
+        if (it) onActivate(it);
+      }}
+      onSecondaryActivate={(i) => {
+        const it = filtered[i];
+        if (it) onSecondaryActivate(it);
+      }}
+    >
+      {filtered.map((item, i) => (
+        <KeyboardList.Item key={item.name} index={i}>
+          {renderItem(item)}
+        </KeyboardList.Item>
+      ))}
+    </KeyboardList>
+  );
+}
+
 export function CollapsibleFilteredSection<T extends { name: string }>({
   title,
   items,
@@ -81,30 +132,16 @@ export function CollapsibleFilteredSection<T extends { name: string }>({
       {effectiveExpanded && (
         <div className="section-content pb-1">
           {filtered.length === 0 ? (
-            <div className="text-text-muted text-2xs px-3 py-2 font-mono italic">
-              {isFiltering ? "No matches" : emptyLabel}
-            </div>
+            <FilteredSectionEmpty isFiltering={isFiltering} emptyLabel={emptyLabel} />
           ) : (
-            // Re-key the KeyboardList by the filter signature so its internal
-            // activeIndex resets to 0 instead of pointing past a shorter list.
-            <KeyboardList
-              key={`${filtered.length}-${filterQuery}`}
-              aria-label={listAriaLabel}
-              onActivate={(i) => {
-                const it = filtered[i];
-                if (it) onActivate(it);
-              }}
-              onSecondaryActivate={(i) => {
-                const it = filtered[i];
-                if (it) onSecondaryActivate(it);
-              }}
-            >
-              {filtered.map((item, i) => (
-                <KeyboardList.Item key={item.name} index={i}>
-                  {renderItem(item)}
-                </KeyboardList.Item>
-              ))}
-            </KeyboardList>
+            <FilteredSectionList
+              filtered={filtered}
+              filterQuery={filterQuery}
+              listAriaLabel={listAriaLabel}
+              onActivate={onActivate}
+              onSecondaryActivate={onSecondaryActivate}
+              renderItem={renderItem}
+            />
           )}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { check, type Update } from "@tauri-apps/plugin-updater";
+import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { logError } from "../utils/logger";
 
@@ -98,5 +98,3 @@ export async function downloadAndInstallUpdate(): Promise<void> {
 export function getReleaseUrl(version: string): string {
   return `https://github.com/mywill/YetAnotherGitGui/releases/tag/v${version}`;
 }
-
-export type { Update };

@@ -3,8 +3,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { StashList } from "./StashList";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useSelectionStore } from "../../stores/selectionStore";
 import { mockStore } from "../../test/mockStores";
 import type { StashInfo } from "../../types";
+import { runQuickCleanup } from "../../utils/cleanupActions";
 
 vi.mock("../../stores/repositoryStore", () => ({
   useRepositoryStore: vi.fn(),
@@ -12,14 +14,22 @@ vi.mock("../../stores/repositoryStore", () => ({
 vi.mock("../../stores/dialogStore", () => ({
   useDialogStore: vi.fn(),
 }));
+vi.mock("../../stores/selectionStore", () => ({
+  useSelectionStore: vi.fn(),
+}));
 vi.mock("../../services/clipboard", () => ({
   copyToClipboard: vi.fn(),
+}));
+vi.mock("../../utils/cleanupActions", () => ({
+  runQuickCleanup: vi.fn(),
 }));
 
 const loadStashDetails = vi.fn();
 const applyStash = vi.fn();
 const dropStash = vi.fn();
+const loadStashes = vi.fn();
 const showConfirm = vi.fn();
+const setActiveView = vi.fn();
 
 const stashes: StashInfo[] = [
   {
@@ -46,9 +56,11 @@ describe("StashList", () => {
       loadStashDetails,
       applyStash,
       dropStash,
+      loadStashes,
       selectedStashDetails: null,
     });
     mockStore(useDialogStore, { showConfirm });
+    mockStore(useSelectionStore, { setActiveView });
   });
 
   it("renders empty state when there are no stashes", () => {
@@ -96,5 +108,40 @@ describe("StashList", () => {
     await waitFor(() => expect(showConfirm).toHaveBeenCalled());
     await Promise.resolve();
     expect(applyStash).not.toHaveBeenCalled();
+  });
+
+  it("clicking drop old stashes triggers runQuickCleanup", async () => {
+    render(<StashList />);
+    const dropButton = screen.getByRole("button", {
+      name: /drop stashes older than/i,
+    });
+    fireEvent.click(dropButton);
+    expect(runQuickCleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Dropping… and disables button while running", async () => {
+    vi.mocked(runQuickCleanup).mockImplementation(
+      ({ setRunning, fetchCandidates, confirmMessage, formatItemForDialog, runBulk, refresh }) => {
+        fetchCandidates();
+        confirmMessage([]);
+        formatItemForDialog({ index: 0, message: "test" });
+        runBulk([]);
+        refresh();
+        setRunning(true);
+        return Promise.resolve();
+      }
+    );
+    render(<StashList />);
+    const dropButton = screen.getByRole("button", {
+      name: /drop stashes older than/i,
+    });
+    fireEvent.click(dropButton);
+    await vi.waitFor(() => {
+      const btn = screen.getByRole("button", {
+        name: /drop stashes older than/i,
+      });
+      expect(btn).toBeDisabled();
+      expect(btn).toHaveTextContent(/Dropping…/);
+    });
   });
 });

@@ -15,6 +15,7 @@ import * as git from "../services/git";
 import { useNotificationStore } from "./notificationStore";
 import { cleanErrorMessage } from "../utils/errorMessages";
 import { logInfo } from "../utils/logger";
+import { withRequestId } from "../utils/withRequestId";
 
 // Monotonic request counters used to discard stale async responses.
 // When a user rapidly clicks through files/commits, we want to keep only
@@ -143,14 +144,18 @@ interface RepositoryState {
 
 type DiffRefresh = { path: string; staged: boolean } | { conditionalPath: string; staged: boolean };
 
-async function withStagingRefresh(
+async function executeWithStateRefresh(gitOp: () => Promise<void>, get: () => RepositoryState) {
+  await gitOp();
+  await get().loadFileStatuses();
+}
+
+async function withDiffRefresh(
   gitOp: () => Promise<void>,
   get: () => RepositoryState,
   diffRefresh?: DiffRefresh
 ) {
   try {
-    await gitOp();
-    await get().loadFileStatuses();
+    await executeWithStateRefresh(gitOp, get);
     if (diffRefresh) {
       if ("path" in diffRefresh) {
         await get().loadFileDiff(diffRefresh.path, diffRefresh.staged);
@@ -289,10 +294,6 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
     isUntracked?: boolean,
     isConflicted?: boolean
   ) => {
-    // Capture a local request ID to detect stale responses.
-    const requestId = ++diffRequestId;
-
-    // Clear stash selection when viewing a file diff
     set({
       diffLoading: true,
       currentDiffPath: path,
@@ -303,16 +304,16 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
       expandedStashFiles: new Set(),
       stashFileDiffs: new Map(),
     });
-    try {
-      const diff = await git.getFileDiff(path, staged, isUntracked, isConflicted);
-      // Discard response if a newer request has superseded this one.
-      if (requestId !== diffRequestId) return;
-      set({ currentDiff: diff, diffLoading: false });
-    } catch (err) {
-      if (requestId !== diffRequestId) return;
-      set({ diffLoading: false });
-      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
-    }
+    await withRequestId(
+      ++diffRequestId,
+      () => diffRequestId,
+      () => git.getFileDiff(path, staged, isUntracked, isConflicted),
+      (diff) => set({ currentDiff: diff, diffLoading: false }),
+      (err) => {
+        set({ diffLoading: false });
+        useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+      }
+    );
   },
 
   resolveConflict: async (path: string, strategy: string) => {
@@ -404,14 +405,14 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   },
 
   stageFile: async (path: string) => {
-    await withStagingRefresh(() => git.stageFile(path), get, {
+    await withDiffRefresh(() => git.stageFile(path), get, {
       conditionalPath: path,
       staged: true,
     });
   },
 
   unstageFile: async (path: string) => {
-    await withStagingRefresh(() => git.unstageFile(path), get, {
+    await withDiffRefresh(() => git.unstageFile(path), get, {
       conditionalPath: path,
       staged: false,
     });
@@ -419,43 +420,43 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
 
   stageFiles: async (paths: string[]) => {
     // Single batch IPC call + single index.write() instead of N sequential calls.
-    await withStagingRefresh(() => git.stageFiles(paths), get);
+    await withDiffRefresh(() => git.stageFiles(paths), get);
   },
 
   unstageFiles: async (paths: string[]) => {
-    await withStagingRefresh(() => git.unstageFiles(paths), get);
+    await withDiffRefresh(() => git.unstageFiles(paths), get);
   },
 
   stageHunk: async (path: string, hunkIndex: number) => {
-    await withStagingRefresh(() => git.stageHunk(path, hunkIndex), get, {
+    await withDiffRefresh(() => git.stageHunk(path, hunkIndex), get, {
       path,
       staged: false,
     });
   },
 
   unstageHunk: async (path: string, hunkIndex: number) => {
-    await withStagingRefresh(() => git.unstageHunk(path, hunkIndex), get, {
+    await withDiffRefresh(() => git.unstageHunk(path, hunkIndex), get, {
       path,
       staged: true,
     });
   },
 
   stageLines: async (path: string, hunkIndex: number, lineIndices: number[]) => {
-    await withStagingRefresh(() => git.stageLines(path, hunkIndex, lineIndices), get, {
+    await withDiffRefresh(() => git.stageLines(path, hunkIndex, lineIndices), get, {
       path,
       staged: false,
     });
   },
 
   discardHunk: async (path: string, hunkIndex: number) => {
-    await withStagingRefresh(() => git.discardHunk(path, hunkIndex), get, {
+    await withDiffRefresh(() => git.discardHunk(path, hunkIndex), get, {
       path,
       staged: false,
     });
   },
 
   discardLines: async (path: string, hunkIndex: number, lineIndices: number[]) => {
-    await withStagingRefresh(() => git.discardHunk(path, hunkIndex, lineIndices), get, {
+    await withDiffRefresh(() => git.discardHunk(path, hunkIndex, lineIndices), get, {
       path,
       staged: false,
     });
@@ -537,17 +538,17 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   },
 
   loadCommitDetails: async (hash: string) => {
-    const requestId = ++commitDetailsRequestId;
     set({ commitDetailsLoading: true, expandedCommitFiles: new Set(), commitFileDiffs: new Map() });
-    try {
-      const details = await git.getCommitDetails(hash);
-      if (requestId !== commitDetailsRequestId) return;
-      set({ selectedCommitDetails: details, commitDetailsLoading: false });
-    } catch (err) {
-      if (requestId !== commitDetailsRequestId) return;
-      set({ commitDetailsLoading: false });
-      useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
-    }
+    await withRequestId(
+      ++commitDetailsRequestId,
+      () => commitDetailsRequestId,
+      () => git.getCommitDetails(hash),
+      (details) => set({ selectedCommitDetails: details, commitDetailsLoading: false }),
+      (err) => {
+        set({ commitDetailsLoading: false });
+        useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
+      }
+    );
   },
 
   clearCommitDetails: () => {

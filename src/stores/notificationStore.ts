@@ -9,7 +9,7 @@ export interface Notification {
   actionLabel?: string;
 }
 
-export interface NotificationOptions {
+interface NotificationOptions {
   duration?: number;
   action?: () => void;
   actionLabel?: string;
@@ -28,46 +28,46 @@ let _nextId = 0;
 const DEFAULT_ERROR_DURATION = 10000;
 const DEFAULT_SUCCESS_DURATION = 3000;
 
+function _emitNotification(
+  set: (
+    partial:
+      | NotificationState
+      | Partial<NotificationState>
+      | ((state: NotificationState) => NotificationState | Partial<NotificationState>)
+  ) => void,
+  message: string,
+  type: "error" | "success",
+  defaultDuration: number,
+  opts?: NotificationOptions
+): void {
+  const id = _nextId++;
+  set((state) => ({
+    notifications: [
+      ...state.notifications,
+      { id, message, type, action: opts?.action, actionLabel: opts?.actionLabel },
+    ],
+  }));
+  _timers.set(
+    id,
+    setTimeout(() => {
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id),
+      }));
+      _timers.delete(id);
+    }, opts?.duration ?? defaultDuration)
+  );
+}
+
 export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
 
   showError: (message: string, opts?: NotificationOptions) => {
     logError("yagg::fe::ui", message);
-    const id = _nextId++;
-    set((state) => ({
-      notifications: [
-        ...state.notifications,
-        { id, message, type: "error", action: opts?.action, actionLabel: opts?.actionLabel },
-      ],
-    }));
-    _timers.set(
-      id,
-      setTimeout(() => {
-        set((state) => ({
-          notifications: state.notifications.filter((n) => n.id !== id),
-        }));
-        _timers.delete(id);
-      }, opts?.duration ?? DEFAULT_ERROR_DURATION)
-    );
+    _emitNotification(set, message, "error", DEFAULT_ERROR_DURATION, opts);
   },
 
   showSuccess: (message: string, opts?: NotificationOptions) => {
-    const id = _nextId++;
-    set((state) => ({
-      notifications: [
-        ...state.notifications,
-        { id, message, type: "success", action: opts?.action, actionLabel: opts?.actionLabel },
-      ],
-    }));
-    _timers.set(
-      id,
-      setTimeout(() => {
-        set((state) => ({
-          notifications: state.notifications.filter((n) => n.id !== id),
-        }));
-        _timers.delete(id);
-      }, opts?.duration ?? DEFAULT_SUCCESS_DURATION)
-    );
+    _emitNotification(set, message, "success", DEFAULT_SUCCESS_DURATION, opts);
   },
 
   dismiss: (id: number) => {
