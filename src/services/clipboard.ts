@@ -8,15 +8,12 @@ export async function copyToClipboard(text: string): Promise<void> {
   } catch (tauriErr) {
     // Tauri's clipboard plugin can fail in non-Tauri preview/test contexts.
     // Log at debug — we still have a fallback to try.
-    logDebug(
-      "yagg::fe::clipboard",
-      `Tauri clipboard failed, falling back: ${String(tauriErr)}`,
-    );
+    logDebug("yagg::fe::clipboard", `Tauri clipboard failed, falling back: ${String(tauriErr)}`);
 
     if (!navigator.clipboard) {
       logError(
         "yagg::fe::clipboard",
-        `clipboard write failed: navigator.clipboard not available (original: ${String(tauriErr)})`,
+        `clipboard write failed: navigator.clipboard not available (original: ${String(tauriErr)})`
       );
       return;
     }
@@ -26,7 +23,7 @@ export async function copyToClipboard(text: string): Promise<void> {
     } catch (browserErr) {
       logError(
         "yagg::fe::clipboard",
-        `clipboard write failed (both Tauri and browser API): ${String(browserErr)}`,
+        `clipboard write failed (both Tauri and browser API): ${String(browserErr)}`
       );
     }
   }

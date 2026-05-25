@@ -252,7 +252,10 @@ mod tests {
             // Update events route through the unified per-instance log file —
             // the basename must look like `app-YYYY-MM-DD-pid<N>.log`.
             let p = path.unwrap();
-            assert!(p.contains("/app-"), "expected unified log basename, got {p}");
+            assert!(
+                p.contains("/app-"),
+                "expected unified log basename, got {p}"
+            );
             assert!(p.ends_with(".log"), "expected .log suffix, got {p}");
         }
     }
