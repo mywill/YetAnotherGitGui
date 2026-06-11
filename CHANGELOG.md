@@ -1,3 +1,11 @@
+## [1.13.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.0...v1.13.1) (2026-06-11)
+
+
+### Bug Fixes
+
+* formatting issues ([0ab9d99](https://github.com/mywill/YetAnotherGitGui/commit/0ab9d993a4d1efa19231167229a3c696767f8bc9))
+* git2 update broke some of the APIs had to add .ok()s to convert back to optionals ([05b9c80](https://github.com/mywill/YetAnotherGitGui/commit/05b9c801320b29f2d4531faa79db1a56c818c661))
+
 # [1.13.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.12.0...v1.13.0) (2026-05-25)
 
 
