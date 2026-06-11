@@ -24,7 +24,7 @@ fn delete_branch_logic(
     } else {
         if let Ok(head) = repo.head() {
             if head.is_branch() {
-                if let Some(head_name) = head.shorthand() {
+                if let Ok(head_name) = head.shorthand() {
                     if head_name == branch_name {
                         return Err(AppError::Git(git2::Error::from_str(
                             "Cannot delete the currently checked out branch",
@@ -45,7 +45,9 @@ fn list_branches_logic() {
     create_initial_commit(&repo, &temp_dir);
 
     let head = repo.head().ok();
-    let head_name = head.as_ref().and_then(|h| h.shorthand().map(String::from));
+    let head_name = head
+        .as_ref()
+        .and_then(|h| h.shorthand().ok().map(String::from));
     assert!(head_name.is_some());
 
     let mut branches = Vec::new();
@@ -77,7 +79,7 @@ fn checkout_branch_logic() {
     repo.set_head(refname).unwrap();
 
     let head = repo.head().unwrap();
-    assert_eq!(head.shorthand(), Some("test-branch"));
+    assert_eq!(head.shorthand().ok(), Some("test-branch"));
 }
 
 #[test]
@@ -260,9 +262,9 @@ fn annotated_tag_tagger_extracted() {
     repo.tag_foreach(|tag_oid, _name| {
         if let Ok(obj) = repo.find_object(tag_oid, None) {
             if let Some(tag) = obj.as_tag() {
-                if tag.name() == Some("v1.0.0") {
+                if tag.name().ok() == Some("v1.0.0") {
                     let tagger = tag.tagger().expect("annotated tag has tagger");
-                    assert_eq!(tagger.name(), Some("Alice"));
+                    assert_eq!(tagger.name().ok(), Some("Alice"));
                     assert!(tagger.when().seconds() > 0);
                     found = true;
                 }
@@ -335,7 +337,7 @@ fn checkout_branch_logic_routes_through_set_head() {
     let refname = reference.name().unwrap();
     repo.set_head(refname).unwrap();
 
-    assert_eq!(repo.head().unwrap().shorthand(), Some("audit-test"));
+    assert_eq!(repo.head().unwrap().shorthand().ok(), Some("audit-test"));
 }
 
 // Mirror of `create_branch_and_checkout` — same reason as `delete_branch_logic`.
@@ -349,7 +351,7 @@ fn create_branch_and_checkout_logic(repo: &Repository, branch_name: &str) -> Res
     repo.checkout_tree(tree.as_object(), None)?;
     let refname = reference
         .name()
-        .ok_or_else(|| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
+        .map_err(|_| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
     repo.set_head(refname)?;
     Ok(())
 }
@@ -363,7 +365,7 @@ fn create_branch_and_checkout_succeeds_at_head() {
     assert!(result.is_ok(), "expected create to succeed, got {result:?}");
 
     assert!(repo.find_branch("feature/new", BranchType::Local).is_ok());
-    assert_eq!(repo.head().unwrap().shorthand(), Some("feature/new"));
+    assert_eq!(repo.head().unwrap().shorthand().ok(), Some("feature/new"));
 }
 
 #[test]
@@ -373,11 +375,11 @@ fn create_branch_and_checkout_rejects_duplicate() {
     let commit = repo.find_commit(oid).unwrap();
     repo.branch("existing", &commit, false).unwrap();
 
-    let head_before = repo.head().unwrap().shorthand().map(String::from);
+    let head_before = repo.head().unwrap().shorthand().ok().map(String::from);
     let result = create_branch_and_checkout_logic(&repo, "existing");
     assert!(result.is_err(), "expected duplicate to fail");
     assert_eq!(
-        repo.head().unwrap().shorthand().map(String::from),
+        repo.head().unwrap().shorthand().ok().map(String::from),
         head_before,
         "HEAD should not have moved after a failed create"
     );
@@ -414,11 +416,17 @@ fn create_branch_and_checkout_uses_current_head() {
 fn create_branch_and_checkout_flips_head_to_new_branch() {
     let (temp_dir, repo) = create_test_repo();
     let main_oid = create_initial_commit(&repo, &temp_dir);
-    let main_name = repo.head().unwrap().shorthand().map(String::from).unwrap();
+    let main_name = repo
+        .head()
+        .unwrap()
+        .shorthand()
+        .ok()
+        .map(String::from)
+        .unwrap();
 
     create_branch_and_checkout_logic(&repo, "feature").unwrap();
 
-    assert_eq!(repo.head().unwrap().shorthand(), Some("feature"));
+    assert_eq!(repo.head().unwrap().shorthand().ok(), Some("feature"));
     let original = repo
         .find_branch(&main_name, BranchType::Local)
         .expect("original branch should still exist");

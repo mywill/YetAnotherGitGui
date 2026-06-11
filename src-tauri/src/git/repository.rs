@@ -55,7 +55,7 @@ pub fn get_repo_info(repo: &Repository) -> Result<RepositoryInfo, AppError> {
         Ok(reference) => {
             let hash = reference.peel_to_commit().ok().map(|c| c.id().to_string());
             if reference.is_branch() {
-                (reference.shorthand().map(String::from), false, hash)
+                (reference.shorthand().ok().map(String::from), false, hash)
             } else {
                 (None, true, hash)
             }
@@ -66,7 +66,7 @@ pub fn get_repo_info(repo: &Repository) -> Result<RepositoryInfo, AppError> {
     let remotes = repo
         .remotes()?
         .iter()
-        .filter_map(|r| r.map(String::from))
+        .filter_map(|r| r.ok().flatten().map(String::from))
         .collect();
 
     let repo_state = map_repo_state(repo.state()).to_string();

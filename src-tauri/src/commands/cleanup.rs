@@ -26,10 +26,12 @@ fn build_branch_info(branch: &git2::Branch) -> Result<BranchInfo, AppError> {
     let name = branch.name()?.unwrap_or("").to_string();
     let tip = branch.get().peel_to_commit().ok();
     let target_hash = tip.as_ref().map(|c| c.id().to_string()).unwrap_or_default();
-    let last_commit_summary = tip.as_ref().and_then(|c| c.summary().map(String::from));
+    let last_commit_summary = tip
+        .as_ref()
+        .and_then(|c| c.summary().ok().flatten().map(String::from));
     let last_commit_author = tip
         .as_ref()
-        .and_then(|c| c.author().name().map(String::from));
+        .and_then(|c| c.author().name().ok().map(String::from));
     let last_commit_time = tip.as_ref().map(|c| c.time().seconds());
 
     Ok(BranchInfo {
@@ -53,7 +55,7 @@ pub fn find_gone_branches(repo: &Repository) -> Result<Vec<BranchInfo>, AppError
     let head_name = repo
         .head()
         .ok()
-        .and_then(|h| h.shorthand().map(String::from));
+        .and_then(|h| h.shorthand().ok().map(String::from));
     let config = repo.config()?;
 
     let mut result = Vec::new();
@@ -93,7 +95,7 @@ pub fn find_merged_branches(repo: &Repository) -> Result<Vec<BranchInfo>, AppErr
         Err(_) => return Ok(Vec::new()),
     };
     let head_commit = head.peel_to_commit()?;
-    let head_name = head.shorthand().map(String::from);
+    let head_name = head.shorthand().ok().map(String::from);
     let head_oid = head_commit.id();
 
     let mut result = Vec::new();
@@ -128,7 +130,7 @@ pub fn delete_branches_bulk(repo: &Repository, names: &[String]) -> Vec<BulkResu
     let head_name = repo
         .head()
         .ok()
-        .and_then(|h| h.shorthand().map(String::from));
+        .and_then(|h| h.shorthand().ok().map(String::from));
 
     names
         .iter()
@@ -257,7 +259,7 @@ pub fn find_untracked_files(repo: &Repository) -> Result<Vec<String>, AppError> 
     let mut paths = Vec::new();
     for entry in statuses.iter() {
         if entry.status().contains(Status::WT_NEW) {
-            if let Some(path) = entry.path() {
+            if let Ok(path) = entry.path() {
                 paths.push(path.to_string());
             }
         }
