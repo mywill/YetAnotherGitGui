@@ -36,7 +36,9 @@ pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError
     let repo = state.get_repo()?;
 
     let head = repo.head().ok();
-    let head_name = head.as_ref().and_then(|h| h.shorthand().ok().map(String::from));
+    let head_name = head
+        .as_ref()
+        .and_then(|h| h.shorthand().ok().map(String::from));
 
     let mut branches = Vec::new();
 
@@ -48,7 +50,9 @@ pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError
 
         let tip = branch.get().peel_to_commit().ok();
         let target_hash = tip.as_ref().map(|c| c.id().to_string()).unwrap_or_default();
-        let last_commit_summary = tip.as_ref().and_then(|c| c.summary().ok().flatten().map(String::from));
+        let last_commit_summary = tip
+            .as_ref()
+            .and_then(|c| c.summary().ok().flatten().map(String::from));
         let last_commit_author = tip
             .as_ref()
             .and_then(|c| c.author().name().ok().map(String::from));
@@ -128,7 +132,12 @@ pub fn list_tags(state: State<AppState>) -> Result<Vec<TagInfo>, AppError> {
                     let msg = tag.message().ok().flatten().map(|s: &str| s.to_string());
                     let (t_name, t_time) = tag
                         .tagger()
-                        .map(|sig| (sig.name().ok().map(String::from), Some(sig.when().seconds())))
+                        .map(|sig| {
+                            (
+                                sig.name().ok().map(String::from),
+                                Some(sig.when().seconds()),
+                            )
+                        })
                         .unwrap_or((None, None));
                     (target, true, msg, t_name, t_time)
                 } else {

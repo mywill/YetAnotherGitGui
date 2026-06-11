@@ -26,7 +26,9 @@ fn build_branch_info(branch: &git2::Branch) -> Result<BranchInfo, AppError> {
     let name = branch.name()?.unwrap_or("").to_string();
     let tip = branch.get().peel_to_commit().ok();
     let target_hash = tip.as_ref().map(|c| c.id().to_string()).unwrap_or_default();
-    let last_commit_summary = tip.as_ref().and_then(|c| c.summary().ok().flatten().map(String::from));
+    let last_commit_summary = tip
+        .as_ref()
+        .and_then(|c| c.summary().ok().flatten().map(String::from));
     let last_commit_author = tip
         .as_ref()
         .and_then(|c| c.author().name().ok().map(String::from));

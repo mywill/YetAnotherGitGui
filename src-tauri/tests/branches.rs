@@ -45,7 +45,9 @@ fn list_branches_logic() {
     create_initial_commit(&repo, &temp_dir);
 
     let head = repo.head().ok();
-    let head_name = head.as_ref().and_then(|h| h.shorthand().ok().map(String::from));
+    let head_name = head
+        .as_ref()
+        .and_then(|h| h.shorthand().ok().map(String::from));
     assert!(head_name.is_some());
 
     let mut branches = Vec::new();
@@ -414,7 +416,13 @@ fn create_branch_and_checkout_uses_current_head() {
 fn create_branch_and_checkout_flips_head_to_new_branch() {
     let (temp_dir, repo) = create_test_repo();
     let main_oid = create_initial_commit(&repo, &temp_dir);
-    let main_name = repo.head().unwrap().shorthand().ok().map(String::from).unwrap();
+    let main_name = repo
+        .head()
+        .unwrap()
+        .shorthand()
+        .ok()
+        .map(String::from)
+        .unwrap();
 
     create_branch_and_checkout_logic(&repo, "feature").unwrap();
 
