@@ -55,7 +55,7 @@ fn list_conflicted_paths(repo: &Repository) -> Result<Vec<String>, AppError> {
     Ok(statuses
         .iter()
         .filter(|e| e.status().contains(Status::CONFLICTED))
-        .filter_map(|e| e.path().map(String::from))
+        .filter_map(|e| e.path().ok().map(String::from))
         .collect())
 }
 

@@ -36,7 +36,7 @@ pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError
     let repo = state.get_repo()?;
 
     let head = repo.head().ok();
-    let head_name = head.as_ref().and_then(|h| h.shorthand().map(String::from));
+    let head_name = head.as_ref().and_then(|h| h.shorthand().ok().map(String::from));
 
     let mut branches = Vec::new();
 
@@ -48,10 +48,10 @@ pub fn list_branches(state: State<AppState>) -> Result<Vec<BranchInfo>, AppError
 
         let tip = branch.get().peel_to_commit().ok();
         let target_hash = tip.as_ref().map(|c| c.id().to_string()).unwrap_or_default();
-        let last_commit_summary = tip.as_ref().and_then(|c| c.summary().map(String::from));
+        let last_commit_summary = tip.as_ref().and_then(|c| c.summary().ok().flatten().map(String::from));
         let last_commit_author = tip
             .as_ref()
-            .and_then(|c| c.author().name().map(String::from));
+            .and_then(|c| c.author().name().ok().map(String::from));
         let last_commit_time = tip.as_ref().map(|c| c.time().seconds());
 
         // Upstream tracking + ahead/behind (local branches only)
@@ -125,10 +125,10 @@ pub fn list_tags(state: State<AppState>) -> Result<Vec<TagInfo>, AppError> {
             let (target_hash, is_annotated, message, tagger_name, tagger_time) =
                 if let Some(tag) = obj.as_tag() {
                     let target = tag.target_id().to_string();
-                    let msg = tag.message().map(|s: &str| s.to_string());
+                    let msg = tag.message().ok().flatten().map(|s: &str| s.to_string());
                     let (t_name, t_time) = tag
                         .tagger()
-                        .map(|sig| (sig.name().map(String::from), Some(sig.when().seconds())))
+                        .map(|sig| (sig.name().ok().map(String::from), Some(sig.when().seconds())))
                         .unwrap_or((None, None));
                     (target, true, msg, t_name, t_time)
                 } else {
@@ -139,7 +139,7 @@ pub fn list_tags(state: State<AppState>) -> Result<Vec<TagInfo>, AppError> {
             let last_commit_summary = Oid::from_str(&target_hash)
                 .ok()
                 .and_then(|o| repo.find_commit(o).ok())
-                .and_then(|c| c.summary().map(String::from));
+                .and_then(|c| c.summary().ok().flatten().map(String::from));
 
             tags.push(TagInfo {
                 name,
@@ -178,7 +178,7 @@ pub fn checkout_branch(branch_name: String, state: State<AppState>) -> Result<()
     // Set HEAD to point to the branch
     let refname = reference
         .name()
-        .ok_or_else(|| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
+        .map_err(|_| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
     repo.set_head(refname)?;
 
     Ok(())
@@ -205,7 +205,7 @@ pub fn create_branch_and_checkout(
     repo.checkout_tree(tree.as_object(), None)?;
     let refname = reference
         .name()
-        .ok_or_else(|| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
+        .map_err(|_| AppError::Git(git2::Error::from_str("Invalid branch reference name")))?;
     repo.set_head(refname)?;
 
     Ok(())
@@ -246,7 +246,7 @@ pub fn delete_branch(
         // Check if this is the current branch (HEAD)
         if let Ok(head) = repo.head() {
             if head.is_branch() {
-                if let Some(head_name) = head.shorthand() {
+                if let Ok(head_name) = head.shorthand() {
                     if head_name == branch_name {
                         return Err(AppError::Git(git2::Error::from_str(
                             "Cannot delete the currently checked out branch",
