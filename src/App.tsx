@@ -160,7 +160,10 @@ export function App() {
             Yet Another Git Gui
           </span>
           {repositoryInfo && (
-            <span className="repo-path text-text-muted max-w-75 truncate font-mono text-xs leading-normal">
+            <span
+              className="repo-path text-text-muted max-w-75 truncate font-mono text-xs leading-normal"
+              title={repositoryInfo.path}
+            >
               {repositoryInfo.path}
             </span>
           )}
