@@ -1,3 +1,12 @@
+## [1.13.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.1...v1.13.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* updated repo path to have a hover effect so you can see the full path if it is to long and truncates ([79d0cbf](https://github.com/mywill/YetAnotherGitGui/commit/79d0cbfdc90e0c160b1cad0047f22cd2f0d73a27))
+* updated to lazy load some of the other tabs to improve load speed and updated to have loading states for that ([0584e63](https://github.com/mywill/YetAnotherGitGui/commit/0584e6380214e07e5e24946de81f0f06c3a020fd))
+* updated to populate the canical path when using relative on the CLI and you didnt get to a git repo folder ([a95e1d9](https://github.com/mywill/YetAnotherGitGui/commit/a95e1d941103639744ac6eefaf9e03439499694b))
+
 ## [1.13.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.0...v1.13.1) (2026-06-11)
 
 
