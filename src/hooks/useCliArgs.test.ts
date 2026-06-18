@@ -137,6 +137,79 @@ describe("useCliArgs", () => {
     });
   });
 
+  it("resolves '../.' relative CLI arg against cwd to absolute path", async () => {
+    vi.mocked(getMatches).mockResolvedValue({
+      args: {
+        path: { value: "../.", occurrences: 1 },
+      },
+      subcommand: null,
+    });
+    vi.mocked(getCurrentDir).mockResolvedValue("/home/user/Code/repo/myGitTool");
+
+    const { result } = renderHook(() => useCliArgs());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.repoPath).toBe("/home/user/Code/repo");
+  });
+
+  it("resolves '../..' relative CLI arg chain against cwd", async () => {
+    vi.mocked(getMatches).mockResolvedValue({
+      args: {
+        path: { value: "../../other", occurrences: 1 },
+      },
+      subcommand: null,
+    });
+    vi.mocked(getCurrentDir).mockResolvedValue("/a/b/c/d");
+
+    const { result } = renderHook(() => useCliArgs());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.repoPath).toBe("/a/b/other");
+  });
+
+  it("resolves './subdir' relative CLI arg against cwd", async () => {
+    vi.mocked(getMatches).mockResolvedValue({
+      args: {
+        path: { value: "./subdir", occurrences: 1 },
+      },
+      subcommand: null,
+    });
+    vi.mocked(getCurrentDir).mockResolvedValue("/home/user");
+
+    const { result } = renderHook(() => useCliArgs());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.repoPath).toBe("/home/user/subdir");
+  });
+
+  it("calls getCurrentDir when CLI arg is relative", async () => {
+    vi.mocked(getMatches).mockResolvedValue({
+      args: {
+        path: { value: "../repo", occurrences: 1 },
+      },
+      subcommand: null,
+    });
+    vi.mocked(getCurrentDir).mockResolvedValue("/home/user");
+
+    const { result } = renderHook(() => useCliArgs());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(getCurrentDir).toHaveBeenCalled();
+    expect(result.current.repoPath).toBe("/home/repo");
+  });
+
   it("sets loading to false even when falling back due to error", async () => {
     vi.mocked(getMatches).mockRejectedValue(new Error("Error"));
     vi.mocked(getCurrentDir).mockResolvedValue("/dir");
