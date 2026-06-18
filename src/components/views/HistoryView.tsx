@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { CommitGraph } from "../graph/CommitGraph";
 import { CommitDetailsPanel } from "../history/CommitDetailsPanel";
-import { DetailsPanelEmpty } from "../common/DetailsPanelStates";
+import { DetailsPanelEmpty, DetailsPanelLoading } from "../common/DetailsPanelStates";
 import { YaggResizer } from "../common/YaggResizer";
 import { useRepositoryStore, useIsEmptyRepo } from "../../stores/repositoryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -15,6 +15,7 @@ import {
 
 export function HistoryView() {
   const commits = useRepositoryStore((s) => s.commits);
+  const commitsLoading = useRepositoryStore((s) => s.commitsLoading);
   const selectedCommitDetails = useRepositoryStore((s) => s.selectedCommitDetails);
   const commitDetailsLoading = useRepositoryStore((s) => s.commitDetailsLoading);
   const isEmptyRepo = useIsEmptyRepo();
@@ -45,6 +46,14 @@ export function HistoryView() {
           className="history-empty flex-1"
           label="No commits yet. Create your first commit in the Status view."
         />
+      </div>
+    );
+  }
+
+  if (commitsLoading && commits.length === 0) {
+    return (
+      <div className="history-view flex min-h-0 flex-1 overflow-hidden">
+        <DetailsPanelLoading className="history-loading flex-1" label="Loading commits..." />
       </div>
     );
   }

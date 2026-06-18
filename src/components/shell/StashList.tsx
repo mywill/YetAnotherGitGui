@@ -5,7 +5,7 @@ import { useDialogStore } from "../../stores/dialogStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { StashItem } from "../sidebar/StashItem";
 import { KeyboardList } from "../common/KeyboardList";
-import { DetailsPanelEmpty } from "../common/DetailsPanelStates";
+import { DetailsPanelEmpty, DetailsPanelLoading } from "../common/DetailsPanelStates";
 import { SectionActionButton } from "../files/SectionHeader";
 import { STASH_DAYS_OLD } from "../../stores/cleanupStore";
 import { buildStashDropMessage } from "../../utils/dialogText";
@@ -15,6 +15,7 @@ import type { StashInfo } from "../../types";
 
 export const StashList = () => {
   const stashes = useRepositoryStore((s) => s.stashes);
+  const refsLoading = useRepositoryStore((s) => s.refsLoading);
   const loadStashDetails = useRepositoryStore((s) => s.loadStashDetails);
   const loadStashes = useRepositoryStore((s) => s.loadStashes);
   const applyStash = useRepositoryStore((s) => s.applyStash);
@@ -85,7 +86,11 @@ export const StashList = () => {
         </div>
       )}
       {stashes.length === 0 ? (
-        <DetailsPanelEmpty className="stash-list-empty flex-1" label="No stashes" />
+        refsLoading ? (
+          <DetailsPanelLoading className="stash-list-empty flex-1" label="Loading stashes..." />
+        ) : (
+          <DetailsPanelEmpty className="stash-list-empty flex-1" label="No stashes" />
+        )
       ) : (
         <div className="stash-list bg-bg-canvas flex-1 overflow-y-auto">
           <KeyboardList

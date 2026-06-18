@@ -3,6 +3,7 @@ import { IconTrash } from "@tabler/icons-react";
 import { CurrentBranch } from "../sidebar/CurrentBranch";
 import { BranchTagList } from "../sidebar/BranchTagList";
 import { SectionActionButton } from "../files/SectionHeader";
+import { DetailsPanelLoading } from "../common/DetailsPanelStates";
 import { useDialogStore } from "../../stores/dialogStore";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
@@ -12,6 +13,8 @@ import type { BranchInfo } from "../../types";
 
 export const BranchesView = () => {
   const [running, setRunning] = useState(false);
+  const branches = useRepositoryStore((s) => s.branches);
+  const refsLoading = useRepositoryStore((s) => s.refsLoading);
   const showConfirm = useDialogStore((s) => s.showConfirm);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const loadBranchesAndTags = useRepositoryStore((s) => s.loadBranchesAndTags);
@@ -35,6 +38,12 @@ export const BranchesView = () => {
       showConfirm,
       setActiveView,
     });
+
+  if (refsLoading && branches.length === 0) {
+    return (
+      <DetailsPanelLoading className="branches-loading flex-1" label="Loading branches & tags..." />
+    );
+  }
 
   return (
     <div className="branches-view bg-bg-canvas flex flex-1 flex-col overflow-hidden">

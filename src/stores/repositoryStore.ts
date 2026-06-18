@@ -61,6 +61,7 @@ interface RepositoryState {
   branches: BranchInfo[];
   tags: TagInfo[];
   stashes: StashInfo[];
+  refsLoading: boolean;
 
   // Stash details
   selectedStashDetails: StashDetails | null;
@@ -205,6 +206,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   branches: [],
   tags: [],
   stashes: [],
+  refsLoading: false,
 
   selectedStashDetails: null,
   stashDetailsLoading: false,
@@ -213,25 +215,21 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
 
   openRepository: async (path: string) => {
     logInfo("yagg::fe::lifecycle", `repo open requested path=${path}`);
-    set({ isLoading: true, fileStatusesLoading: true, commitsLoading: true });
+    set({ isLoading: true, fileStatusesLoading: true });
     try {
       const info = await git.openRepository(path);
-      // Reset loading states before triggering data loads
-      set({
-        repositoryInfo: info,
-        isLoading: false,
-        commitsLoading: false,
-        fileStatusesLoading: false,
-      });
+      set({ repositoryInfo: info, isLoading: false });
 
-      // Load initial data
-      await Promise.all([get().loadAllCommits(), get().loadFileStatuses()]);
+      // Phase 1 (blocking): load what the default Status view needs
+      await get().loadFileStatuses();
+      // Phase 2 (background): commit graph for History view
+      get().loadAllCommits();
+      // Phase 3: loadBranchesAndTags fires via App.tsx useEffect on repositoryInfo
     } catch (err) {
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
       set({
         isLoading: false,
         fileStatusesLoading: false,
-        commitsLoading: false,
       });
     }
   },
@@ -242,7 +240,7 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
 
     try {
       const info = await git.getRepositoryInfo();
-      set({ repositoryInfo: info });
+      set({ repositoryInfo: info, refsLoading: true });
 
       // loadAllCommits atomically replaces the commits array when the new
       // data arrives — no need to pre-clear it, which would cause a flash.
@@ -621,13 +619,15 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
 
   loadBranchesAndTags: async () => {
     try {
+      set({ refsLoading: true });
       const [branches, tags, stashes] = await Promise.all([
         git.listBranches(),
         git.listTags(),
         git.listStashes(),
       ]);
-      set({ branches, tags, stashes });
+      set({ branches, tags, stashes, refsLoading: false });
     } catch (err) {
+      set({ refsLoading: false });
       useNotificationStore.getState().showError(cleanErrorMessage(String(err)));
     }
   },
