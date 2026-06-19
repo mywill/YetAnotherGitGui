@@ -1,3 +1,10 @@
+## [1.13.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.2...v1.13.3) (2026-06-19)
+
+
+### Bug Fixes
+
+* updated overflow logic for the graph to attempt to make sure you can always see the graph when needed ([dd74167](https://github.com/mywill/YetAnotherGitGui/commit/dd74167db4421cafbf22e963569e179e6b529168))
+
 ## [1.13.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.1...v1.13.2) (2026-06-18)
 
 
