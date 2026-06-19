@@ -104,6 +104,14 @@ describe("StashDetailsPanel", () => {
     expect(screen.getByText(/files changed/i)).toBeInTheDocument();
   });
 
+  it("files-list has horizontal scrolling enabled", () => {
+    render(<StashDetailsPanel details={mockStashDetails} loading={false} />);
+
+    const filesList = document.querySelector<HTMLDivElement>(".files-list");
+    expect(filesList).not.toBeNull();
+    expect(filesList!.className).toContain("overflow-x-auto");
+  });
+
   it("handles stash with no branch name", () => {
     const stashWithoutBranch = {
       ...mockStashDetails,

@@ -175,7 +175,7 @@ export function CommitDetailsPanel({ details, loading }: CommitDetailsPanelProps
           aria-label="Files changed"
           onActivate={handleActivate}
           onSecondaryActivate={handleActivate}
-          className="files-list min-w-0 flex-1 overflow-y-auto"
+          className="files-list min-w-0 flex-1 overflow-hidden overflow-x-auto overflow-y-auto"
         >
           {details.files_changed.map((file, i) => (
             <KeyboardList.Item key={file.path} index={i}>

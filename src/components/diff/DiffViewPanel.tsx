@@ -232,7 +232,7 @@ export function DiffViewPanel({ diff, loading, staged }: DiffViewPanelProps) {
           </YaggButton>
         </div>
       )}
-      <div className="diff-content flex-1 overflow-y-auto font-mono text-xs leading-normal">
+      <div className="diff-content flex-1 overflow-hidden overflow-x-auto overflow-y-auto font-mono text-xs leading-normal">
         {diff.hunks.map((hunk, index) =>
           hunk.is_loaded ? (
             isConflicted ? (

@@ -284,6 +284,31 @@ describe("DiffViewPanel", () => {
     expect(container.querySelector(".diff-content")).toBeInTheDocument();
   });
 
+  it("diff-content has horizontal scrolling enabled", () => {
+    const diff: FileDiff = {
+      path: "test.txt",
+      hunks: [
+        {
+          header: "@@ -1,1 +1,1 @@",
+          old_start: 1,
+          old_lines: 1,
+          new_start: 1,
+          new_lines: 1,
+          is_loaded: true,
+          lines: [],
+        },
+      ],
+      is_binary: false,
+      total_lines: 0,
+    };
+
+    const { container } = render(<DiffViewPanel diff={diff} loading={false} staged={false} />);
+
+    const diffContent = container.querySelector<HTMLDivElement>(".diff-content");
+    expect(diffContent).not.toBeNull();
+    expect(diffContent!.className).toContain("overflow-x-auto");
+  });
+
   describe("discard buttons", () => {
     const diff: FileDiff = {
       path: "test.txt",

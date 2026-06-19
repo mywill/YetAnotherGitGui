@@ -68,6 +68,13 @@ export function CommitGraph({ commits }: CommitGraphProps) {
   const graphWidth = layoutSizes["graph.col.graph"] ?? 120;
   const authorWidth = layoutSizes["graph.col.author"] ?? 150;
   const dateWidth = layoutSizes["graph.col.date"] ?? 120;
+
+  const minGraphWidth = useMemo(() => {
+    const maxColumn = commits.reduce((max, c) => Math.max(max, c.column), 0);
+    return Math.max(MIN_WIDTH, 12 + maxColumn * 12 + 12);
+  }, [commits]);
+  const effectiveGraphWidth = Math.max(graphWidth, minGraphWidth);
+
   const [containerWidth, setContainerWidth] = useState(0);
 
   // Row height follows density × text-size. Read the computed --spacing-row
@@ -172,9 +179,9 @@ export function CommitGraph({ commits }: CommitGraphProps) {
   const handleGraphResize = useCallback(
     (delta: number) => {
       const current = useSettingsStore.getState().layoutSizes["graph.col.graph"] ?? 120;
-      setLayoutSize("graph.col.graph", Math.max(MIN_WIDTH, current + delta));
+      setLayoutSize("graph.col.graph", Math.max(minGraphWidth, current + delta));
     },
-    [setLayoutSize]
+    [setLayoutSize, minGraphWidth]
   );
 
   const handleMessageResize = useCallback(
@@ -197,7 +204,7 @@ export function CommitGraph({ commits }: CommitGraphProps) {
   const padding = 8;
   const columnGap = 24;
   const halfGap = columnGap / 2;
-  const graphResizerPos = padding + graphWidth + halfGap;
+  const graphResizerPos = padding + effectiveGraphWidth + halfGap;
   const authorResizerPos = containerWidth - padding - dateWidth - columnGap - authorWidth - halfGap;
   const dateResizerPos = containerWidth - padding - dateWidth - halfGap;
 
@@ -206,7 +213,7 @@ export function CommitGraph({ commits }: CommitGraphProps) {
 
   // CSS custom properties for grid layout
   const containerStyle = {
-    "--graph-width": `${graphWidth}px`,
+    "--graph-width": `${effectiveGraphWidth}px`,
     "--author-width": `${authorWidth}px`,
     "--date-width": `${dateWidth}px`,
   } as React.CSSProperties;

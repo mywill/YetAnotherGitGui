@@ -168,6 +168,14 @@ describe("CommitDetailsPanel", () => {
     expect(screen.getByText(/files changed/i)).toBeInTheDocument();
   });
 
+  it("files-list has horizontal scrolling enabled", () => {
+    render(<CommitDetailsPanel details={mockCommitDetails} loading={false} />);
+
+    const filesList = document.querySelector<HTMLDivElement>(".files-list");
+    expect(filesList).not.toBeNull();
+    expect(filesList!.className).toContain("overflow-x-auto");
+  });
+
   it("handles commit with no parent (initial commit)", () => {
     const initialCommit = {
       ...mockCommitDetails,
