@@ -2323,9 +2323,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.32"
+version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
+checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "mac"
@@ -6219,7 +6219,7 @@ dependencies = [
 
 [[package]]
 name = "yagg"
-version = "1.13.1"
+version = "1.13.3"
 dependencies = [
  "chrono",
  "dirs",
