@@ -373,12 +373,7 @@ function CategorySectionContent({
 }: CategorySectionContentProps) {
   return (
     <>
-      <p className="text-text-muted px-3 pt-2 pb-1 text-xs">
-        {description}{" "}
-        <span className="text-text-muted/70">
-          Click to select; Ctrl/⌘ to add, Shift for a range. Arrows + Space to navigate.
-        </span>
-      </p>
+      <p className="text-text-muted px-3 pt-2 pb-1 text-xs">{description}</p>
       <div className="pt-1 pb-2">
         {loading && total === 0 ? (
           <p className="text-text-muted px-3 text-xs">Loading…</p>
