@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { CommitRow } from "./CommitRow";
 import type { GraphCommit } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -37,15 +37,32 @@ vi.mock("../common/ContextMenu", () => ({
   }: {
     x: number;
     y: number;
-    items: Array<{ label: string; onClick: () => void }>;
+    items: Array<{
+      label: string;
+      onClick?: () => void;
+      children?: Array<{ label: string; onClick: () => void }>;
+    }>;
     onClose: () => void;
   }) => (
     <div data-testid="context-menu">
-      {items.map((item) => (
-        <button key={item.label} onClick={item.onClick}>
-          {item.label}
-        </button>
-      ))}
+      {items.map((item) =>
+        item.children ? (
+          <div key={item.label} data-testid={`submenu-${item.label}`}>
+            <div>{item.label}</div>
+            <div data-testid={`submenu-items-${item.label}`}>
+              {item.children.map((child) => (
+                <button key={child.label} onClick={child.onClick}>
+                  {child.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button key={item.label} onClick={item.onClick}>
+            {item.label}
+          </button>
+        )
+      )}
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -55,6 +72,8 @@ vi.mock("../common/ContextMenu", () => ({
 vi.mock("../../services/clipboard", () => ({
   copyToClipboard: vi.fn().mockResolvedValue(undefined),
 }));
+
+import { copyToClipboard } from "../../services/clipboard";
 
 // Mock useVirtualizedFocus (lives in ../common/virtualizedFocus).
 vi.mock("../common/virtualizedFocus", () => ({
@@ -282,6 +301,160 @@ describe("CommitRow", () => {
       fireEvent.contextMenu(row!);
 
       expect(screen.getByText("Copy commit hash")).toBeInTheDocument();
+    });
+
+    describe("copy branch name", () => {
+      it("does not show Copy branch name when commit has no branches", () => {
+        const { container } = render(<CommitRow {...defaultProps} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.queryByText("Copy branch name")).not.toBeInTheDocument();
+      });
+
+      it("shows single Copy branch name item when commit has one branch", () => {
+        const commit = createMockCommit({
+          refs: [{ name: "main", ref_type: "branch", is_head: false }],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.getByText("Copy branch name")).toBeInTheDocument();
+        // No submenu (single branch)
+        expect(screen.queryByTestId("submenu-Copy branch name")).not.toBeInTheDocument();
+      });
+
+      it("copies the branch name when clicked", async () => {
+        const commit = createMockCommit({
+          refs: [{ name: "main", ref_type: "branch", is_head: false }],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+        fireEvent.click(screen.getByText("Copy branch name"));
+
+        await waitFor(() => {
+          expect(copyToClipboard).toHaveBeenCalledWith("main");
+        });
+      });
+
+      it("shows Copy branch name submenu when commit has multiple branches", () => {
+        const commit = createMockCommit({
+          refs: [
+            { name: "main", ref_type: "branch", is_head: true },
+            { name: "origin/main", ref_type: "remotebranch", is_head: false },
+          ],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.getByTestId("submenu-Copy branch name")).toBeInTheDocument();
+        const submenuItems = screen.getByTestId("submenu-items-Copy branch name");
+        expect(submenuItems).toHaveTextContent("main");
+        expect(submenuItems).toHaveTextContent("origin/main");
+      });
+
+      it("copies correct branch name from submenu", async () => {
+        const commit = createMockCommit({
+          refs: [
+            { name: "main", ref_type: "branch", is_head: true },
+            { name: "feature", ref_type: "branch", is_head: false },
+          ],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+        const submenuItems = screen.getByTestId("submenu-items-Copy branch name");
+        fireEvent.click(within(submenuItems).getByText("feature"));
+
+        await waitFor(() => {
+          expect(copyToClipboard).toHaveBeenCalledWith("feature");
+        });
+      });
+
+      it("includes remote branches as branch names", () => {
+        const commit = createMockCommit({
+          refs: [{ name: "origin/dev", ref_type: "remotebranch", is_head: false }],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.getByText("Copy branch name")).toBeInTheDocument();
+      });
+    });
+
+    describe("copy tag name", () => {
+      it("shows single Copy tag name item when commit has one tag", () => {
+        const commit = createMockCommit({
+          refs: [{ name: "v1.0.0", ref_type: "tag", is_head: false }],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.getByText("Copy tag name")).toBeInTheDocument();
+        expect(screen.queryByTestId("submenu-Copy tag name")).not.toBeInTheDocument();
+      });
+
+      it("copies the tag name when clicked", async () => {
+        const commit = createMockCommit({
+          refs: [{ name: "v1.0.0", ref_type: "tag", is_head: false }],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+        fireEvent.click(screen.getByText("Copy tag name"));
+
+        await waitFor(() => {
+          expect(copyToClipboard).toHaveBeenCalledWith("v1.0.0");
+        });
+      });
+
+      it("shows Copy tag name submenu when commit has multiple tags", () => {
+        const commit = createMockCommit({
+          refs: [
+            { name: "v1.0.0", ref_type: "tag", is_head: false },
+            { name: "v2.0.0", ref_type: "tag", is_head: false },
+          ],
+        });
+
+        const { container } = render(<CommitRow {...defaultProps} commit={commit} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.getByTestId("submenu-Copy tag name")).toBeInTheDocument();
+        const submenuItems = screen.getByTestId("submenu-items-Copy tag name");
+        expect(submenuItems).toHaveTextContent("v1.0.0");
+        expect(submenuItems).toHaveTextContent("v2.0.0");
+      });
+
+      it("does not show Copy tag name when commit has no tags", () => {
+        const { container } = render(<CommitRow {...defaultProps} />);
+
+        const row = container.querySelector(".commit-row");
+        fireEvent.contextMenu(row!);
+
+        expect(screen.queryByText("Copy tag name")).not.toBeInTheDocument();
+      });
     });
 
     it("shows checkout option in context menu", () => {

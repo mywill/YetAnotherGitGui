@@ -2,8 +2,9 @@ import { memo, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import clsx from "clsx";
 import { formatDistanceToNow } from "date-fns";
-import type { GraphCommit } from "../../types";
+import type { GraphCommit, RefInfo } from "../../types";
 import { BranchLines } from "./BranchLines";
+import type { ContextMenuItem } from "../common/ContextMenu";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
@@ -63,6 +64,14 @@ export const CommitRow = memo(function CommitRow({
     closeContextMenu();
   }, [commit.hash, closeContextMenu]);
 
+  const handleCopyRefName = useCallback(
+    (name: string) => async () => {
+      await copyToClipboard(name);
+      closeContextMenu();
+    },
+    [closeContextMenu]
+  );
+
   const handleCheckout = useCallback(() => {
     closeContextMenu();
     onDoubleClick();
@@ -88,6 +97,55 @@ export const CommitRow = memo(function CommitRow({
     const d = new Date(commit.timestamp * 1000);
     return { date: d, timeAgo: formatDistanceToNow(d, { addSuffix: true }) };
   }, [commit.timestamp]);
+
+  const { branchRefs, tagRefs } = useMemo(() => {
+    const branchRefs: RefInfo[] = [];
+    const tagRefs: RefInfo[] = [];
+    for (const ref of commit.refs) {
+      if (ref.ref_type === "tag") {
+        tagRefs.push(ref);
+      } else {
+        branchRefs.push(ref);
+      }
+    }
+    return { branchRefs, tagRefs };
+  }, [commit.refs]);
+
+  const refMenuItems = useMemo<ContextMenuItem[]>(() => {
+    const items: ContextMenuItem[] = [];
+
+    if (branchRefs.length === 1) {
+      items.push({
+        label: "Copy branch name",
+        onClick: handleCopyRefName(branchRefs[0].name),
+      });
+    } else if (branchRefs.length > 1) {
+      items.push({
+        label: "Copy branch name",
+        children: branchRefs.map((r) => ({
+          label: r.name,
+          onClick: handleCopyRefName(r.name),
+        })),
+      });
+    }
+
+    if (tagRefs.length === 1) {
+      items.push({
+        label: "Copy tag name",
+        onClick: handleCopyRefName(tagRefs[0].name),
+      });
+    } else if (tagRefs.length > 1) {
+      items.push({
+        label: "Copy tag name",
+        children: tagRefs.map((r) => ({
+          label: r.name,
+          onClick: handleCopyRefName(r.name),
+        })),
+      });
+    }
+
+    return items;
+  }, [branchRefs, tagRefs, handleCopyRefName]);
 
   return (
     <>
@@ -183,6 +241,7 @@ export const CommitRow = memo(function CommitRow({
           y={contextMenu.y}
           onClose={closeContextMenu}
           items={[
+            ...refMenuItems,
             { label: "Copy commit hash", onClick: handleCopyHash },
             { label: "Checkout commit", onClick: handleCheckout },
             { label: "Revert commit", onClick: handleRevert },
