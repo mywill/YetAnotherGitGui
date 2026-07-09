@@ -41,10 +41,12 @@ export function SettingsMenu() {
   const setAutoCheckForUpdates = useSettingsStore((s) => s.setAutoCheckForUpdates);
   const debugLoggingEnabled = useSettingsStore((s) => s.debugLoggingEnabled);
   const setDebugLoggingEnabled = useSettingsStore((s) => s.setDebugLoggingEnabled);
+  const resetToDefaults = useSettingsStore((s) => s.resetToDefaults);
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showUninstallDialog, setShowUninstallDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -139,6 +141,13 @@ export function SettingsMenu() {
     } catch (error) {
       useNotificationStore.getState().showError(String(error));
     }
+  };
+
+  const handleReset = () => {
+    setShowResetDialog(false);
+    resetToDefaults();
+    closeMenu();
+    useNotificationStore.getState().showSuccess("All settings reset to defaults");
   };
 
   const handleViewLogs = async () => {
@@ -339,6 +348,18 @@ export function SettingsMenu() {
               variant="menu-item"
               className="settings-menu-item px-3 py-2 text-xs"
               role="menuitem"
+              onClick={() => {
+                closeMenu();
+                setShowResetDialog(true);
+              }}
+            >
+              Reset to Defaults
+            </YaggButton>
+            <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
+            <YaggButton
+              variant="menu-item"
+              className="settings-menu-item px-3 py-2 text-xs"
+              role="menuitem"
               disabled={updateChecking}
               onClick={handleCheckForUpdates}
             >
@@ -430,6 +451,17 @@ export function SettingsMenu() {
           </div>
         )}
       </div>
+
+      {showResetDialog && (
+        <ConfirmDialog
+          title="Reset to Defaults"
+          message="This will reset all settings to their factory defaults, including panel layout, density, text size, theme, auto-check on launch, and debug logging. This action cannot be undone."
+          confirmLabel="Reset"
+          cancelLabel="Cancel"
+          onConfirm={handleReset}
+          onCancel={() => setShowResetDialog(false)}
+        />
+      )}
 
       {showInstallDialog && (
         <CliInstallDialog onConfirm={handleInstall} onCancel={() => setShowInstallDialog(false)} />

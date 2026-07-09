@@ -16,7 +16,9 @@ describe("settingsStore", () => {
       textSize: "medium",
       theme: "dark",
       layoutSizes: {},
+      sectionExpanded: {},
       autoCheckForUpdates: true,
+      debugLoggingEnabled: false,
       loaded: false,
     });
     // Reset DOM dataset
@@ -288,6 +290,93 @@ describe("settingsStore", () => {
       const toasts = useNotificationStore.getState().notifications;
       expect(toasts).toHaveLength(1);
       expect(toasts[0].message).toContain("Invalid path: /nope");
+    });
+  });
+
+  describe("resetToDefaults", () => {
+    beforeEach(() => {
+      useNotificationStore.setState({ notifications: [] });
+      // Put the store in a non-default state before each test
+      useSettingsStore.setState({
+        density: "spacious",
+        textSize: "large",
+        theme: "light",
+        layoutSizes: { "history.details": 350 },
+        sectionExpanded: { "cleanup.gone": true },
+        autoCheckForUpdates: false,
+        debugLoggingEnabled: true,
+        loaded: true,
+      });
+      document.documentElement.dataset.density = "spacious";
+      document.documentElement.dataset.textSize = "large";
+      document.documentElement.dataset.theme = "light";
+    });
+
+    it("resets all settings to default values", () => {
+      useSettingsStore.getState().resetToDefaults();
+      const state = useSettingsStore.getState();
+      expect(state.density).toBe("compact");
+      expect(state.textSize).toBe("medium");
+      expect(state.theme).toBe("dark");
+      expect(state.layoutSizes).toEqual({});
+      expect(state.sectionExpanded).toEqual({});
+      expect(state.autoCheckForUpdates).toBe(true);
+      expect(state.debugLoggingEnabled).toBe(false);
+    });
+
+    it("applies defaults to DOM dataset", () => {
+      useSettingsStore.getState().resetToDefaults();
+      expect(document.documentElement.dataset.density).toBe("compact");
+      expect(document.documentElement.dataset.textSize).toBe("medium");
+      expect(document.documentElement.dataset.theme).toBe("dark");
+    });
+
+    it("clears pending persist timer before writing", async () => {
+      vi.useFakeTimers();
+      // Call a setter so a timer is pending
+      useSettingsStore.getState().setDensity("comfortable");
+      // Don't advance the timer — now reset
+      useSettingsStore.getState().resetToDefaults();
+      // Advance past the original timer — should NOT trigger a stale write
+      vi.advanceTimersByTime(1000);
+
+      const { writeSettings } = await import("../services/settings");
+      // The call from resetToDefaults + no stale call
+      expect(writeSettings).toHaveBeenCalledTimes(1);
+      expect(writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ density: "compact", layoutSizes: {} })
+      );
+      vi.useRealTimers();
+    });
+
+    it("calls writeSettings with default values", async () => {
+      const { writeSettings } = await import("../services/settings");
+      useSettingsStore.getState().resetToDefaults();
+
+      await new Promise((r) => setTimeout(r, 5));
+
+      expect(writeSettings).toHaveBeenCalledWith({
+        density: "compact",
+        textSize: "medium",
+        theme: "dark",
+        layoutSizes: {},
+        sectionExpanded: {},
+        autoCheckForUpdates: true,
+        debugLoggingEnabled: false,
+      });
+    });
+
+    it("shows error toast when writeSettings rejects", async () => {
+      const { writeSettings } = await import("../services/settings");
+      vi.mocked(writeSettings).mockRejectedValueOnce(new Error("disk full"));
+
+      useSettingsStore.getState().resetToDefaults();
+      await new Promise((r) => setTimeout(r, 5));
+
+      const toasts = useNotificationStore.getState().notifications;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].type).toBe("error");
+      expect(toasts[0].message).toContain("disk full");
     });
   });
 });

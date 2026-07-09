@@ -29,6 +29,7 @@ interface SettingsState {
   toggleSectionExpanded: (key: string) => void;
   setAutoCheckForUpdates: (value: boolean) => void;
   setDebugLoggingEnabled: (value: boolean) => void;
+  resetToDefaults: () => void;
 }
 
 const DEFAULTS: Omit<
@@ -43,6 +44,7 @@ const DEFAULTS: Omit<
   | "toggleSectionExpanded"
   | "setAutoCheckForUpdates"
   | "setDebugLoggingEnabled"
+  | "resetToDefaults"
 > = {
   density: "compact",
   textSize: "medium",
@@ -199,5 +201,36 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       logError("yagg::fe::settings", `set_debug_logging_enabled failed: ${String(err)}`);
     });
     persistDebounced(get, true);
+  },
+
+  resetToDefaults: () => {
+    if (persistTimer) clearTimeout(persistTimer);
+
+    const currentDebugLogging = get().debugLoggingEnabled;
+    if (currentDebugLogging) {
+      setDebugLoggingEnabledBackend(false).catch((err: unknown) => {
+        logError(
+          "yagg::fe::settings",
+          `set_debug_logging_enabled failed during reset: ${String(err)}`
+        );
+      });
+    }
+
+    applyToDOM(DEFAULTS.density, DEFAULTS.textSize, DEFAULTS.theme);
+    set({ ...DEFAULTS, loaded: true });
+
+    const data: SettingsData = {
+      density: DEFAULTS.density,
+      textSize: DEFAULTS.textSize,
+      theme: DEFAULTS.theme,
+      layoutSizes: DEFAULTS.layoutSizes,
+      sectionExpanded: DEFAULTS.sectionExpanded,
+      autoCheckForUpdates: DEFAULTS.autoCheckForUpdates,
+      debugLoggingEnabled: DEFAULTS.debugLoggingEnabled,
+    };
+    writeSettings(data).catch((err: unknown) => {
+      const raw = err instanceof Error ? err.message : String(err);
+      notifyPersistError(cleanErrorMessage(raw));
+    });
   },
 }));
