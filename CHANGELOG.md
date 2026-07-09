@@ -1,3 +1,10 @@
+## [1.13.4](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.3...v1.13.4) (2026-07-09)
+
+
+### Bug Fixes
+
+* added a reset to defaults incase something odd happens with the window resizes ([1c98fe4](https://github.com/mywill/YetAnotherGitGui/commit/1c98fe4e16f812678d0d1141db99fbedcede9c01))
+
 ## [1.13.3](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.2...v1.13.3) (2026-06-19)
 
 
