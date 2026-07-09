@@ -1,3 +1,15 @@
+# [1.14.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.4...v1.14.0) (2026-07-09)
+
+
+### Bug Fixes
+
+* fixed for fallow warn ([b3f9630](https://github.com/mywill/YetAnotherGitGui/commit/b3f96302697949a5f13a3a3ac44ec33c67b2b0a1))
+
+
+### Features
+
+* added right click option to copy branch and tag names ([a96c057](https://github.com/mywill/YetAnotherGitGui/commit/a96c0571c50664aa57102afa552417260b99c175))
+
 ## [1.13.4](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.3...v1.13.4) (2026-07-09)
 
 
