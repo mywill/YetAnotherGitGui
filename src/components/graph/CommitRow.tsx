@@ -4,7 +4,9 @@ import clsx from "clsx";
 import { formatDistanceToNow } from "date-fns";
 import type { GraphCommit } from "../../types";
 import { BranchLines } from "./BranchLines";
+import type { ContextMenuItem } from "../common/ContextMenu";
 import { ContextMenu } from "../common/ContextMenu";
+import { buildRefMenuItems } from "./refMenuItems";
 import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
@@ -63,6 +65,14 @@ export const CommitRow = memo(function CommitRow({
     closeContextMenu();
   }, [commit.hash, closeContextMenu]);
 
+  const handleCopyRefName = useCallback(
+    (name: string) => async () => {
+      await copyToClipboard(name);
+      closeContextMenu();
+    },
+    [closeContextMenu]
+  );
+
   const handleCheckout = useCallback(() => {
     closeContextMenu();
     onDoubleClick();
@@ -88,6 +98,11 @@ export const CommitRow = memo(function CommitRow({
     const d = new Date(commit.timestamp * 1000);
     return { date: d, timeAgo: formatDistanceToNow(d, { addSuffix: true }) };
   }, [commit.timestamp]);
+
+  const refMenuItems = useMemo<ContextMenuItem[]>(
+    () => buildRefMenuItems(commit.refs, handleCopyRefName),
+    [commit.refs, handleCopyRefName]
+  );
 
   return (
     <>
@@ -183,6 +198,7 @@ export const CommitRow = memo(function CommitRow({
           y={contextMenu.y}
           onClose={closeContextMenu}
           items={[
+            ...refMenuItems,
             { label: "Copy commit hash", onClick: handleCopyHash },
             { label: "Checkout commit", onClick: handleCheckout },
             { label: "Revert commit", onClick: handleRevert },
