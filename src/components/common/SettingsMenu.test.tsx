@@ -202,10 +202,10 @@ describe("SettingsMenu", () => {
         fireEvent.click(screen.getByTitle("Settings"));
       });
 
-      // Should have three separators (after auto-check group + before About + before Help), not the macOS CLI separator
+      // Should have four separators (after auto-check group + before About + before Help + before Reset to Defaults), not the macOS CLI separator
       await waitFor(() => {
         const separators = screen.getAllByRole("separator");
-        expect(separators).toHaveLength(3);
+        expect(separators).toHaveLength(4);
       });
     });
   });
@@ -663,6 +663,80 @@ describe("SettingsMenu", () => {
       await waitFor(() => {
         expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("network error"));
       });
+    });
+  });
+
+  describe("reset to defaults", () => {
+    beforeEach(() => {
+      vi.mocked(checkCliInstalled).mockResolvedValue(false);
+    });
+
+    it("shows Reset to Defaults menu item", async () => {
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      expect(screen.getByText("Reset to Defaults")).toBeInTheDocument();
+    });
+
+    it("shows confirmation dialog when clicked", async () => {
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Reset to Defaults"));
+
+      await waitFor(() => {
+        expect(screen.getByRole("dialog")).toBeInTheDocument();
+        expect(screen.getByText("Reset to Defaults")).toBeInTheDocument();
+      });
+    });
+
+    it("calls resetToDefaults and shows success when confirmed", async () => {
+      const { useSettingsStore } = await import("../../stores/settingsStore");
+      const resetToDefaults = vi.spyOn(useSettingsStore.getState(), "resetToDefaults");
+
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Reset to Defaults"));
+
+      await waitFor(() => {
+        expect(screen.getByRole("dialog")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Reset"));
+
+      await waitFor(() => {
+        expect(resetToDefaults).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockShowSuccess).toHaveBeenCalledWith("All settings reset to defaults");
+    });
+
+    it("closes dialog when Cancel is clicked", async () => {
+      render(<SettingsMenu />);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByTitle("Settings"));
+      });
+
+      fireEvent.click(screen.getByText("Reset to Defaults"));
+
+      await waitFor(() => {
+        expect(screen.getByRole("dialog")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Cancel"));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 });
