@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { VIEWS } from "./viewRegistry";
+import { VIEWS, isViewEnabled } from "./viewRegistry";
 
 const ICON_SIZE_BY_DENSITY = { compact: 16, comfortable: 18, spacious: 20 } as const;
 
@@ -9,7 +9,10 @@ export const IconRail = () => {
   const activeView = useSelectionStore((s) => s.activeView);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const density = useSettingsStore((s) => s.density);
+  const enabledTabs = useSettingsStore((s) => s.enabledTabs);
   const iconSize = ICON_SIZE_BY_DENSITY[density];
+
+  const visibleViews = VIEWS.filter((v) => isViewEnabled(v.id, enabledTabs));
 
   return (
     <nav
@@ -17,7 +20,7 @@ export const IconRail = () => {
       role="tablist"
       aria-label="Navigation"
     >
-      {VIEWS.map(({ id, label, icon: Icon, shortcut }) => (
+      {visibleViews.map(({ id, label, icon: Icon, shortcut }) => (
         <button
           key={id}
           id={`rail-tab-${id}`}

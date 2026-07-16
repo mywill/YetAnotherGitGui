@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { SettingsMenu } from "./SettingsMenu";
 import { useNotificationStore } from "../../stores/notificationStore";
 import {
@@ -538,8 +538,11 @@ describe("SettingsMenu", () => {
       });
 
       expect(screen.getByText("Auto-check on launch")).toBeInTheDocument();
-      const onBtn = screen.getByRole("menuitemradio", { name: "On" });
-      const offBtn = screen.getByRole("menuitemradio", { name: "Off" });
+      // Scope to the "Auto-check on launch" group so the On/Off buttons don't
+      // collide with the Worktrees/Cleanup tab toggles elsewhere in the menu.
+      const autoCheckGroup = screen.getByText("Auto-check on launch").parentElement!;
+      const onBtn = within(autoCheckGroup).getByRole("menuitemradio", { name: "On" });
+      const offBtn = within(autoCheckGroup).getByRole("menuitemradio", { name: "Off" });
       // Default state is true (autoCheckForUpdates defaults to true in the store)
       expect(onBtn).toHaveAttribute("aria-checked", "true");
       expect(offBtn).toHaveAttribute("aria-checked", "false");
@@ -557,7 +560,8 @@ describe("SettingsMenu", () => {
         fireEvent.click(screen.getByTitle("Settings"));
       });
 
-      fireEvent.click(screen.getByRole("menuitemradio", { name: "Off" }));
+      const autoCheckGroup = screen.getByText("Auto-check on launch").parentElement!;
+      fireEvent.click(within(autoCheckGroup).getByRole("menuitemradio", { name: "Off" }));
 
       expect(useSettingsStore.getState().autoCheckForUpdates).toBe(false);
     });

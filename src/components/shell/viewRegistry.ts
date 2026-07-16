@@ -9,6 +9,7 @@ import {
   IconTrees,
 } from "@tabler/icons-react";
 import type { ViewType } from "../../stores/selectionStore";
+import type { EnabledTabs } from "../../stores/settingsStore";
 import { StatusView } from "../views/StatusView";
 import { HistoryView } from "../views/HistoryView";
 import { BranchesView } from "../views/BranchesView";
@@ -36,3 +37,13 @@ export const VIEWS: ViewDef[] = [
 const VIEW_BY_ID = new Map(VIEWS.map((v) => [v.id, v]));
 
 export const getView = (id: ViewType): ViewDef | undefined => VIEW_BY_ID.get(id);
+
+/**
+ * Whether a given view should be reachable in the UI. Only `cleanup` and
+ * `worktrees` are user-toggleable; all other views are always enabled.
+ */
+export function isViewEnabled(id: ViewType, enabledTabs: EnabledTabs): boolean {
+  if (id === "cleanup") return enabledTabs.cleanup;
+  if (id === "worktrees") return enabledTabs.worktrees;
+  return true;
+}

@@ -11,6 +11,7 @@ export interface SettingsData {
   debugLoggingEnabled?: boolean;
   worktreesDefaultParentDir?: string | null;
   worktreesRecent?: string[];
+  enabledTabs?: { cleanup?: boolean; worktrees?: boolean };
 }
 
 export async function readSettings(): Promise<SettingsData> {

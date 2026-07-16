@@ -1,6 +1,7 @@
 import type { BulkResult } from "../types";
 import type { ViewType } from "../stores/selectionStore";
 import { useNotificationStore } from "../stores/notificationStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { cleanErrorMessage } from "./errorMessages";
 import { formatList } from "./dialogText";
 
@@ -109,7 +110,13 @@ export async function runQuickCleanup<T>(spec: QuickCleanupSpec<T>): Promise<voi
         `${pastTenseVerb} ${succeeded}, failed ${failed}. Open the Cleanup view for details.`
       );
       if (mixedFailureFallbackView) {
-        setActiveView(mixedFailureFallbackView);
+        // If the fallback tab is disabled in settings, send the user to the
+        // Working Copy view instead of a hidden/disabled view.
+        const { enabledTabs } = useSettingsStore.getState();
+        const disabled =
+          (mixedFailureFallbackView === "cleanup" && !enabledTabs.cleanup) ||
+          (mixedFailureFallbackView === "worktrees" && !enabledTabs.worktrees);
+        setActiveView(disabled ? "status" : mixedFailureFallbackView);
       }
     }
     await refresh();

@@ -41,6 +41,8 @@ export function SettingsMenu() {
   const setAutoCheckForUpdates = useSettingsStore((s) => s.setAutoCheckForUpdates);
   const debugLoggingEnabled = useSettingsStore((s) => s.debugLoggingEnabled);
   const setDebugLoggingEnabled = useSettingsStore((s) => s.setDebugLoggingEnabled);
+  const enabledTabs = useSettingsStore((s) => s.enabledTabs);
+  const setEnabledTab = useSettingsStore((s) => s.setEnabledTab);
   const resetToDefaults = useSettingsStore((s) => s.resetToDefaults);
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
@@ -343,6 +345,63 @@ export function SettingsMenu() {
                 </YaggButton>
               </div>
             </div>
+            <div className="settings-menu-group px-3 py-2">
+              <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
+                Tabs
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-text-secondary text-xs">Worktrees</span>
+                  <div className="flex gap-1">
+                    <YaggButton
+                      variant={enabledTabs.worktrees ? "selection" : "outline"}
+                      size="sm"
+                      className="text-2xs"
+                      role="menuitemradio"
+                      aria-checked={enabledTabs.worktrees}
+                      onClick={() => setEnabledTab("worktrees", true)}
+                    >
+                      On
+                    </YaggButton>
+                    <YaggButton
+                      variant={!enabledTabs.worktrees ? "selection" : "outline"}
+                      size="sm"
+                      className="text-2xs"
+                      role="menuitemradio"
+                      aria-checked={!enabledTabs.worktrees}
+                      onClick={() => setEnabledTab("worktrees", false)}
+                    >
+                      Off
+                    </YaggButton>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-text-secondary text-xs">Cleanup</span>
+                  <div className="flex gap-1">
+                    <YaggButton
+                      variant={enabledTabs.cleanup ? "selection" : "outline"}
+                      size="sm"
+                      className="text-2xs"
+                      role="menuitemradio"
+                      aria-checked={enabledTabs.cleanup}
+                      onClick={() => setEnabledTab("cleanup", true)}
+                    >
+                      On
+                    </YaggButton>
+                    <YaggButton
+                      variant={!enabledTabs.cleanup ? "selection" : "outline"}
+                      size="sm"
+                      className="text-2xs"
+                      role="menuitemradio"
+                      aria-checked={!enabledTabs.cleanup}
+                      onClick={() => setEnabledTab("cleanup", false)}
+                    >
+                      Off
+                    </YaggButton>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="settings-menu-separator bg-border my-1 h-px" role="separator" />
             <YaggButton
               variant="menu-item"
@@ -455,7 +514,7 @@ export function SettingsMenu() {
       {showResetDialog && (
         <ConfirmDialog
           title="Reset to Defaults"
-          message="This will reset all settings to their factory defaults, including panel layout, density, text size, theme, auto-check on launch, and debug logging. This action cannot be undone."
+          message="This will reset all settings to their factory defaults, including panel layout, density, text size, theme, auto-check on launch, visible tabs, and debug logging. This action cannot be undone."
           confirmLabel="Reset"
           cancelLabel="Cancel"
           onConfirm={handleReset}

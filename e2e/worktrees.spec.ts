@@ -5,6 +5,12 @@ import { switchToWorktreesView } from "./helpers";
 
 test.describe("Worktrees view", () => {
   test.beforeEach(async ({ page }) => {
+    // Worktrees tab is off by default; opt it on for these tests.
+    await page.addInitScript(
+      `window.__MOCK_SETTINGS__ = ${JSON.stringify(
+        JSON.stringify({ enabledTabs: { worktrees: true } })
+      )};`
+    );
     await page.addInitScript(tauriMocks);
     await page.goto("/");
     await page.waitForLoadState("networkidle");

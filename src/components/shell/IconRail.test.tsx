@@ -2,10 +2,15 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { IconRail } from "./IconRail";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 describe("IconRail", () => {
   beforeEach(() => {
     useSelectionStore.setState({ activeView: "status" });
+    // Enable every toggleable tab so the "all tabs" assertions hold.
+    useSettingsStore.setState({
+      enabledTabs: { cleanup: true, worktrees: true },
+    });
   });
 
   it("renders a tablist navigation", () => {
@@ -14,7 +19,7 @@ describe("IconRail", () => {
     expect(screen.getByRole("tablist", { name: "Navigation" })).toBeInTheDocument();
   });
 
-  it("renders six tab buttons", () => {
+  it("renders six tab buttons when all tabs are enabled", () => {
     render(<IconRail />);
 
     const tabs = screen.getAllByRole("tab");
@@ -30,6 +35,26 @@ describe("IconRail", () => {
     expect(screen.getByRole("tab", { name: "Stashes" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Worktrees" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Cleanup" })).toBeInTheDocument();
+  });
+
+  it("hides the Worktrees tab when disabled in settings", () => {
+    useSettingsStore.setState({
+      enabledTabs: { cleanup: true, worktrees: false },
+    });
+    render(<IconRail />);
+
+    expect(screen.queryByRole("tab", { name: "Worktrees" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
+  });
+
+  it("hides the Cleanup tab when disabled in settings", () => {
+    useSettingsStore.setState({
+      enabledTabs: { cleanup: false, worktrees: true },
+    });
+    render(<IconRail />);
+
+    expect(screen.queryByRole("tab", { name: "Cleanup" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
   });
 
   it("marks the active tab with aria-selected=true", () => {
