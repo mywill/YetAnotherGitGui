@@ -11,6 +11,7 @@ pub mod staging;
 pub mod stash;
 pub mod system;
 pub mod terminal;
+pub mod worktree;
 
 pub use branches::*;
 pub use cleanup::*;
@@ -25,3 +26,4 @@ pub use staging::*;
 pub use stash::*;
 pub use system::*;
 pub use terminal::*;
+pub use worktree::*;

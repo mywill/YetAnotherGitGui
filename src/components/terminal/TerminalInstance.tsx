@@ -20,11 +20,16 @@ export function TerminalInstance() {
   const sessionIdRef = useRef<number | null>(null);
 
   const repoPath = useRepositoryStore((s) => s.repositoryInfo?.path ?? null);
+  const cwdOverride = useTerminalStore((s) => s.cwd);
   const setSessionId = useTerminalStore((s) => s.setSessionId);
   const setConnected = useTerminalStore((s) => s.setConnected);
 
+  // The effective spawn directory: an explicit override (e.g. a worktree
+  // path chosen via "Open in Terminal") wins, otherwise the repo workdir.
+  const spawnPath = cwdOverride ?? repoPath;
+
   useEffect(() => {
-    if (!containerRef.current || !repoPath) return;
+    if (!containerRef.current || !spawnPath) return;
 
     const terminal = new Terminal({
       cursorBlink: true,
@@ -58,10 +63,10 @@ export function TerminalInstance() {
     let disposed = false;
 
     async function init() {
-      if (disposed || !repoPath) return;
+      if (disposed || !spawnPath) return;
 
       try {
-        const id = await spawnTerminal(repoPath);
+        const id = await spawnTerminal(spawnPath);
         if (disposed) {
           killTerminal(id);
           return;
@@ -124,7 +129,7 @@ export function TerminalInstance() {
       terminalRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [repoPath, setSessionId, setConnected]);
+  }, [spawnPath, setSessionId, setConnected]);
 
   return <div ref={containerRef} className="terminal-container flex-1 overflow-hidden" />;
 }

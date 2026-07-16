@@ -24,9 +24,18 @@ vi.mock("../../services/clipboard", () => ({
   copyToClipboard: vi.fn(),
 }));
 
+vi.mock("../../stores/worktreeStore", () => ({
+  useWorktreeStore: vi.fn((selector?: (s: unknown) => unknown) =>
+    selector
+      ? selector({ openAddDialog: mockOpenWorktreeAddDialog })
+      : { openAddDialog: mockOpenWorktreeAddDialog }
+  ),
+}));
+
 const mockCheckoutBranch = vi.fn();
 const mockDeleteBranch = vi.fn();
 const mockShowConfirm = vi.fn();
+const mockOpenWorktreeAddDialog = vi.fn();
 
 describe("BranchItem", () => {
   beforeEach(() => {
@@ -249,6 +258,26 @@ describe("BranchItem", () => {
       fireEvent.click(screen.getByText("Copy Name"));
 
       expect(copyToClipboard).toHaveBeenCalledWith("feature/test");
+    });
+
+    it("opens the worktree add dialog with the branch preset", async () => {
+      const branch: BranchInfo = {
+        name: "feature/test",
+        is_remote: false,
+        is_head: false,
+        target_hash: "abc123",
+      };
+      render(<BranchItem branch={branch} />);
+
+      const item = screen.getByText("feature/test").closest(".branch-item");
+      fireEvent.contextMenu(item!);
+
+      await waitFor(() => {
+        expect(screen.getByText("New worktree from this branch…")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText("New worktree from this branch…"));
+
+      expect(mockOpenWorktreeAddDialog).toHaveBeenCalledWith({ branch: "feature/test" });
     });
 
     it("copy name copies full remote branch name to clipboard", async () => {

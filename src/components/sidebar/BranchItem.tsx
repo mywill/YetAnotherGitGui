@@ -6,6 +6,7 @@ import type { BranchInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useWorktreeStore } from "../../stores/worktreeStore";
 import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
@@ -20,6 +21,7 @@ export function BranchItem({ branch }: BranchItemProps) {
   const deleteBranch = useRepositoryStore((s) => s.deleteBranch);
   const selectAndScrollToCommit = useSelectionStore((s) => s.selectAndScrollToCommit);
   const showConfirm = useDialogStore((s) => s.showConfirm);
+  const openWorktreeAddDialog = useWorktreeStore((s) => s.openAddDialog);
   const { contextMenu, handleContextMenu, closeContextMenu } = useContextMenu();
 
   const handleClick = useCallback(() => {
@@ -101,6 +103,11 @@ export function BranchItem({ branch }: BranchItemProps) {
     copyToClipboard(branch.name);
   }, [branch.name, closeContextMenu]);
 
+  const handleNewWorktree = useCallback(() => {
+    closeContextMenu();
+    openWorktreeAddDialog({ branch: branch.name });
+  }, [closeContextMenu, openWorktreeAddDialog, branch.name]);
+
   // Display name: for remote branches, show only the part after origin/
   const displayName = branch.is_remote ? branch.name.replace(/^[^/]+\//, "") : branch.name;
 
@@ -113,6 +120,10 @@ export function BranchItem({ branch }: BranchItemProps) {
       label: "Checkout",
       onClick: handleCheckout,
       disabled: branch.is_head,
+    },
+    {
+      label: "New worktree from this branch…",
+      onClick: handleNewWorktree,
     },
     {
       label: "Delete",

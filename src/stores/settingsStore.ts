@@ -18,6 +18,8 @@ interface SettingsState {
   sectionExpanded: Record<string, boolean>;
   autoCheckForUpdates: boolean;
   debugLoggingEnabled: boolean;
+  worktreesDefaultParentDir: string | null;
+  worktreesRecent: string[];
   loaded: boolean;
 
   load: () => Promise<void>;
@@ -29,6 +31,8 @@ interface SettingsState {
   toggleSectionExpanded: (key: string) => void;
   setAutoCheckForUpdates: (value: boolean) => void;
   setDebugLoggingEnabled: (value: boolean) => void;
+  setWorktreesDefaultParentDir: (dir: string | null) => void;
+  addRecentWorktree: (name: string) => void;
   resetToDefaults: () => void;
 }
 
@@ -44,6 +48,8 @@ const DEFAULTS: Omit<
   | "toggleSectionExpanded"
   | "setAutoCheckForUpdates"
   | "setDebugLoggingEnabled"
+  | "setWorktreesDefaultParentDir"
+  | "addRecentWorktree"
   | "resetToDefaults"
 > = {
   density: "compact",
@@ -53,6 +59,8 @@ const DEFAULTS: Omit<
   sectionExpanded: {},
   autoCheckForUpdates: true,
   debugLoggingEnabled: false,
+  worktreesDefaultParentDir: null,
+  worktreesRecent: [],
 };
 
 // Module-level so concurrent setter calls coalesce into one persist write.
@@ -94,6 +102,8 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
       sectionExpanded,
       autoCheckForUpdates,
       debugLoggingEnabled,
+      worktreesDefaultParentDir,
+      worktreesRecent,
     } = getState();
     const data: SettingsData = {
       density,
@@ -103,6 +113,8 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
       sectionExpanded,
       autoCheckForUpdates,
       debugLoggingEnabled,
+      worktreesDefaultParentDir,
+      worktreesRecent,
     };
     writeSettings(data).catch((err: unknown) => {
       const raw = err instanceof Error ? err.message : String(err);
@@ -125,6 +137,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const sectionExpanded = saved.sectionExpanded ?? DEFAULTS.sectionExpanded;
       const autoCheckForUpdates = saved.autoCheckForUpdates ?? DEFAULTS.autoCheckForUpdates;
       const debugLoggingEnabled = saved.debugLoggingEnabled ?? DEFAULTS.debugLoggingEnabled;
+      const worktreesDefaultParentDir =
+        saved.worktreesDefaultParentDir ?? DEFAULTS.worktreesDefaultParentDir;
+      const worktreesRecent = saved.worktreesRecent ?? DEFAULTS.worktreesRecent;
 
       applyToDOM(density, textSize, theme);
       set({
@@ -135,6 +150,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         sectionExpanded,
         autoCheckForUpdates,
         debugLoggingEnabled,
+        worktreesDefaultParentDir,
+        worktreesRecent,
         loaded: true,
       });
     } catch (e) {
@@ -203,6 +220,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     persistDebounced(get, true);
   },
 
+  setWorktreesDefaultParentDir: (dir) => {
+    set({ worktreesDefaultParentDir: dir });
+    persistDebounced(get, true);
+  },
+
+  addRecentWorktree: (name) => {
+    set((s) => {
+      const filtered = s.worktreesRecent.filter((n) => n !== name);
+      return { worktreesRecent: [name, ...filtered].slice(0, 20) };
+    });
+    persistDebounced(get, true);
+  },
+
   resetToDefaults: () => {
     if (persistTimer) clearTimeout(persistTimer);
 
@@ -227,6 +257,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       sectionExpanded: DEFAULTS.sectionExpanded,
       autoCheckForUpdates: DEFAULTS.autoCheckForUpdates,
       debugLoggingEnabled: DEFAULTS.debugLoggingEnabled,
+      worktreesDefaultParentDir: DEFAULTS.worktreesDefaultParentDir,
+      worktreesRecent: DEFAULTS.worktreesRecent,
     };
     writeSettings(data).catch((err: unknown) => {
       const raw = err instanceof Error ? err.message : String(err);

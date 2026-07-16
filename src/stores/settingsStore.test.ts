@@ -363,6 +363,8 @@ describe("settingsStore", () => {
         sectionExpanded: {},
         autoCheckForUpdates: true,
         debugLoggingEnabled: false,
+        worktreesDefaultParentDir: null,
+        worktreesRecent: [],
       });
     });
 
@@ -377,6 +379,32 @@ describe("settingsStore", () => {
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
       expect(toasts[0].message).toContain("disk full");
+    });
+  });
+
+  describe("worktree settings", () => {
+    it("setWorktreesDefaultParentDir updates state and persists", async () => {
+      const { writeSettings } = await import("../services/settings");
+      useSettingsStore.getState().setWorktreesDefaultParentDir("/tmp/wts");
+      await new Promise((r) => setTimeout(r, 5));
+      expect(useSettingsStore.getState().worktreesDefaultParentDir).toBe("/tmp/wts");
+      expect(writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreesDefaultParentDir: "/tmp/wts" })
+      );
+    });
+
+    it("addRecentWorktree prepends and deduplicates", async () => {
+      useSettingsStore.setState({ worktreesRecent: ["b", "c"] });
+      useSettingsStore.getState().addRecentWorktree("a");
+      useSettingsStore.getState().addRecentWorktree("b");
+      expect(useSettingsStore.getState().worktreesRecent).toEqual(["b", "a", "c"]);
+    });
+
+    it("addRecentWorktree caps at 20 entries", () => {
+      for (let i = 0; i < 25; i++) {
+        useSettingsStore.getState().addRecentWorktree(`wt-${i}`);
+      }
+      expect(useSettingsStore.getState().worktreesRecent.length).toBe(20);
     });
   });
 });

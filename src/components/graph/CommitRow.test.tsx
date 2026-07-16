@@ -20,6 +20,15 @@ vi.mock("../../stores/dialogStore", () => ({
   useDialogStore: vi.fn(),
 }));
 
+const mockOpenWorktreeAddDialog = vi.fn();
+vi.mock("../../stores/worktreeStore", () => ({
+  useWorktreeStore: vi.fn((selector?: (s: unknown) => unknown) =>
+    selector
+      ? selector({ openAddDialog: mockOpenWorktreeAddDialog })
+      : { openAddDialog: mockOpenWorktreeAddDialog }
+  ),
+}));
+
 // Mock BranchLines component
 vi.mock("./BranchLines", () => ({
   BranchLines: ({ commit }: { commit: GraphCommit }) => (
@@ -301,6 +310,20 @@ describe("CommitRow", () => {
       fireEvent.contextMenu(row!);
 
       expect(screen.getByText("Copy commit hash")).toBeInTheDocument();
+    });
+
+    it("opens the worktree add dialog with the commit hash preset", () => {
+      const { container } = render(<CommitRow {...defaultProps} />);
+
+      const row = container.querySelector(".commit-row");
+      fireEvent.contextMenu(row!);
+
+      const item = screen.getByText("New worktree from this commit…");
+      fireEvent.click(item);
+
+      expect(mockOpenWorktreeAddDialog).toHaveBeenCalledWith({
+        commitHash: "abc123def456789",
+      });
     });
 
     describe("copy branch name", () => {

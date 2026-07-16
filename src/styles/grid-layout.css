@@ -5,3 +5,11 @@
       100px
     );
 }
+
+/* WorktreesView/WorktreeRow grid — driven by JS custom properties.
+   Columns: Name | Branch | Path | Dirty | State | Actions */
+.worktree-grid {
+  grid-template-columns:
+    var(--wt-name-width, 160px) var(--wt-branch-width, 120px) 1fr var(--wt-dirty-width, 50px)
+    var(--wt-state-width, 90px) var(--wt-actions-width, 80px);
+}

@@ -42,6 +42,8 @@ export const tauriMocks = `
 
         if (pluginName === 'opener') {
           if (pluginCmd === 'open_url') return undefined;
+          if (pluginCmd === 'open_path') return undefined;
+          if (pluginCmd === 'reveal_item_in_dir') return undefined;
           return null;
         }
 
@@ -601,6 +603,67 @@ export const tauriMocks = `
         case 'resize_terminal':
           return undefined;
         case 'kill_terminal':
+          return undefined;
+
+        case 'list_worktrees':
+          return [
+            {
+              name: 'main',
+              path: '/mock/repo/path',
+              is_main: true,
+              branch: 'main',
+              head_hash: 'abc123def456789',
+              is_valid: true,
+              is_locked: false,
+              lock_reason: null,
+              is_prunable: false,
+              dirty_count: 0,
+              ahead: null,
+              behind: null,
+              last_commit_summary: 'Initial commit',
+              last_commit_author: 'Test Author',
+              last_commit_time: Math.floor(Date.now() / 1000) - 3600
+            },
+            {
+              name: 'feature-worktree',
+              path: '/mock/repo-feature-wt',
+              is_main: false,
+              branch: 'feature',
+              head_hash: 'def456abc789',
+              is_valid: true,
+              is_locked: false,
+              lock_reason: null,
+              is_prunable: false,
+              dirty_count: 2,
+              ahead: 3,
+              behind: 1,
+              last_commit_summary: 'Add feature',
+              last_commit_author: 'Test Author',
+              last_commit_time: Math.floor(Date.now() / 1000) - 1800
+            }
+          ];
+        case 'add_worktree':
+          return {
+            name: args?.name || 'wt',
+            path: args?.path || '/mock/wt',
+            is_main: false,
+            branch: args?.branch ?? null,
+            head_hash: 'def456abc789',
+            is_valid: true,
+            is_locked: false,
+            lock_reason: null,
+            is_prunable: false,
+            dirty_count: 0,
+            ahead: null,
+            behind: null,
+            last_commit_summary: null,
+            last_commit_author: null,
+            last_commit_time: null
+          };
+        case 'remove_worktree':
+        case 'move_worktree':
+        case 'lock_worktree':
+        case 'unlock_worktree':
           return undefined;
 
         default:

@@ -5,6 +5,10 @@ interface TerminalState {
   sessionId: number | null;
   panelHeight: number;
   isConnected: boolean;
+  /** Optional CWD override for the spawned terminal. When null, the terminal
+   * spawns in the open repository's working directory. Used by "Open in
+   * Terminal" from a worktree row. */
+  cwd: string | null;
 
   toggleTerminal: () => void;
   openTerminal: () => void;
@@ -12,6 +16,8 @@ interface TerminalState {
   setSessionId: (id: number | null) => void;
   setPanelHeight: (height: number) => void;
   setConnected: (connected: boolean) => void;
+  setCwd: (cwd: string | null) => void;
+  openInCwd: (cwd: string) => void;
 }
 
 export const useTerminalStore = create<TerminalState>((set) => ({
@@ -19,11 +25,14 @@ export const useTerminalStore = create<TerminalState>((set) => ({
   sessionId: null,
   panelHeight: 200,
   isConnected: false,
+  cwd: null,
 
-  toggleTerminal: () => set((s) => ({ isOpen: !s.isOpen })),
+  toggleTerminal: () => set((s) => ({ isOpen: !s.isOpen, cwd: !s.isOpen ? s.cwd : null })),
   openTerminal: () => set({ isOpen: true }),
-  closeTerminal: () => set({ isOpen: false }),
+  closeTerminal: () => set({ isOpen: false, cwd: null }),
   setSessionId: (id) => set({ sessionId: id }),
   setPanelHeight: (height) => set({ panelHeight: Math.max(60, height) }),
   setConnected: (connected) => set({ isConnected: connected }),
+  setCwd: (cwd) => set({ cwd }),
+  openInCwd: (cwd) => set({ cwd, isOpen: true }),
 }));

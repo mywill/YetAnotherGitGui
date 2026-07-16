@@ -6,6 +6,12 @@ interface ColumnResizerProps {
   ariaLabel: string;
   step?: number;
   largeStep?: number;
+  /** Current column width for aria-valuenow (optional, improves a11y). */
+  valueNow?: number;
+  /** Minimum column width for aria-valuemin (optional). */
+  valueMin?: number;
+  /** Maximum column width for aria-valuemax (optional). */
+  valueMax?: number;
 }
 
 export const ColumnResizer = ({
@@ -14,6 +20,9 @@ export const ColumnResizer = ({
   ariaLabel,
   step = 8,
   largeStep = 32,
+  valueNow,
+  valueMin = 0,
+  valueMax,
 }: ColumnResizerProps) => {
   const resizerRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
@@ -84,6 +93,9 @@ export const ColumnResizer = ({
       role="separator"
       aria-orientation="vertical"
       aria-label={ariaLabel}
+      aria-valuenow={valueNow}
+      aria-valuemin={valueMin}
+      aria-valuemax={valueMax}
       tabIndex={0}
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}

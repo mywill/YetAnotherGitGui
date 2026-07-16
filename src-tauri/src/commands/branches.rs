@@ -265,6 +265,35 @@ pub fn delete_branch(
             }
         }
 
+        // Refuse to delete a branch that is checked out in any linked worktree.
+        // libgit2 would error anyway, but surfacing a clear message is better
+        // than a generic "branch is checked out" from the delete call.
+        if let Ok(names) = repo.worktrees() {
+            for name_result in names.iter() {
+                let wt_name = match name_result {
+                    Ok(Some(n)) => n.to_string(),
+                    _ => continue,
+                };
+                if let Ok(wt) = repo.find_worktree(&wt_name) {
+                    if let Ok(wt_repo) = git2::Repository::open_from_worktree(&wt) {
+                        if let Ok(wt_head) = wt_repo.head() {
+                            if wt_head.is_branch() {
+                                if let Ok(wt_branch_name) = wt_head.shorthand() {
+                                    if wt_branch_name == branch_name {
+                                        return Err(AppError::Git(git2::Error::from_str(
+                                            &format!(
+                                                "Branch is checked out in worktree '{wt_name}'"
+                                            ),
+                                        )));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Find and delete the local branch
         let mut branch = repo.find_branch(&branch_name, BranchType::Local)?;
         branch.delete()?;

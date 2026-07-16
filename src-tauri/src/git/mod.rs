@@ -5,6 +5,7 @@ pub mod operations;
 pub mod repository;
 pub mod staging;
 pub mod stash;
+pub mod worktree;
 
 pub use commit::*;
 pub use diff::*;
@@ -12,3 +13,4 @@ pub use graph::*;
 pub use repository::*;
 pub use staging::*;
 pub use stash::*;
+pub use worktree::*;

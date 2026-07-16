@@ -155,3 +155,21 @@ export interface BulkResult {
   success: boolean;
   error: string | null;
 }
+
+export interface WorktreeInfo {
+  name: string;
+  path: string;
+  is_main: boolean;
+  branch: string | null;
+  head_hash: string | null;
+  is_valid: boolean;
+  is_locked: boolean;
+  lock_reason: string | null;
+  is_prunable: boolean;
+  dirty_count: number;
+  ahead: number | null;
+  behind: number | null;
+  last_commit_summary: string | null;
+  last_commit_author: string | null;
+  last_commit_time: number | null;
+}

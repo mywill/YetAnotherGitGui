@@ -56,6 +56,13 @@ export async function switchToCleanupView(page: Page) {
   await page.waitForSelector(".cleanup-view", { timeout: 10000 });
 }
 
+/** Switch to the Worktrees tab and wait for it to load. */
+export async function switchToWorktreesView(page: Page) {
+  const worktreesTab = page.locator('button[role="tab"][aria-label="Worktrees"]');
+  await worktreesTab.click();
+  await page.waitForSelector(".worktrees-view", { timeout: 10000 });
+}
+
 /**
  * Standard test setup: inject Tauri mocks, navigate to app root,
  * and wait for the network to idle.
