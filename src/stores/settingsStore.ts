@@ -5,10 +5,16 @@ import { useNotificationStore } from "./notificationStore";
 import { cleanErrorMessage } from "../utils/errorMessages";
 import { setDebugLoggingEnabled as setDebugLoggingEnabledBackend } from "../services/logging";
 import { logError } from "../utils/logger";
+import { useSelectionStore } from "./selectionStore";
 
 export type Density = "compact" | "comfortable" | "spacious";
 export type TextSize = "small" | "medium" | "large";
 export type Theme = "dark" | "light";
+
+export interface EnabledTabs {
+  cleanup: boolean;
+  worktrees: boolean;
+}
 
 interface SettingsState {
   density: Density;
@@ -18,6 +24,9 @@ interface SettingsState {
   sectionExpanded: Record<string, boolean>;
   autoCheckForUpdates: boolean;
   debugLoggingEnabled: boolean;
+  worktreesDefaultParentDir: string | null;
+  worktreesRecent: string[];
+  enabledTabs: EnabledTabs;
   loaded: boolean;
 
   load: () => Promise<void>;
@@ -29,6 +38,9 @@ interface SettingsState {
   toggleSectionExpanded: (key: string) => void;
   setAutoCheckForUpdates: (value: boolean) => void;
   setDebugLoggingEnabled: (value: boolean) => void;
+  setWorktreesDefaultParentDir: (dir: string | null) => void;
+  addRecentWorktree: (name: string) => void;
+  setEnabledTab: (tab: "cleanup" | "worktrees", value: boolean) => void;
   resetToDefaults: () => void;
 }
 
@@ -44,6 +56,9 @@ const DEFAULTS: Omit<
   | "toggleSectionExpanded"
   | "setAutoCheckForUpdates"
   | "setDebugLoggingEnabled"
+  | "setWorktreesDefaultParentDir"
+  | "addRecentWorktree"
+  | "setEnabledTab"
   | "resetToDefaults"
 > = {
   density: "compact",
@@ -53,6 +68,9 @@ const DEFAULTS: Omit<
   sectionExpanded: {},
   autoCheckForUpdates: true,
   debugLoggingEnabled: false,
+  worktreesDefaultParentDir: null,
+  worktreesRecent: [],
+  enabledTabs: { cleanup: true, worktrees: false },
 };
 
 // Module-level so concurrent setter calls coalesce into one persist write.
@@ -94,6 +112,9 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
       sectionExpanded,
       autoCheckForUpdates,
       debugLoggingEnabled,
+      worktreesDefaultParentDir,
+      worktreesRecent,
+      enabledTabs,
     } = getState();
     const data: SettingsData = {
       density,
@@ -103,6 +124,9 @@ function persistDebounced(getState: () => SettingsState, immediate: boolean) {
       sectionExpanded,
       autoCheckForUpdates,
       debugLoggingEnabled,
+      worktreesDefaultParentDir,
+      worktreesRecent,
+      enabledTabs,
     };
     writeSettings(data).catch((err: unknown) => {
       const raw = err instanceof Error ? err.message : String(err);
@@ -125,6 +149,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const sectionExpanded = saved.sectionExpanded ?? DEFAULTS.sectionExpanded;
       const autoCheckForUpdates = saved.autoCheckForUpdates ?? DEFAULTS.autoCheckForUpdates;
       const debugLoggingEnabled = saved.debugLoggingEnabled ?? DEFAULTS.debugLoggingEnabled;
+      const worktreesDefaultParentDir =
+        saved.worktreesDefaultParentDir ?? DEFAULTS.worktreesDefaultParentDir;
+      const worktreesRecent = saved.worktreesRecent ?? DEFAULTS.worktreesRecent;
+      const enabledTabs: EnabledTabs = {
+        cleanup: saved.enabledTabs?.cleanup ?? DEFAULTS.enabledTabs.cleanup,
+        worktrees: saved.enabledTabs?.worktrees ?? DEFAULTS.enabledTabs.worktrees,
+      };
 
       applyToDOM(density, textSize, theme);
       set({
@@ -135,6 +166,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         sectionExpanded,
         autoCheckForUpdates,
         debugLoggingEnabled,
+        worktreesDefaultParentDir,
+        worktreesRecent,
+        enabledTabs,
         loaded: true,
       });
     } catch (e) {
@@ -203,6 +237,33 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     persistDebounced(get, true);
   },
 
+  setWorktreesDefaultParentDir: (dir) => {
+    set({ worktreesDefaultParentDir: dir });
+    persistDebounced(get, true);
+  },
+
+  addRecentWorktree: (name) => {
+    set((s) => {
+      const filtered = s.worktreesRecent.filter((n) => n !== name);
+      return { worktreesRecent: [name, ...filtered].slice(0, 20) };
+    });
+    persistDebounced(get, true);
+  },
+
+  setEnabledTab: (tab, value) => {
+    set((s) => ({ enabledTabs: { ...s.enabledTabs, [tab]: value } }));
+
+    // If the user just disabled the tab they're currently viewing, drop back
+    // to the Working Copy view so the center pane never goes blank.
+    if (!value) {
+      const activeView = useSelectionStore.getState().activeView;
+      if (activeView === tab) {
+        useSelectionStore.getState().setActiveView("status");
+      }
+    }
+    persistDebounced(get, true);
+  },
+
   resetToDefaults: () => {
     if (persistTimer) clearTimeout(persistTimer);
 
@@ -227,6 +288,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       sectionExpanded: DEFAULTS.sectionExpanded,
       autoCheckForUpdates: DEFAULTS.autoCheckForUpdates,
       debugLoggingEnabled: DEFAULTS.debugLoggingEnabled,
+      worktreesDefaultParentDir: DEFAULTS.worktreesDefaultParentDir,
+      worktreesRecent: DEFAULTS.worktreesRecent,
+      enabledTabs: DEFAULTS.enabledTabs,
     };
     writeSettings(data).catch((err: unknown) => {
       const raw = err instanceof Error ? err.message : String(err);

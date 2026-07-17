@@ -154,6 +154,12 @@ pub fn run() {
             commands::write_terminal,
             commands::resize_terminal,
             commands::kill_terminal,
+            commands::list_worktrees,
+            commands::add_worktree,
+            commands::remove_worktree,
+            commands::move_worktree,
+            commands::lock_worktree,
+            commands::unlock_worktree,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {

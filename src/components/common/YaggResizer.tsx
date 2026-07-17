@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import clsx from "clsx";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useRafPointerDrag } from "../../hooks/useRafPointerDrag";
 
 interface YaggResizerProps {
   orientation: "vertical" | "horizontal";
@@ -15,8 +16,37 @@ interface YaggResizerProps {
   storageKey?: string;
   collapsible?: boolean;
   panelId?: string;
-  /** Which side of the resizer the controlled panel is on. Defaults to "left" (vertical) / "up" (horizontal). */
   panelSide?: "left" | "right" | "up" | "down";
+}
+
+interface KeyboardResizeConfig {
+  growKey: string;
+  shrinkKey: string;
+  step: number;
+  largeStep: number;
+  defaultSize: number;
+  max: number;
+  collapsible: boolean;
+  isCollapsed: boolean;
+}
+
+// fallow-ignore-next-line complexity
+function getKeyboardResize(
+  key: string,
+  shiftKey: boolean,
+  size: number,
+  config: KeyboardResizeConfig,
+  clamp: (val: number) => number
+): number | null {
+  const amount = shiftKey ? config.largeStep : config.step;
+  if (key === config.growKey) return clamp(size + amount);
+  if (key === config.shrinkKey) return clamp(size - amount);
+  if (key === "Home") return config.defaultSize;
+  if (key === "End") return config.max;
+  if (config.collapsible && (key === "Enter" || key === " ")) {
+    return config.isCollapsed ? config.defaultSize : 0;
+  }
+  return null;
 }
 
 export const YaggResizer = ({
@@ -34,13 +64,10 @@ export const YaggResizer = ({
   panelId,
   panelSide,
 }: YaggResizerProps) => {
-  const resizerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
-  const pendingSizeRef = useRef<number | null>(null);
   const dragStartSizeRef = useRef(0);
+  const currentDragSizeRef = useRef(0);
   const isCollapsedRef = useRef(false);
 
-  // Initialize from stored layout size
   useEffect(() => {
     if (!storageKey) return;
     const stored = useSettingsStore.getState().layoutSizes[storageKey];
@@ -68,68 +95,37 @@ export const YaggResizer = ({
     [onSizeChange, storageKey]
   );
 
-  // Whether dragging right/down should shrink instead of grow
   const inverted = panelSide === "right" || panelSide === "down";
 
-  // Pointer drag with capture
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault();
-      const el = resizerRef.current;
-      if (!el) return;
-      el.setPointerCapture(e.pointerId);
-
-      const startPos = orientation === "vertical" ? e.clientX : e.clientY;
-      dragStartSizeRef.current = size;
-
-      const handlePointerMove = (moveEvent: PointerEvent) => {
-        const currentPos = orientation === "vertical" ? moveEvent.clientX : moveEvent.clientY;
-        const rawDelta = currentPos - startPos;
-        const delta = inverted ? -rawDelta : rawDelta;
-
-        const next = clampSize(dragStartSizeRef.current + delta);
-        pendingSizeRef.current = next;
-
-        if (rafRef.current === null) {
-          rafRef.current = requestAnimationFrame(() => {
-            rafRef.current = null;
-            if (pendingSizeRef.current !== null) {
-              onSizeChange(pendingSizeRef.current);
-              isCollapsedRef.current = pendingSizeRef.current === 0;
-            }
-          });
-        }
-      };
-
-      const handlePointerUp = () => {
-        el.removeEventListener("pointermove", handlePointerMove);
-        el.removeEventListener("pointerup", handlePointerUp);
-        el.removeEventListener("pointercancel", handlePointerUp);
-
-        if (rafRef.current !== null) {
-          cancelAnimationFrame(rafRef.current);
-          rafRef.current = null;
-        }
-
-        // Commit final size to storage
-        const finalSize = pendingSizeRef.current ?? size;
-        commitSize(finalSize);
-        pendingSizeRef.current = null;
-      };
-
-      el.addEventListener("pointermove", handlePointerMove);
-      el.addEventListener("pointerup", handlePointerUp);
-      el.addEventListener("pointercancel", handlePointerUp);
+  const handlePointerDown = useRafPointerDrag({
+    getPosition: (e) => {
+      const raw = orientation === "vertical" ? e.clientX : e.clientY;
+      return inverted ? -raw : raw;
     },
-    [orientation, size, inverted, clampSize, onSizeChange, commitSize]
+    onDragMove: (totalDelta) => {
+      const next = clampSize(dragStartSizeRef.current + totalDelta);
+      currentDragSizeRef.current = next;
+      onSizeChange(next);
+      isCollapsedRef.current = next === 0;
+    },
+    onDragEnd: (_totalDelta) => {
+      commitSize(currentDragSizeRef.current);
+    },
+  });
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      dragStartSizeRef.current = size;
+      currentDragSizeRef.current = size;
+      handlePointerDown(e);
+    },
+    [size, handlePointerDown]
   );
 
-  // Double-click to reset
   const handleDoubleClick = useCallback(() => {
     commitSize(defaultSize);
   }, [defaultSize, commitSize]);
 
-  // Keyboard support
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const isVertical = orientation === "vertical";
@@ -138,28 +134,24 @@ export const YaggResizer = ({
       const growKey = inverted ? naturalShrink : naturalGrow;
       const shrinkKey = inverted ? naturalGrow : naturalShrink;
 
-      let next: number | null = null;
-
-      if (e.key === growKey) {
-        e.preventDefault();
-        const amount = e.shiftKey ? largeStep : step;
-        next = clampSize(size + amount);
-      } else if (e.key === shrinkKey) {
-        e.preventDefault();
-        const amount = e.shiftKey ? largeStep : step;
-        next = clampSize(size - amount);
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        next = defaultSize;
-      } else if (e.key === "End") {
-        e.preventDefault();
-        next = max;
-      } else if ((e.key === "Enter" || e.key === " ") && collapsible) {
-        e.preventDefault();
-        next = isCollapsedRef.current ? defaultSize : 0;
-      }
-
+      const next = getKeyboardResize(
+        e.key,
+        e.shiftKey,
+        size,
+        {
+          growKey,
+          shrinkKey,
+          step,
+          largeStep,
+          defaultSize,
+          max,
+          collapsible,
+          isCollapsed: isCollapsedRef.current,
+        },
+        clampSize
+      );
       if (next !== null) {
+        e.preventDefault();
         commitSize(next);
       }
     },
@@ -181,7 +173,6 @@ export const YaggResizer = ({
 
   return (
     <div
-      ref={resizerRef}
       role="separator"
       aria-orientation={orientation}
       aria-valuenow={size}
@@ -190,7 +181,7 @@ export const YaggResizer = ({
       aria-label={ariaLabel}
       aria-controls={panelId}
       tabIndex={0}
-      onPointerDown={handlePointerDown}
+      onPointerDown={onPointerDown}
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
       className={clsx(

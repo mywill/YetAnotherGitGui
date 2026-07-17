@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { runQuickCleanup } from "./cleanupActions";
+import { useSettingsStore } from "../stores/settingsStore";
 
 const mockShowError = vi.fn();
 const mockShowSuccess = vi.fn();
@@ -43,6 +44,10 @@ function makeSpec(overrides: Partial<Parameters<typeof runQuickCleanup<Item>>[0]
 describe("runQuickCleanup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset tab-enable settings so each test starts from the default state.
+    useSettingsStore.setState({
+      enabledTabs: { cleanup: true, worktrees: false },
+    });
   });
 
   it("toasts the empty message when no candidates are returned and does not call the bulk op", async () => {
@@ -112,6 +117,19 @@ describe("runQuickCleanup", () => {
     });
     await runQuickCleanup(spec);
     expect(spec.setActiveView).not.toHaveBeenCalled();
+  });
+
+  it("falls back to Working Copy when the cleanup fallback tab is disabled", async () => {
+    useSettingsStore.setState({ enabledTabs: { cleanup: false, worktrees: false } });
+    const spec = makeSpec({
+      runBulk: vi.fn().mockResolvedValue([
+        { item: "a", success: true, error: null },
+        { item: "b", success: false, error: "boom" },
+      ]),
+      mixedFailureFallbackView: "cleanup",
+    });
+    await runQuickCleanup(spec);
+    expect(spec.setActiveView).toHaveBeenCalledWith("status");
   });
 
   it("setRunning toggles around the operation, even on thrown errors", async () => {

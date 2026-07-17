@@ -1,11 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useSettingsStore } from "./settingsStore";
 import { useNotificationStore } from "./notificationStore";
+import { useSelectionStore } from "./selectionStore";
 
 // Mock the settings service
 vi.mock("../services/settings", () => ({
   readSettings: vi.fn().mockResolvedValue({}),
   writeSettings: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock the logging service so the debug-logging backend setter is controllable
+// and its rejection paths can be exercised for coverage.
+const mockSetDebugLoggingEnabled = vi.fn().mockResolvedValue(undefined);
+vi.mock("../services/logging", () => ({
+  setDebugLoggingEnabled: (...args: unknown[]) => mockSetDebugLoggingEnabled(...args),
 }));
 
 describe("settingsStore", () => {
@@ -19,6 +27,9 @@ describe("settingsStore", () => {
       sectionExpanded: {},
       autoCheckForUpdates: true,
       debugLoggingEnabled: false,
+      worktreesDefaultParentDir: null,
+      worktreesRecent: [],
+      enabledTabs: { cleanup: true, worktrees: false },
       loaded: false,
     });
     // Reset DOM dataset
@@ -305,6 +316,9 @@ describe("settingsStore", () => {
         sectionExpanded: { "cleanup.gone": true },
         autoCheckForUpdates: false,
         debugLoggingEnabled: true,
+        worktreesDefaultParentDir: "/tmp/wts",
+        worktreesRecent: ["a", "b"],
+        enabledTabs: { cleanup: false, worktrees: true },
         loaded: true,
       });
       document.documentElement.dataset.density = "spacious";
@@ -322,6 +336,7 @@ describe("settingsStore", () => {
       expect(state.sectionExpanded).toEqual({});
       expect(state.autoCheckForUpdates).toBe(true);
       expect(state.debugLoggingEnabled).toBe(false);
+      expect(state.enabledTabs).toEqual({ cleanup: true, worktrees: false });
     });
 
     it("applies defaults to DOM dataset", () => {
@@ -363,6 +378,9 @@ describe("settingsStore", () => {
         sectionExpanded: {},
         autoCheckForUpdates: true,
         debugLoggingEnabled: false,
+        worktreesDefaultParentDir: null,
+        worktreesRecent: [],
+        enabledTabs: { cleanup: true, worktrees: false },
       });
     });
 
@@ -377,6 +395,136 @@ describe("settingsStore", () => {
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
       expect(toasts[0].message).toContain("disk full");
+    });
+
+    it("swallows a backend rejection when disabling debug logging during reset", async () => {
+      mockSetDebugLoggingEnabled.mockRejectedValueOnce(new Error("backend down"));
+
+      useSettingsStore.getState().resetToDefaults();
+      // Let the rejected promise + catch handler flush.
+      await new Promise((r) => setTimeout(r, 5));
+
+      // State still resets despite the backend rejection.
+      expect(useSettingsStore.getState().debugLoggingEnabled).toBe(false);
+    });
+  });
+
+  describe("debug logging", () => {
+    afterEach(() => {
+      mockSetDebugLoggingEnabled.mockReset();
+      mockSetDebugLoggingEnabled.mockResolvedValue(undefined);
+    });
+
+    it("setDebugLoggingEnabled forwards to the backend and persists", async () => {
+      useSettingsStore.getState().setDebugLoggingEnabled(true);
+      await new Promise((r) => setTimeout(r, 5));
+
+      expect(useSettingsStore.getState().debugLoggingEnabled).toBe(true);
+      expect(mockSetDebugLoggingEnabled).toHaveBeenCalledWith(true);
+    });
+
+    it("swallows a backend rejection without throwing", async () => {
+      mockSetDebugLoggingEnabled.mockRejectedValueOnce(new Error("nope"));
+
+      useSettingsStore.getState().setDebugLoggingEnabled(false);
+      await new Promise((r) => setTimeout(r, 5));
+
+      // State still updated locally even though the backend rejected.
+      expect(useSettingsStore.getState().debugLoggingEnabled).toBe(false);
+    });
+  });
+
+  describe("worktree settings", () => {
+    it("setWorktreesDefaultParentDir updates state and persists", async () => {
+      const { writeSettings } = await import("../services/settings");
+      useSettingsStore.getState().setWorktreesDefaultParentDir("/tmp/wts");
+      await new Promise((r) => setTimeout(r, 5));
+      expect(useSettingsStore.getState().worktreesDefaultParentDir).toBe("/tmp/wts");
+      expect(writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ worktreesDefaultParentDir: "/tmp/wts" })
+      );
+    });
+
+    it("addRecentWorktree prepends and deduplicates", async () => {
+      useSettingsStore.setState({ worktreesRecent: ["b", "c"] });
+      useSettingsStore.getState().addRecentWorktree("a");
+      useSettingsStore.getState().addRecentWorktree("b");
+      expect(useSettingsStore.getState().worktreesRecent).toEqual(["b", "a", "c"]);
+    });
+
+    it("addRecentWorktree caps at 20 entries", () => {
+      for (let i = 0; i < 25; i++) {
+        useSettingsStore.getState().addRecentWorktree(`wt-${i}`);
+      }
+      expect(useSettingsStore.getState().worktreesRecent.length).toBe(20);
+    });
+  });
+
+  describe("enabledTabs", () => {
+    it("defaults to cleanup on, worktrees off", () => {
+      const { enabledTabs } = useSettingsStore.getState();
+      expect(enabledTabs.cleanup).toBe(true);
+      expect(enabledTabs.worktrees).toBe(false);
+    });
+
+    it("setEnabledTab updates state and persists", async () => {
+      const { writeSettings } = await import("../services/settings");
+      useSettingsStore.getState().setEnabledTab("worktrees", true);
+      await new Promise((r) => setTimeout(r, 5));
+      expect(useSettingsStore.getState().enabledTabs.worktrees).toBe(true);
+      expect(writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ enabledTabs: { cleanup: true, worktrees: true } })
+      );
+    });
+
+    it("load() applies per-field fallback for old settings without enabledTabs", async () => {
+      const { readSettings } = await import("../services/settings");
+      vi.mocked(readSettings).mockResolvedValue({ density: "spacious" });
+
+      await useSettingsStore.getState().load();
+
+      expect(useSettingsStore.getState().enabledTabs).toEqual({
+        cleanup: true,
+        worktrees: false,
+      });
+    });
+
+    it("load() round-trips a persisted enabledTabs", async () => {
+      const { readSettings } = await import("../services/settings");
+      vi.mocked(readSettings).mockResolvedValue({
+        enabledTabs: { cleanup: false, worktrees: true },
+      });
+
+      await useSettingsStore.getState().load();
+
+      expect(useSettingsStore.getState().enabledTabs).toEqual({
+        cleanup: false,
+        worktrees: true,
+      });
+    });
+
+    it("disabling the currently-active tab switches to Working Copy", () => {
+      useSettingsStore.setState({
+        enabledTabs: { cleanup: true, worktrees: true },
+      });
+      useSelectionStore.setState({ activeView: "worktrees" });
+
+      useSettingsStore.getState().setEnabledTab("worktrees", false);
+
+      expect(useSettingsStore.getState().enabledTabs.worktrees).toBe(false);
+      expect(useSelectionStore.getState().activeView).toBe("status");
+    });
+
+    it("disabling a non-active tab leaves the active view untouched", () => {
+      useSettingsStore.setState({
+        enabledTabs: { cleanup: true, worktrees: true },
+      });
+      useSelectionStore.setState({ activeView: "history" });
+
+      useSettingsStore.getState().setEnabledTab("worktrees", false);
+
+      expect(useSettingsStore.getState().enabledTabs.worktrees).toBe(false);
+      expect(useSelectionStore.getState().activeView).toBe("history");
     });
   });
 });

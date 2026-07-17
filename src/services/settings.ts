@@ -9,6 +9,9 @@ export interface SettingsData {
   sectionExpanded?: Record<string, boolean>;
   autoCheckForUpdates?: boolean;
   debugLoggingEnabled?: boolean;
+  worktreesDefaultParentDir?: string | null;
+  worktreesRecent?: string[];
+  enabledTabs?: { cleanup?: boolean; worktrees?: boolean };
 }
 
 export async function readSettings(): Promise<SettingsData> {

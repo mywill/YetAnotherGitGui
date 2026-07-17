@@ -11,6 +11,7 @@ import { copyToClipboard } from "../../services/clipboard";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
+import { useWorktreeStore } from "../../stores/worktreeStore";
 import { useVirtualizedFocus } from "../common/virtualizedFocus";
 import { useContextMenu } from "../../hooks/useContextMenu";
 
@@ -43,6 +44,7 @@ const REF_BADGE_STYLES: Record<string, { bg: string; color: string; border: stri
   },
 };
 
+// fallow-ignore-next-line complexity
 export const CommitRow = memo(function CommitRow({
   index,
   style,
@@ -57,6 +59,7 @@ export const CommitRow = memo(function CommitRow({
   const revertCommit = useRepositoryStore((s) => s.revertCommit);
   const setActiveView = useSelectionStore((s) => s.setActiveView);
   const showConfirm = useDialogStore((s) => s.showConfirm);
+  const openWorktreeAddDialog = useWorktreeStore((s) => s.openAddDialog);
   const { focusedIndex } = useVirtualizedFocus();
   const isKeyboardFocused = focusedIndex === index;
 
@@ -201,6 +204,13 @@ export const CommitRow = memo(function CommitRow({
             ...refMenuItems,
             { label: "Copy commit hash", onClick: handleCopyHash },
             { label: "Checkout commit", onClick: handleCheckout },
+            {
+              label: "New worktree from this commit…",
+              onClick: () => {
+                closeContextMenu();
+                openWorktreeAddDialog({ commitHash: commit.hash });
+              },
+            },
             { label: "Revert commit", onClick: handleRevert },
           ]}
         />
