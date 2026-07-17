@@ -1,3 +1,11 @@
+# [1.15.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.14.0...v1.15.0) (2026-07-17)
+
+
+### Features
+
+* added a new tab to help managing worktrees ([19de26e](https://github.com/mywill/YetAnotherGitGui/commit/19de26eea04ee1340435f1f44086fab0f69ac7e4))
+* added new setting to turn on and off some tabs ([bd209b3](https://github.com/mywill/YetAnotherGitGui/commit/bd209b34b36290e2286bfb64a1ccfdac508d9dbb))
+
 # [1.14.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.13.4...v1.14.0) (2026-07-09)
 
 
