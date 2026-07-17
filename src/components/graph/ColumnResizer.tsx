@@ -1,4 +1,5 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
+import { useRafPointerDrag } from "../../hooks/useRafPointerDrag";
 
 interface ColumnResizerProps {
   position: number;
@@ -6,11 +7,8 @@ interface ColumnResizerProps {
   ariaLabel: string;
   step?: number;
   largeStep?: number;
-  /** Current column width for aria-valuenow (optional, improves a11y). */
   valueNow?: number;
-  /** Minimum column width for aria-valuemin (optional). */
   valueMin?: number;
-  /** Maximum column width for aria-valuemax (optional). */
   valueMax?: number;
 }
 
@@ -24,54 +22,14 @@ export const ColumnResizer = ({
   valueMin = 0,
   valueMax,
 }: ColumnResizerProps) => {
-  const resizerRef = useRef<HTMLDivElement>(null);
-  const startXRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const pendingDeltaRef = useRef(0);
-
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault();
-      const el = resizerRef.current;
-      if (!el) return;
-      el.setPointerCapture(e.pointerId);
-      startXRef.current = e.clientX;
-
-      const handlePointerMove = (moveEvent: PointerEvent) => {
-        const delta = moveEvent.clientX - startXRef.current;
-        startXRef.current = moveEvent.clientX;
-        pendingDeltaRef.current += delta;
-
-        if (rafRef.current === null) {
-          rafRef.current = requestAnimationFrame(() => {
-            rafRef.current = null;
-            const d = pendingDeltaRef.current;
-            pendingDeltaRef.current = 0;
-            if (d !== 0) onResize(d);
-          });
-        }
-      };
-
-      const handlePointerUp = () => {
-        el.removeEventListener("pointermove", handlePointerMove);
-        el.removeEventListener("pointerup", handlePointerUp);
-        el.removeEventListener("pointercancel", handlePointerUp);
-        if (rafRef.current !== null) {
-          cancelAnimationFrame(rafRef.current);
-          rafRef.current = null;
-        }
-        if (pendingDeltaRef.current !== 0) {
-          onResize(pendingDeltaRef.current);
-          pendingDeltaRef.current = 0;
-        }
-      };
-
-      el.addEventListener("pointermove", handlePointerMove);
-      el.addEventListener("pointerup", handlePointerUp);
-      el.addEventListener("pointercancel", handlePointerUp);
+  const handlePointerDown = useRafPointerDrag({
+    onDragMove: (delta) => {
+      onResize(delta);
     },
-    [onResize]
-  );
+    onDragEnd: (delta) => {
+      if (delta !== 0) onResize(delta);
+    },
+  });
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -89,7 +47,6 @@ export const ColumnResizer = ({
 
   return (
     <div
-      ref={resizerRef}
       role="separator"
       aria-orientation="vertical"
       aria-label={ariaLabel}

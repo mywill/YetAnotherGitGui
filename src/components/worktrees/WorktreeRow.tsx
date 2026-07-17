@@ -1,6 +1,5 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import clsx from "clsx";
-import { formatDistanceToNow } from "date-fns";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
 import {
@@ -18,6 +17,7 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useTerminalStore } from "../../stores/terminalStore";
 import { useContextMenu } from "../../hooks/useContextMenu";
 import { ContextMenu } from "../common/ContextMenu";
+import { formatTimeAgo } from "../../utils/date";
 
 const COLUMN_GAP = 16;
 
@@ -87,23 +87,37 @@ export function WorktreeRow({ worktree }: WorktreeRowProps) {
     void openPath(worktree.path);
   }, [closeContextMenu, worktree.path]);
 
-  const dateText = safeFormatDistance(worktree.last_commit_time);
+  const dateText = formatTimeAgo(worktree.last_commit_time);
 
-  const contextMenuItems = [
-    { label: "Open in app", onClick: handleOpen },
-    { label: "Open in Terminal", onClick: handleOpenTerminal },
-    { label: "Reveal in File Manager", onClick: handleReveal },
-    { label: "Open Folder", onClick: handleOpenFolder },
-    ...(worktree.is_main
-      ? []
-      : [
-          { label: "Move…", onClick: handleMove },
-          worktree.is_locked
-            ? { label: "Unlock", onClick: handleUnlock }
-            : { label: "Lock", onClick: handleLock },
-          { label: "Remove…", onClick: handleRemove },
-        ]),
-  ];
+  const contextMenuItems = useMemo(
+    () => [
+      { label: "Open in app", onClick: handleOpen },
+      { label: "Open in Terminal", onClick: handleOpenTerminal },
+      { label: "Reveal in File Manager", onClick: handleReveal },
+      { label: "Open Folder", onClick: handleOpenFolder },
+      ...(worktree.is_main
+        ? []
+        : [
+            { label: "Move…", onClick: handleMove },
+            worktree.is_locked
+              ? { label: "Unlock", onClick: handleUnlock }
+              : { label: "Lock", onClick: handleLock },
+            { label: "Remove…", onClick: handleRemove },
+          ]),
+    ],
+    [
+      handleOpen,
+      handleOpenTerminal,
+      handleReveal,
+      handleOpenFolder,
+      worktree.is_main,
+      worktree.is_locked,
+      handleMove,
+      handleUnlock,
+      handleLock,
+      handleRemove,
+    ]
+  );
 
   return (
     <>
@@ -182,35 +196,12 @@ export function WorktreeRow({ worktree }: WorktreeRowProps) {
           )}
         </div>
         {/* Actions */}
-        <div className="flex items-center justify-center gap-0.5">
-          <button
-            type="button"
-            onClick={handleOpenTerminal}
-            className="text-text-muted hover:text-text-primary shrink-0 cursor-pointer bg-transparent p-0.5"
-            title="Open in Terminal"
-            aria-label={`Open ${worktree.name} in terminal`}
-          >
-            <IconTerminal size={13} stroke={1.75} aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={handleReveal}
-            className="text-text-muted hover:text-text-primary shrink-0 cursor-pointer bg-transparent p-0.5"
-            title="Reveal in File Manager"
-            aria-label={`Reveal ${worktree.name} in file manager`}
-          >
-            <IconFolder size={13} stroke={1.75} aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={handleOpen}
-            className="text-text-muted hover:text-text-primary shrink-0 cursor-pointer bg-transparent p-0.5"
-            title="Open in app"
-            aria-label={`Open ${worktree.name} in app`}
-          >
-            <IconExternalLink size={13} stroke={1.75} aria-hidden />
-          </button>
-        </div>
+        <WorktreeActions
+          worktreeName={worktree.name}
+          onOpenTerminal={handleOpenTerminal}
+          onReveal={handleReveal}
+          onOpen={handleOpen}
+        />
       </div>
       {contextMenu && (
         <ContextMenu
@@ -224,11 +215,46 @@ export function WorktreeRow({ worktree }: WorktreeRowProps) {
   );
 }
 
-function safeFormatDistance(secondsSinceEpoch: number | null): string | null {
-  if (secondsSinceEpoch == null) return null;
-  try {
-    return formatDistanceToNow(new Date(secondsSinceEpoch * 1000), { addSuffix: true });
-  } catch {
-    return null;
-  }
+function WorktreeActions({
+  worktreeName,
+  onOpenTerminal,
+  onReveal,
+  onOpen,
+}: {
+  worktreeName: string;
+  onOpenTerminal: () => void;
+  onReveal: () => void;
+  onOpen: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-0.5">
+      <button
+        type="button"
+        onClick={onOpenTerminal}
+        className="text-text-muted hover:text-text-primary shrink-0 cursor-pointer bg-transparent p-0.5"
+        title="Open in Terminal"
+        aria-label={`Open ${worktreeName} in terminal`}
+      >
+        <IconTerminal size={13} stroke={1.75} aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={onReveal}
+        className="text-text-muted hover:text-text-primary shrink-0 cursor-pointer bg-transparent p-0.5"
+        title="Reveal in File Manager"
+        aria-label={`Reveal ${worktreeName} in file manager`}
+      >
+        <IconFolder size={13} stroke={1.75} aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="text-text-muted hover:text-text-primary shrink-0 cursor-pointer bg-transparent p-0.5"
+        title="Open in app"
+        aria-label={`Open ${worktreeName} in app`}
+      >
+        <IconExternalLink size={13} stroke={1.75} aria-hidden />
+      </button>
+    </div>
+  );
 }

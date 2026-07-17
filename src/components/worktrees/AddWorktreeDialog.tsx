@@ -11,12 +11,38 @@ import { copyToClipboard } from "../../services/clipboard";
 type Mode = "existing" | "new" | "detached";
 
 function sanitizeName(input: string): string {
-  // Worktree name: filesystem-safe, no slashes/colons/etc.
   return input
     .trim()
     .replace(/[^A-Za-z0-9._-]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function computeWorktreeName(
+  mode: Mode,
+  branch: string,
+  newBranch: string,
+  commitHash: string
+): string {
+  if (mode === "existing") return sanitizeName(branch);
+  if (mode === "new") return sanitizeName(newBranch);
+  return sanitizeName(commitHash ? `wt-${commitHash.slice(0, 7)}` : "wt-detached");
+}
+
+// fallow-ignore-next-line complexity
+function canSubmitWorktree(
+  mode: Mode,
+  name: string,
+  newBranch: string,
+  branch: string,
+  submitting: boolean
+): boolean {
+  return (
+    !submitting &&
+    name.trim().length > 0 &&
+    (mode !== "new" || newBranch.trim().length > 0) &&
+    (mode !== "existing" || branch.length > 0)
+  );
 }
 
 export function AddWorktreeDialog() {
@@ -46,9 +72,7 @@ export function AddWorktreeDialog() {
 
   // Auto-fill the worktree name from the selected branch / new-branch name.
   useEffect(() => {
-    if (mode === "existing") setName(sanitizeName(branch));
-    else if (mode === "new") setName(sanitizeName(newBranch));
-    else setName(sanitizeName(commitHash ? `wt-${commitHash.slice(0, 7)}` : "wt-detached"));
+    setName(computeWorktreeName(mode, branch, newBranch, commitHash));
   }, [mode, branch, newBranch, commitHash]);
 
   const fullPath = parentDir ? `${parentDir}/${name}` : name;
@@ -90,11 +114,7 @@ export function AddWorktreeDialog() {
     return () => document.removeEventListener("keydown", onKey);
   }, [closeAddDialog]);
 
-  const canSubmit =
-    !submitting &&
-    name.trim().length > 0 &&
-    (mode !== "new" || newBranch.trim().length > 0) &&
-    (mode !== "existing" || branch.length > 0);
+  const canSubmit = canSubmitWorktree(mode, name, newBranch, branch, submitting);
 
   const copyPath = () => {
     void copyToClipboard(fullPath);

@@ -1,14 +1,13 @@
 import { useCallback } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { IconTag } from "@tabler/icons-react";
 import type { TagInfo } from "../../types";
 import { useRepositoryStore } from "../../stores/repositoryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useDialogStore } from "../../stores/dialogStore";
-import { ContextMenu } from "../common/ContextMenu";
 import { copyToClipboard } from "../../services/clipboard";
 import { useContextMenu } from "../../hooks/useContextMenu";
-import { SidebarListItem } from "./SidebarListItem";
+import { SidebarRefItem } from "./SidebarRefItem";
+import { formatTimeAgo } from "../../utils/date";
 
 interface TagItemProps {
   tag: TagInfo;
@@ -87,53 +86,38 @@ export function TagItem({ tag }: TagItemProps) {
 
   const taggerText = tag.is_annotated ? tag.tagger_name : null;
   const dateText =
-    tag.is_annotated && tag.tagger_time != null ? safeFormatDistance(tag.tagger_time) : null;
+    tag.is_annotated && tag.tagger_time != null ? formatTimeAgo(tag.tagger_time) : null;
 
   return (
-    <>
-      <SidebarListItem
-        itemClass="tag-item"
-        title={tag.message || tag.name}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        onContextMenu={handleContextMenu}
-      >
-        <TagIcon />
-        <span className="tag-item-name min-w-0 shrink truncate font-mono">{tag.name}</span>
-        {tag.is_annotated && (
-          <span className="annotated-badge bg-badge-tag text-badge-tag-text text-3xs shrink-0 rounded px-1 py-px font-semibold">
-            A
-          </span>
-        )}
-        {taggerText && (
-          <span className="tag-item-tagger text-text-muted text-2xs shrink-0 truncate font-mono">
-            {taggerText}
-          </span>
-        )}
-        {dateText && (
-          <span className="tag-item-date text-text-muted text-2xs shrink-0 font-mono whitespace-nowrap">
-            {dateText}
-          </span>
-        )}
-      </SidebarListItem>
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          items={contextMenuItems}
-          onClose={closeContextMenu}
-        />
+    <SidebarRefItem
+      itemClass="tag-item"
+      title={tag.message || tag.name}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
+      contextMenuItems={contextMenuItems}
+      contextMenuAnchor={contextMenu}
+      onCloseContextMenu={closeContextMenu}
+    >
+      <TagIcon />
+      <span className="tag-item-name min-w-0 shrink truncate font-mono">{tag.name}</span>
+      {tag.is_annotated && (
+        <span className="annotated-badge bg-badge-tag text-badge-tag-text text-3xs shrink-0 rounded px-1 py-px font-semibold">
+          A
+        </span>
       )}
-    </>
+      {taggerText && (
+        <span className="tag-item-tagger text-text-muted text-2xs shrink-0 truncate font-mono">
+          {taggerText}
+        </span>
+      )}
+      {dateText && (
+        <span className="tag-item-date text-text-muted text-2xs shrink-0 font-mono whitespace-nowrap">
+          {dateText}
+        </span>
+      )}
+    </SidebarRefItem>
   );
-}
-
-function safeFormatDistance(secondsSinceEpoch: number): string | null {
-  try {
-    return formatDistanceToNow(new Date(secondsSinceEpoch * 1000), { addSuffix: true });
-  } catch {
-    return null;
-  }
 }
 
 function TagIcon() {

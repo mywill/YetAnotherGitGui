@@ -17,6 +17,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { AboutDialog } from "./AboutDialog";
 import { UpdateDialog } from "./UpdateDialog";
 import { YaggButton } from "./YaggButton";
+import { SegmentedToggle } from "./SegmentedToggle";
 import { openLogDir } from "../../services/logging";
 import { CliInstallDialog } from "./CliInstallDialog";
 import { logError } from "../../utils/logger";
@@ -256,94 +257,55 @@ export function SettingsMenu() {
               <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
                 Theme
               </div>
-              <div className="flex gap-1">
-                {(["dark", "light"] as Theme[]).map((t) => (
-                  <YaggButton
-                    key={t}
-                    variant={currentTheme === t ? "selection" : "outline"}
-                    size="sm"
-                    className="text-2xs flex-1 capitalize"
-                    role="menuitemradio"
-                    aria-checked={currentTheme === t}
-                    onClick={() => {
-                      setTheme(t);
-                    }}
-                  >
-                    {t}
-                  </YaggButton>
-                ))}
-              </div>
+              <SegmentedToggle
+                options={[
+                  { label: "Dark", value: "dark" },
+                  { label: "Light", value: "light" },
+                ]}
+                value={currentTheme}
+                onChange={(v) => setTheme(v as Theme)}
+              />
             </div>
             <div className="settings-menu-group px-3 py-2">
               <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
                 Density
               </div>
-              <div className="flex gap-1">
-                {(["compact", "comfortable", "spacious"] as Density[]).map((d) => (
-                  <YaggButton
-                    key={d}
-                    variant={currentDensity === d ? "selection" : "outline"}
-                    size="sm"
-                    className="text-2xs flex-1 capitalize"
-                    role="menuitemradio"
-                    aria-checked={currentDensity === d}
-                    onClick={() => {
-                      setDensity(d);
-                    }}
-                  >
-                    {d}
-                  </YaggButton>
-                ))}
-              </div>
+              <SegmentedToggle
+                options={[
+                  { label: "Compact", value: "compact" },
+                  { label: "Comfortable", value: "comfortable" },
+                  { label: "Spacious", value: "spacious" },
+                ]}
+                value={currentDensity}
+                onChange={(v) => setDensity(v as Density)}
+              />
             </div>
             <div className="settings-menu-group px-3 py-2">
               <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
                 Text size
               </div>
-              <div className="flex gap-1">
-                {(["small", "medium", "large"] as TextSize[]).map((t) => (
-                  <YaggButton
-                    key={t}
-                    variant={currentTextSize === t ? "selection" : "outline"}
-                    size="sm"
-                    className="text-2xs flex-1 capitalize"
-                    role="menuitemradio"
-                    aria-checked={currentTextSize === t}
-                    onClick={() => {
-                      setTextSize(t);
-                    }}
-                  >
-                    {t}
-                  </YaggButton>
-                ))}
-              </div>
+              <SegmentedToggle
+                options={[
+                  { label: "Small", value: "small" },
+                  { label: "Medium", value: "medium" },
+                  { label: "Large", value: "large" },
+                ]}
+                value={currentTextSize}
+                onChange={(v) => setTextSize(v as TextSize)}
+              />
             </div>
             <div className="settings-menu-group px-3 py-2">
               <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
                 Auto-check on launch
               </div>
-              <div className="flex gap-1">
-                <YaggButton
-                  variant={autoCheckForUpdates ? "selection" : "outline"}
-                  size="sm"
-                  className="text-2xs flex-1"
-                  role="menuitemradio"
-                  aria-checked={autoCheckForUpdates}
-                  onClick={() => setAutoCheckForUpdates(true)}
-                >
-                  On
-                </YaggButton>
-                <YaggButton
-                  variant={!autoCheckForUpdates ? "selection" : "outline"}
-                  size="sm"
-                  className="text-2xs flex-1"
-                  role="menuitemradio"
-                  aria-checked={!autoCheckForUpdates}
-                  onClick={() => setAutoCheckForUpdates(false)}
-                >
-                  Off
-                </YaggButton>
-              </div>
+              <SegmentedToggle
+                options={[
+                  { label: "On", value: "on" },
+                  { label: "Off", value: "off" },
+                ]}
+                value={autoCheckForUpdates ? "on" : "off"}
+                onChange={(v) => setAutoCheckForUpdates(v === "on")}
+              />
             </div>
             <div className="settings-menu-group px-3 py-2">
               <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
@@ -352,53 +314,25 @@ export function SettingsMenu() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-text-secondary text-xs">Worktrees</span>
-                  <div className="flex gap-1">
-                    <YaggButton
-                      variant={enabledTabs.worktrees ? "selection" : "outline"}
-                      size="sm"
-                      className="text-2xs"
-                      role="menuitemradio"
-                      aria-checked={enabledTabs.worktrees}
-                      onClick={() => setEnabledTab("worktrees", true)}
-                    >
-                      On
-                    </YaggButton>
-                    <YaggButton
-                      variant={!enabledTabs.worktrees ? "selection" : "outline"}
-                      size="sm"
-                      className="text-2xs"
-                      role="menuitemradio"
-                      aria-checked={!enabledTabs.worktrees}
-                      onClick={() => setEnabledTab("worktrees", false)}
-                    >
-                      Off
-                    </YaggButton>
-                  </div>
+                  <SegmentedToggle
+                    options={[
+                      { label: "On", value: "on" },
+                      { label: "Off", value: "off" },
+                    ]}
+                    value={enabledTabs.worktrees ? "on" : "off"}
+                    onChange={(v) => setEnabledTab("worktrees", v === "on")}
+                  />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-text-secondary text-xs">Cleanup</span>
-                  <div className="flex gap-1">
-                    <YaggButton
-                      variant={enabledTabs.cleanup ? "selection" : "outline"}
-                      size="sm"
-                      className="text-2xs"
-                      role="menuitemradio"
-                      aria-checked={enabledTabs.cleanup}
-                      onClick={() => setEnabledTab("cleanup", true)}
-                    >
-                      On
-                    </YaggButton>
-                    <YaggButton
-                      variant={!enabledTabs.cleanup ? "selection" : "outline"}
-                      size="sm"
-                      className="text-2xs"
-                      role="menuitemradio"
-                      aria-checked={!enabledTabs.cleanup}
-                      onClick={() => setEnabledTab("cleanup", false)}
-                    >
-                      Off
-                    </YaggButton>
-                  </div>
+                  <SegmentedToggle
+                    options={[
+                      { label: "On", value: "on" },
+                      { label: "Off", value: "off" },
+                    ]}
+                    value={enabledTabs.cleanup ? "on" : "off"}
+                    onChange={(v) => setEnabledTab("cleanup", v === "on")}
+                  />
                 </div>
               </div>
             </div>
@@ -481,28 +415,14 @@ export function SettingsMenu() {
                     <div className="text-text-muted text-2xs mb-1 font-medium tracking-wider uppercase">
                       Verbose debug logging
                     </div>
-                    <div className="flex gap-1">
-                      <YaggButton
-                        variant={debugLoggingEnabled ? "selection" : "outline"}
-                        size="sm"
-                        className="text-2xs flex-1"
-                        role="menuitemradio"
-                        aria-checked={debugLoggingEnabled}
-                        onClick={() => setDebugLoggingEnabled(true)}
-                      >
-                        On
-                      </YaggButton>
-                      <YaggButton
-                        variant={!debugLoggingEnabled ? "selection" : "outline"}
-                        size="sm"
-                        className="text-2xs flex-1"
-                        role="menuitemradio"
-                        aria-checked={!debugLoggingEnabled}
-                        onClick={() => setDebugLoggingEnabled(false)}
-                      >
-                        Off
-                      </YaggButton>
-                    </div>
+                    <SegmentedToggle
+                      options={[
+                        { label: "On", value: "on" },
+                        { label: "Off", value: "off" },
+                      ]}
+                      value={debugLoggingEnabled ? "on" : "off"}
+                      onChange={(v) => setDebugLoggingEnabled(v === "on")}
+                    />
                   </div>
                 </div>
               )}

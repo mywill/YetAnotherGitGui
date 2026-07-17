@@ -44,6 +44,7 @@ const REF_BADGE_STYLES: Record<string, { bg: string; color: string; border: stri
   },
 };
 
+// fallow-ignore-next-line complexity
 export const CommitRow = memo(function CommitRow({
   index,
   style,
