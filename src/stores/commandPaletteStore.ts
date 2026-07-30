@@ -1,13 +1,7 @@
 import { create } from "zustand";
 
 export type FilterCategory =
-  | "all"
-  | "commits"
-  | "branches"
-  | "tags"
-  | "authors"
-  | "files"
-  | "stashes";
+  "all" | "commits" | "branches" | "tags" | "authors" | "files" | "stashes";
 
 interface CommandPaletteState {
   isOpen: boolean;

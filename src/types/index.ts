@@ -62,13 +62,7 @@ export interface FileStatus {
 }
 
 export type FileStatusType =
-  | "modified"
-  | "added"
-  | "deleted"
-  | "renamed"
-  | "copied"
-  | "untracked"
-  | "conflicted";
+  "modified" | "added" | "deleted" | "renamed" | "copied" | "untracked" | "conflicted";
 
 export interface FileStatuses {
   staged: FileStatus[];
