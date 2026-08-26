@@ -16,10 +16,18 @@ updates:
       tauri:
         patterns:
           - "@tauri-apps/*"
+      typescript:
+        patterns:
+          - "typescript"
+          - "typescript-eslint"
+          - "@types/*"
       development:
         dependency-type: "development"
         patterns:
           - "*"
+          - "!typescript"
+          - "!typescript-eslint"
+          - "!@types/*"
       production:
         dependency-type: "production"
         patterns:
