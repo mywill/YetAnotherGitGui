@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.15.0...v1.15.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* seperated out ts solo dependabot group to prevent update ([49721e0](https://github.com/mywill/YetAnotherGitGui/commit/49721e03de51b70ce0b1b456a8eaa6d06b138654))
+
 # [1.15.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.14.0...v1.15.0) (2026-07-17)
 
 
