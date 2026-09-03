@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { App } from "./App";
 import { useRepositoryStore } from "./stores/repositoryStore";
 import { useDialogStore } from "./stores/dialogStore";
+import { useSelectionStore } from "./stores/selectionStore";
+import { useSettingsStore } from "./stores/settingsStore";
 import { useCliArgs } from "./hooks/useCliArgs";
 import { mockStore } from "./test/mockStores";
 
@@ -355,6 +357,79 @@ describe("App", () => {
 
       // Verify refresh wasn't called during unmount cleanup
       expect(mockRefreshRepository).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("view-switching keyboard shortcuts", () => {
+    it("switches to Working Copy on Ctrl+1", () => {
+      render(<App />);
+      useSelectionStore.setState({ activeView: "history" });
+
+      fireEvent.keyDown(window, { key: "1", ctrlKey: true });
+
+      expect(useSelectionStore.getState().activeView).toBe("status");
+    });
+
+    it("switches to History on Ctrl+2", () => {
+      render(<App />);
+      useSelectionStore.setState({ activeView: "status" });
+
+      fireEvent.keyDown(window, { key: "2", ctrlKey: true });
+
+      expect(useSelectionStore.getState().activeView).toBe("history");
+    });
+
+    it("switches to Cleanup on Ctrl+5 when Worktrees is disabled", () => {
+      render(<App />);
+      useSettingsStore.setState({ enabledTabs: { cleanup: true, worktrees: false } });
+      useSelectionStore.setState({ activeView: "status" });
+
+      fireEvent.keyDown(window, { key: "5", ctrlKey: true });
+
+      expect(useSelectionStore.getState().activeView).toBe("cleanup");
+    });
+
+    it("is a no-op when the position exceeds the visible views", () => {
+      render(<App />);
+      // Default settings hide Worktrees, leaving 5 visible views
+      useSettingsStore.setState({ enabledTabs: { cleanup: true, worktrees: false } });
+      useSelectionStore.setState({ activeView: "status" });
+
+      fireEvent.keyDown(window, { key: "6", ctrlKey: true });
+
+      expect(useSelectionStore.getState().activeView).toBe("status");
+    });
+
+    it("shifts numbering when Worktrees is enabled", () => {
+      render(<App />);
+      useSettingsStore.setState({ enabledTabs: { cleanup: true, worktrees: true } });
+      useSelectionStore.setState({ activeView: "status" });
+
+      fireEvent.keyDown(window, { key: "5", ctrlKey: true });
+      expect(useSelectionStore.getState().activeView).toBe("worktrees");
+
+      fireEvent.keyDown(window, { key: "6", ctrlKey: true });
+      expect(useSelectionStore.getState().activeView).toBe("cleanup");
+    });
+
+    it("completes a full cycle across all positions", () => {
+      render(<App />);
+      useSettingsStore.setState({ enabledTabs: { cleanup: true, worktrees: true } });
+      useSelectionStore.setState({ activeView: "status" });
+
+      const expected = [
+        ["1", "status"],
+        ["2", "history"],
+        ["3", "branches"],
+        ["4", "stashes"],
+        ["5", "worktrees"],
+        ["6", "cleanup"],
+      ] as const;
+
+      for (const [key, view] of expected) {
+        fireEvent.keyDown(window, { key, ctrlKey: true });
+        expect(useSelectionStore.getState().activeView).toBe(view);
+      }
     });
   });
 

@@ -109,4 +109,40 @@ describe("IconRail", () => {
 
     expect(container.querySelector(".icon-rail")).toBeInTheDocument();
   });
+
+  it("shows Ctrl+N shortcut in each tab tooltip", () => {
+    useSettingsStore.setState({ enabledTabs: { cleanup: true, worktrees: true } });
+    render(<IconRail />);
+
+    expect(screen.getByRole("tab", { name: "Working Copy" })).toHaveAttribute(
+      "title",
+      "Working Copy (Ctrl+1)"
+    );
+    expect(screen.getByRole("tab", { name: "History" })).toHaveAttribute(
+      "title",
+      "History (Ctrl+2)"
+    );
+    expect(screen.getByRole("tab", { name: "Branches & Tags" })).toHaveAttribute(
+      "title",
+      "Branches & Tags (Ctrl+3)"
+    );
+    expect(screen.getByRole("tab", { name: "Worktrees" })).toHaveAttribute(
+      "title",
+      "Worktrees (Ctrl+5)"
+    );
+    expect(screen.getByRole("tab", { name: "Cleanup" })).toHaveAttribute(
+      "title",
+      "Cleanup (Ctrl+6)"
+    );
+  });
+
+  it("renumbers tooltips to skip disabled tabs", () => {
+    useSettingsStore.setState({ enabledTabs: { cleanup: true, worktrees: false } });
+    render(<IconRail />);
+
+    expect(screen.getByRole("tab", { name: "Cleanup" })).toHaveAttribute(
+      "title",
+      "Cleanup (Ctrl+5)"
+    );
+  });
 });
