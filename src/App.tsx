@@ -15,6 +15,7 @@ import { useCommandPaletteStore } from "./stores/commandPaletteStore";
 import { useTerminalStore } from "./stores/terminalStore";
 import { useSettingsStore } from "./stores/settingsStore";
 import { TerminalPanel } from "./components/terminal/TerminalPanel";
+import { getVisibleViews } from "./components/shell/viewRegistry";
 import { useCliArgs } from "./hooks/useCliArgs";
 import { usePlatform } from "./hooks/usePlatform";
 import { useKeyboardShortcuts, type ShortcutHandler } from "./hooks/useKeyboardShortcuts";
@@ -109,6 +110,20 @@ export function App() {
           if (repositoryInfo) setActiveView("history");
         },
       },
+      // Ctrl+1 through Ctrl+6 switch to the visible view at that position.
+      // Numbering follows the on-screen tab order, so hidden tabs (worktrees,
+      // cleanup) are skipped. Degenerate (out-of-range) keys are no-ops.
+      ...Array.from({ length: 6 }, (_, i) => ({
+        key: String(i + 1),
+        mod: true,
+        handler: () => {
+          if (!repositoryInfo) return;
+          if (useCommandPaletteStore.getState().isOpen) return;
+          const enabledTabs = useSettingsStore.getState().enabledTabs;
+          const view = getVisibleViews(enabledTabs)[i];
+          if (view) setActiveView(view.id);
+        },
+      })),
     ],
     [
       isLoading,

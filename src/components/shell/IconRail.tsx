@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { VIEWS, isViewEnabled } from "./viewRegistry";
+import { getVisibleViews } from "./viewRegistry";
 
 const ICON_SIZE_BY_DENSITY = { compact: 16, comfortable: 18, spacious: 20 } as const;
 
@@ -12,7 +12,7 @@ export const IconRail = () => {
   const enabledTabs = useSettingsStore((s) => s.enabledTabs);
   const iconSize = ICON_SIZE_BY_DENSITY[density];
 
-  const visibleViews = VIEWS.filter((v) => isViewEnabled(v.id, enabledTabs));
+  const visibleViews = getVisibleViews(enabledTabs);
 
   return (
     <nav
@@ -20,7 +20,7 @@ export const IconRail = () => {
       role="tablist"
       aria-label="Navigation"
     >
-      {visibleViews.map(({ id, label, icon: Icon, shortcut }) => (
+      {visibleViews.map(({ id, label, icon: Icon }, index) => (
         <button
           key={id}
           id={`rail-tab-${id}`}
@@ -28,7 +28,7 @@ export const IconRail = () => {
           aria-selected={activeView === id}
           aria-controls="workspace-center"
           aria-label={label}
-          title={shortcut ? `${label} (${shortcut})` : label}
+          title={`${label} (Ctrl+${index + 1})`}
           className={clsx(
             "rail-item size-nav-btn relative flex cursor-pointer items-center justify-center rounded-md transition-colors duration-100",
             "hover:bg-bg-hover focus-ring",

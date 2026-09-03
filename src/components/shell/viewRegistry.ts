@@ -22,12 +22,11 @@ export interface ViewDef {
   label: string;
   icon: Icon;
   component: ComponentType;
-  shortcut?: string;
 }
 
-export const VIEWS: ViewDef[] = [
+const VIEWS: ViewDef[] = [
   { id: "status", label: "Working Copy", icon: IconFileDiff, component: StatusView },
-  { id: "history", label: "History", icon: IconHistory, component: HistoryView, shortcut: "⌘/⌃L" },
+  { id: "history", label: "History", icon: IconHistory, component: HistoryView },
   { id: "branches", label: "Branches & Tags", icon: IconGitBranch, component: BranchesView },
   { id: "stashes", label: "Stashes", icon: IconStack2, component: StashesView },
   { id: "worktrees", label: "Worktrees", icon: IconTrees, component: WorktreesView },
@@ -46,4 +45,13 @@ export function isViewEnabled(id: ViewType, enabledTabs: EnabledTabs): boolean {
   if (id === "cleanup") return enabledTabs.cleanup;
   if (id === "worktrees") return enabledTabs.worktrees;
   return true;
+}
+
+/**
+ * Views in display order, filtered to those currently enabled. Used for both
+ * the icon rail and the Ctrl+1..N view-switching shortcuts so numbering stays
+ * in sync with what the user can actually see.
+ */
+export function getVisibleViews(enabledTabs: EnabledTabs): ViewDef[] {
+  return VIEWS.filter((v) => isViewEnabled(v.id, enabledTabs));
 }
