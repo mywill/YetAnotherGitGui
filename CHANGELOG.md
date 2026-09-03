@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.15.1...v1.16.0) (2026-09-03)
+
+
+### Features
+
+* added a easy keyboard swap for tabs ([3ac9b08](https://github.com/mywill/YetAnotherGitGui/commit/3ac9b0879f5135e471a7c7880d16d0887ebf7700))
+
 ## [1.15.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.15.0...v1.15.1) (2026-08-26)
 
 
