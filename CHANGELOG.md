@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.16.0...v1.16.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* versions ([65183cb](https://github.com/mywill/YetAnotherGitGui/commit/65183cbc0aa63b0b3ffab4ff659e57823885952c))
+
 # [1.16.0](https://github.com/mywill/YetAnotherGitGui/compare/v1.15.1...v1.16.0) (2026-09-03)
 
 
