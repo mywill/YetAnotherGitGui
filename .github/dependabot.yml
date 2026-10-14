@@ -1,4 +1,21 @@
 version: 2
+
+# Tauri ships its JS packages (@tauri-apps/*) and Rust crates (tauri,
+# tauri-build, tauri-plugin-*) in lockstep. The CI "Check Tauri Version
+# Alignment" job fails any PR that bumps only one side to a new minor.
+# A multi-ecosystem group makes Dependabot combine both sides into a
+# single pull request, so the alignment check can never observe a
+# half-updated state.
+# Docs: https://docs.github.com/en/code-security/concepts/supply-chain-security/multi-ecosystem-updates
+multi-ecosystem-groups:
+  tauri:
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Group-only option: must live here, not on the ecosystem entries.
+    commit-message:
+      prefix: "chore(deps)"
+
 updates:
   # npm dependencies
   - package-ecosystem: "npm"
@@ -7,15 +24,20 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
-    commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
+    # @tauri-apps/* updates join the cross-ecosystem "tauri" group above;
+    # everything else is managed by the single-ecosystem groups below,
+    # which exclude the tauri packages so no PR ever updates one side
+    # alone.
+    patterns:
+      - "@tauri-apps/*"
+    multi-ecosystem-group: "tauri"
+    # Mirror pnpm's minimumReleaseAge cooldown (pnpm-workspace.yaml) so
+    # Dependabot only proposes npm versions that pnpm will install.
+    cooldown:
+      default-days: 7
+      include:
+        - "@tauri-apps/*"
     groups:
-      # Keep all @tauri-apps/* packages in one PR so JS bumps land
-      # together and stay aligned with the cargo-side tauri group.
-      tauri:
-        patterns:
-          - "@tauri-apps/*"
       typescript:
         patterns:
           - "typescript"
@@ -28,10 +50,13 @@ updates:
           - "!typescript"
           - "!typescript-eslint"
           - "!@types/*"
+          - "!@tauri-apps/*"
       production:
         dependency-type: "production"
         patterns:
           - "*"
+        exclude-patterns:
+          - "@tauri-apps/*"
 
   # Cargo dependencies
   - package-ecosystem: "cargo"
@@ -40,20 +65,27 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
-    commit-message:
-      prefix: "chore(deps)"
+    patterns:
+      - "tauri"
+      - "tauri-build"
+      - "tauri-plugin-*"
+    multi-ecosystem-group: "tauri"
+    # Match the npm-side cooldown so both ecosystems propose similarly
+    # aged versions of the tauri packages.
+    cooldown:
+      default-days: 7
+      include:
+        - "tauri"
+        - "tauri-build"
+        - "tauri-plugin-*"
     groups:
-      # Tauri crate + plugins must move together with @tauri-apps/* on
-      # the npm side. Dependabot can't span ecosystems in a single PR,
-      # but matching groups land in lockstep on the same schedule.
-      tauri:
-        patterns:
-          - "tauri"
-          - "tauri-build"
-          - "tauri-plugin-*"
       rust-dependencies:
         patterns:
           - "*"
+        exclude-patterns:
+          - "tauri"
+          - "tauri-build"
+          - "tauri-plugin-*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
