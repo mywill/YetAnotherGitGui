@@ -12,7 +12,8 @@ multi-ecosystem-groups:
     schedule:
       interval: "weekly"
       day: "monday"
-    # Group-only option: must live here, not on the ecosystem entries.
+    # Group-only options: must live here, not on the ecosystem entries.
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps)"
 
@@ -23,7 +24,6 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
     # @tauri-apps/* updates join the cross-ecosystem "tauri" group above;
     # everything else is managed by the single-ecosystem groups below,
     # which exclude the tauri packages so no PR ever updates one side
@@ -64,7 +64,6 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
     patterns:
       - "tauri"
       - "tauri-build"
