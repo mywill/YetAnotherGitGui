@@ -1,3 +1,10 @@
+## [1.16.2](https://github.com/mywill/YetAnotherGitGui/compare/v1.16.1...v1.16.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* **drag:** issue where the resizer was only working with keyboard it willnow work with the mouse ([79aa98f](https://github.com/mywill/YetAnotherGitGui/commit/79aa98fbffec915b54951e021e24bbf37d6af4ba))
+
 ## [1.16.1](https://github.com/mywill/YetAnotherGitGui/compare/v1.16.0...v1.16.1) (2026-09-09)
 
 
