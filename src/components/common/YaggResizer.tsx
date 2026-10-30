@@ -65,6 +65,7 @@ export const YaggResizer = ({
   panelSide,
 }: YaggResizerProps) => {
   const dragStartSizeRef = useRef(0);
+  const dragTotalRef = useRef(0);
   const currentDragSizeRef = useRef(0);
   const isCollapsedRef = useRef(false);
 
@@ -102,20 +103,26 @@ export const YaggResizer = ({
       const raw = orientation === "vertical" ? e.clientX : e.clientY;
       return inverted ? -raw : raw;
     },
-    onDragMove: (totalDelta) => {
-      const next = clampSize(dragStartSizeRef.current + totalDelta);
+    onDragMove: (frameDelta) => {
+      dragTotalRef.current += frameDelta;
+      const next = clampSize(dragStartSizeRef.current + dragTotalRef.current);
       currentDragSizeRef.current = next;
       onSizeChange(next);
       isCollapsedRef.current = next === 0;
     },
-    onDragEnd: (_totalDelta) => {
-      commitSize(currentDragSizeRef.current);
+    onDragEnd: (frameDelta) => {
+      dragTotalRef.current += frameDelta;
+      const next = clampSize(dragStartSizeRef.current + dragTotalRef.current);
+      currentDragSizeRef.current = next;
+      onSizeChange(next);
+      commitSize(next);
     },
   });
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       dragStartSizeRef.current = size;
+      dragTotalRef.current = 0;
       currentDragSizeRef.current = size;
       handlePointerDown(e);
     },
