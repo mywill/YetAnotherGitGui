@@ -412,6 +412,98 @@ describe("YaggResizer", () => {
     });
   });
 
+  describe("pointer drag across animation frames (regression)", () => {
+    let rafQueue: FrameRequestCallback[];
+    let rafCounter: number;
+
+    beforeEach(() => {
+      // jsdom doesn't implement setPointerCapture — stub it on HTMLElement.
+      Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
+        value: vi.fn(),
+        configurable: true,
+      });
+      // Queue rAF callbacks so each pointer move can be flushed as its own frame.
+      rafQueue = [];
+      rafCounter = 0;
+      vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+        rafQueue.push(cb);
+        rafCounter += 1;
+        return rafCounter;
+      });
+      vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+        rafQueue = rafQueue.filter((_, index) => index + 1 !== id);
+      });
+    });
+
+    const flushFrame = () => {
+      const callbacks = rafQueue;
+      rafQueue = [];
+      callbacks.forEach((cb) => cb(0));
+    };
+
+    const dispatchMove = (el: Element, clientX: number) => {
+      el.dispatchEvent(
+        new PointerEvent("pointermove", { clientX, clientY: 0, pointerId: 1, bubbles: true })
+      );
+    };
+
+    const dispatchUp = (el: Element, clientX: number) => {
+      el.dispatchEvent(
+        new PointerEvent("pointerup", { clientX, clientY: 0, pointerId: 1, bubbles: true })
+      );
+    };
+
+    it("accumulates drag distance across multiple animation frames", () => {
+      const onSizeChange = vi.fn();
+      render(<YaggResizer {...defaultProps} onSizeChange={onSizeChange} />);
+      const separator = screen.getByRole("separator");
+
+      fireEvent.pointerDown(separator, { clientX: 400, clientY: 0, pointerId: 1 });
+      dispatchMove(separator, 410);
+      flushFrame();
+      dispatchMove(separator, 425);
+      flushFrame();
+      dispatchMove(separator, 430);
+      flushFrame();
+
+      // Total mouse travel is 30px, so the panel must be start(300) + 30.
+      expect(onSizeChange).toHaveBeenLastCalledWith(330);
+    });
+
+    it("tracks a drag that reverses direction across frames", () => {
+      const onSizeChange = vi.fn();
+      render(<YaggResizer {...defaultProps} onSizeChange={onSizeChange} />);
+      const separator = screen.getByRole("separator");
+
+      fireEvent.pointerDown(separator, { clientX: 400, clientY: 0, pointerId: 1 });
+      dispatchMove(separator, 420);
+      flushFrame(); // +20
+      dispatchMove(separator, 410);
+      flushFrame(); // -10
+      dispatchMove(separator, 425);
+      flushFrame(); // +15
+
+      // Net travel 400 -> 425 is +25 from the drag origin.
+      expect(onSizeChange).toHaveBeenLastCalledWith(325);
+    });
+
+    it("commits the accumulated size on pointer up even if no frame flushed", () => {
+      const setLayoutSize = vi.fn();
+      useSettingsStore.setState({ setLayoutSize } as never);
+      const onSizeChange = vi.fn();
+      render(<YaggResizer {...defaultProps} storageKey="test.drag" onSizeChange={onSizeChange} />);
+      const separator = screen.getByRole("separator");
+
+      fireEvent.pointerDown(separator, { clientX: 400, clientY: 0, pointerId: 1 });
+      dispatchMove(separator, 420);
+      // Release before the queued frame runs — the pending movement must still apply.
+      dispatchUp(separator, 420);
+
+      expect(onSizeChange).toHaveBeenLastCalledWith(320);
+      expect(setLayoutSize).toHaveBeenCalledWith("test.drag", 320);
+    });
+  });
+
   describe("collapsible behaviour", () => {
     it("collapses to 0 below min/2 when collapsible", () => {
       const onSizeChange = vi.fn();
